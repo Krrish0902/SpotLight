@@ -16,24 +16,24 @@ export default function RoleSelection({ navigate, setRole }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Returning users with a role: redirect based on profile
+  // Returning users (login): go straight to dashboard; profile-setup is only for signup
   useEffect(() => {
     if (!appUser) return;
     if (appUser.role === 'artist') {
       setRole('artist');
-      navigate(profile ? 'artist-dashboard' : 'profile-setup');
+      navigate('artist-dashboard');
       return;
     }
     if (appUser.role === 'organizer') {
       setRole('organizer');
-      navigate(profile ? 'organizer-dashboard' : 'profile-setup');
+      navigate('organizer-dashboard');
       return;
     }
     if (appUser.role === 'admin') {
       setRole('admin');
       navigate('admin-dashboard');
     }
-  }, [appUser?.role, profile]);
+  }, [appUser?.role]);
 
   const handleRoleSelect = async (role: 'artist' | 'organizer') => {
     setError(null);

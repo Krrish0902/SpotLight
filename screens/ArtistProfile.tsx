@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star } from 'lucide-react-native';
+import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export default function ArtistProfile({ navigate, artist, userRole = 'public' }: Props) {
-  const { profile, appUser } = useAuth(); // Access appUser for ID if profile is missing
+  const { profile, appUser, fetchProfile } = useAuth();
   const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
 
   // Determine the ID to fetch videos for
@@ -32,6 +32,13 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
 
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
+
+  // Refetch profile when viewing own profile to ensure we have latest data (fixes stale/empty data on tab switch)
+  useEffect(() => {
+    if (isOwnProfile && appUser?.id && fetchProfile) {
+      fetchProfile();
+    }
+  }, [isOwnProfile, appUser?.id]);
 
   useEffect(() => {
     if (targetArtistId) {
@@ -59,6 +66,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
 
   const isOrganizer = userRole === 'organizer';
   const displayName = isOwnProfile ? (profile?.display_name ?? 'Artist') : (artist?.display_name ?? artist?.name ?? 'Artist');
+  const usernameStr = isOwnProfile ? (profile?.username ?? '') : (artist?.username ?? '');
   const genresStr = isOwnProfile ? (profile?.genres?.join(' • ') ?? '') : (artist?.genres?.join(' • ') ?? artist?.genre ?? '');
   const cityStr = isOwnProfile ? (profile?.city ?? '') : (artist?.city ?? '');
   const bioStr = isOwnProfile ? (profile?.bio ?? '') : (artist?.bio ?? 'Professional artist.');
@@ -74,9 +82,16 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? (userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard') : 'search-discover')}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
-          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => { }}>
-            <Share2 size={24} color="#fff" />
-          </Button>
+          <View style={styles.headerRight}>
+            {isOwnProfile && (
+              <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => navigate('edit-profile', { selectedArtist: artist ?? { id: 'me' } })}>
+                <Pencil size={24} color="#fff" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => { }}>
+              <Share2 size={24} color="#fff" />
+            </Button>
+          </View>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop' }} style={styles.profileImg} />
         </View>
 
@@ -86,6 +101,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
               <Text style={styles.name}>{displayName}</Text>
               {isBoosted && <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>}
             </View>
+            {usernameStr ? (
+              <Badge style={styles.usernamePill}>@{usernameStr}</Badge>
+            ) : null}
             <View style={styles.meta}>
               <Music size={20} color="#fff" />
               <Text style={styles.metaText}>{genresStr || 'Gen Z Artist'}</Text>
@@ -196,12 +214,15 @@ const styles = StyleSheet.create({
   scroll: {},
   coverWrap: { height: 192, position: 'relative' },
   backBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
-  shareBtn: { position: 'absolute', top: 48, right: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
+  headerRight: { position: 'absolute', top: 48, right: 16, flexDirection: 'row', gap: 4 },
+  iconBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
+  shareBtn: {},
   profileImg: { position: 'absolute', bottom: -64, left: 24, width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: '#030712' },
   content: { padding: 24, paddingTop: 80 },
   profileHeader: { marginBottom: 24 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   name: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
+  usernamePill: { backgroundColor: '#7e22ce', borderWidth: 0, alignSelf: 'flex-start', marginBottom: 8 },
   boostedBadge: { backgroundColor: '#a855f7' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },

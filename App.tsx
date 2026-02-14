@@ -62,14 +62,23 @@ function AppContent() {
     }
   }, [appUser?.role]);
 
-  // Redirect logged-in users from public-home to their dashboard or profile setup
+  // Redirect logged-in artist/organizer from public-home to dashboard (profile-setup only on signup)
   useEffect(() => {
     if (isLoading || !appUser || appState.currentScreen !== 'public-home') return;
     if (appUser.role === 'artist' || appUser.role === 'organizer') {
-      const target = profile ? (appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard') : 'profile-setup';
+      const target = appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard';
       setAppState(prev => ({ ...prev, currentScreen: target, userRole: appUser.role }));
     }
-  }, [appUser, profile, isLoading, appState.currentScreen]);
+  }, [appUser, isLoading, appState.currentScreen]);
+
+  // Avoid "pop" by rendering target screen directly when we would redirect from public-home
+  const effectiveScreen = (() => {
+    if (appState.currentScreen !== 'public-home' || isLoading || !appUser) return appState.currentScreen;
+    if (appUser.role === 'artist' || appUser.role === 'organizer') {
+      return appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard';
+    }
+    return appState.currentScreen;
+  })();
 
   const navigate = (screen: string, data?: any) => {
     setAppState(prev => ({
@@ -96,7 +105,7 @@ function AppContent() {
   }
 
   const renderScreen = () => {
-    switch (appState.currentScreen) {
+    switch (effectiveScreen) {
       case 'public-home':
         return <PublicHome navigate={navigate} />;
       case 'search-discover':
@@ -109,6 +118,8 @@ function AppContent() {
         return <RoleSelection navigate={navigate} setRole={setRole} />;
       case 'profile-setup':
         return <ProfileSetup navigate={navigate} userRole={userRole} />;
+      case 'edit-profile':
+        return <ProfileSetup navigate={navigate} userRole={userRole} mode="edit" returnTo="artist-profile" />;
       case 'artist-dashboard':
         return <ArtistDashboard navigate={navigate} />;
       case 'artist-profile':

@@ -41,6 +41,7 @@ database_schema:
       columns:
         - { name: "profile_id", type: "uuid", pk: true }
         - { name: "user_id", type: "uuid", fk: "users.user_id", unique: true }
+        - { name: "username", type: "varchar", note: "User-chosen unique handle (e.g. maya_rivers)" }
         - { name: "display_name", type: "varchar", nullable: false }
         - { name: "bio", type: "text" }
         - { name: "city", type: "varchar", note: "For location filtering" }

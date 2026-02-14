@@ -10,17 +10,35 @@ import { Card } from '../components/ui/Card';
 import { useAuth } from '../lib/auth-context';
 
 interface Props {
-  navigate: (screen: string) => void;
+  navigate: (screen: string, data?: any) => void;
   userRole: 'artist' | 'organizer' | 'admin' | 'public';
+  mode?: 'setup' | 'edit';
+  returnTo?: string;
 }
 
-export default function ProfileSetup({ navigate, userRole }: Props) {
-  const { saveProfile } = useAuth();
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
+
+export default function ProfileSetup({ navigate, userRole, mode = 'setup', returnTo }: Props) {
+  const { saveProfile, profile } = useAuth();
+  const isEdit = mode === 'edit';
+
+  const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
   const [genres, setGenres] = useState('');
   const [company, setCompany] = useState('');
+
+  React.useEffect(() => {
+    if (isEdit && profile) {
+      setUsername(profile.username ?? '');
+      setDisplayName(profile.display_name ?? '');
+      setBio(profile.bio ?? '');
+      setCity(profile.city ?? '');
+      setGenres(profile.genres?.join(', ') ?? '');
+      if (userRole === 'organizer') setCompany(profile.display_name ?? '');
+    }
+  }, [isEdit, profile, userRole]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,11 +48,17 @@ export default function ProfileSetup({ navigate, userRole }: Props) {
       setError(userRole === 'organizer' ? 'Please enter company name.' : 'Please enter your name.');
       return;
     }
+    const u = username.trim().toLowerCase();
+    if (u && !USERNAME_REGEX.test(u)) {
+      setError('Username: 3-30 chars, only letters, numbers, underscores. Use lowercase.');
+      return;
+    }
     setError(null);
     setLoading(true);
 
     const genresArr = genres.trim() ? genres.split(',').map((g) => g.trim()).filter(Boolean) : undefined;
     const { error: err } = await saveProfile({
+      username: u || undefined,
       display_name: name,
       bio: bio.trim() || undefined,
       city: city.trim() || undefined,
@@ -48,17 +72,26 @@ export default function ProfileSetup({ navigate, userRole }: Props) {
       Alert.alert('Error', err.message);
       return;
     }
-    if (userRole === 'artist') navigate('artist-dashboard');
+    if (isEdit && returnTo) navigate(returnTo, { selectedArtist: { id: 'me' } });
+    else if (userRole === 'artist') navigate('artist-dashboard');
     else if (userRole === 'organizer') navigate('organizer-dashboard');
+  };
+
+  const goBack = () => {
+    if (isEdit && returnTo) {
+      navigate(returnTo, { selectedArtist: { id: 'me' } });
+    } else {
+      navigate('role-selection');
+    }
   };
 
   return (
     <LinearGradient colors={['#030712', '#000']} style={styles.container}>
       <View style={styles.header}>
-        <Button variant="ghost" size="icon" onPress={() => navigate('role-selection')}>
+        <Button variant="ghost" size="icon" onPress={goBack}>
           <ChevronLeft size={24} color="#fff" />
         </Button>
-        <Text style={styles.title}>Setup Your Profile</Text>
+        <Text style={styles.title}>{isEdit ? 'Edit Profile' : 'Setup Your Profile'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -73,6 +106,16 @@ export default function ProfileSetup({ navigate, userRole }: Props) {
 
         <Card style={styles.card}>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={styles.field}>
+            <Label>Username</Label>
+            <Input
+              placeholder="e.g. maya_rivers (unique, 3-30 chars)"
+              value={username}
+              onChangeText={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
           <View style={styles.field}>
             <Label>Full Name</Label>
             <Input
@@ -121,9 +164,16 @@ export default function ProfileSetup({ navigate, userRole }: Props) {
               />
             </View>
           )}
-          <Button onPress={handleComplete} style={styles.completeBtn} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.completeText}>Complete Setup</Text>}
-          </Button>
+          <View style={styles.buttonRow}>
+            {isEdit && (
+              <Button variant="outline" onPress={goBack} style={styles.cancelBtn} disabled={loading}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Button>
+            )}
+            <Button onPress={handleComplete} style={styles.completeBtn} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.completeText}>{isEdit ? 'Save Changes' : 'Complete Setup'}</Text>}
+            </Button>
+          </View>
         </Card>
       </ScrollView>
     </LinearGradient>
@@ -141,6 +191,9 @@ const styles = StyleSheet.create({
   card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
   field: { marginBottom: 20 },
   errorText: { color: '#f87171', fontSize: 14, marginBottom: 12 },
-  completeBtn: { backgroundColor: '#a855f7', marginTop: 24 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24, alignItems: 'center' },
+  cancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  cancelText: { color: '#fff', fontSize: 16 },
+  completeBtn: { flex: 1, backgroundColor: '#a855f7' },
   completeText: { color: '#fff', fontSize: 16 },
 });

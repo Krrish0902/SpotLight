@@ -31,6 +31,7 @@ In the Supabase dashboard, go to **SQL Editor** and run (in order):
 3. `supabase/migrations/003_drop_auth_trigger.sql` – avoids 500 on signup (if needed).
 4. `supabase/migrations/004_remove_password_hash.sql` – removes `password_hash` from users (if needed).
 5. `supabase/migrations/005_create_profiles.sql` – creates the `profiles` table for profile setup.
+6. `supabase/migrations/006_add_profile_username.sql` – adds user-chosen unique `username` to profiles.
 
 ## 4. Auth settings in Supabase
 

@@ -26,6 +26,7 @@ export interface AppUser {
 export interface Profile {
   profile_id: string;
   user_id: string;
+  username: string | null;
   display_name: string;
   bio: string | null;
   city: string | null;
@@ -38,6 +39,7 @@ export interface Profile {
 }
 
 export interface ProfileInput {
+  username?: string;
   display_name: string;
   bio?: string;
   city?: string;
@@ -168,8 +170,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const saveProfile = async (data: ProfileInput): Promise<{ error: Error | null }> => {
     const uid = user?.id ?? session?.user?.id;
     if (!uid) return { error: new Error('Not authenticated') };
-    const row = {
-      user_id: uid,
+    const updateRow = {
+      username: data.username?.trim().toLowerCase() || null,
       display_name: data.display_name,
       bio: data.bio ?? null,
       city: data.city ?? null,
@@ -178,15 +180,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       genres: data.genres ?? null,
       instruments: data.instruments ?? null,
     };
-    const { error: insertErr } = await supabase.from('profiles').insert(row);
+    // Update existing profile (edit) — never create duplicate
+    if (profile) {
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update(updateRow)
+        .eq('user_id', uid);
+      if (updateErr) return { error: new Error(updateErr.message) };
+      await refreshProfile();
+      return { error: null };
+    }
+    // Insert new profile (signup flow)
+    const insertRow = { user_id: uid, ...updateRow };
+    const { error: insertErr } = await supabase.from('profiles').insert(insertRow);
     if (!insertErr) {
       await refreshProfile();
       return { error: null };
     }
+    // Row exists (e.g. profile was null in context) — update instead
     if (insertErr.code === '23505') {
       const { error: updateErr } = await supabase
         .from('profiles')
-        .update({ display_name: row.display_name, bio: row.bio, city: row.city, genres: row.genres, instruments: row.instruments })
+        .update(updateRow)
         .eq('user_id', uid);
       if (updateErr) return { error: new Error(updateErr.message) };
       await refreshProfile();
