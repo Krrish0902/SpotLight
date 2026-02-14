@@ -5,6 +5,7 @@ import { ChevronLeft, MapPin, Share2 } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 const mockEvent = {
   id: 1,
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function EventDetails({ navigate, event = mockEvent }: Props) {
+  const { appUser } = useAuth();
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -71,7 +73,7 @@ export default function EventDetails({ navigate, event = mockEvent }: Props) {
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
-      <BottomNav activeTab="events" navigate={navigate} />
+      <BottomNav activeTab="events" navigate={navigate} userRole={appUser?.role} isAuthenticated={!!appUser} />
     </View>
   );
 }

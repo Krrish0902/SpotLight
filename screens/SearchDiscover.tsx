@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 const mockArtists = [
   { id: 1, name: 'Maya Rivers', genre: 'Jazz • Soul', location: 'New York, NY', image: 'photo-1493225457124-a3eb161ffa5f', available: true, boosted: true },
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function SearchDiscover({ navigate }: Props) {
+  const { appUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -89,7 +91,7 @@ export default function SearchDiscover({ navigate }: Props) {
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
-      <BottomNav activeTab="search" navigate={navigate} />
+      <BottomNav activeTab="search" navigate={navigate} userRole={appUser?.role} isAuthenticated={!!appUser} />
     </View>
   );
 }

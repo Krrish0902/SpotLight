@@ -1,30 +1,78 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Music, Briefcase } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { useAuth, UserRole } from '../lib/auth-context';
 
 interface Props {
   navigate: (screen: string) => void;
-  setRole: (role: 'artist' | 'organizer' | 'admin' | 'public') => void;
+  setRole: (role: UserRole) => void;
 }
 
 export default function RoleSelection({ navigate, setRole }: Props) {
-  const handleRoleSelect = (role: 'artist' | 'organizer') => {
+  const { appUser, profile, updateRole } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Returning users with a role: redirect based on profile
+  useEffect(() => {
+    if (!appUser) return;
+    if (appUser.role === 'artist') {
+      setRole('artist');
+      navigate(profile ? 'artist-dashboard' : 'profile-setup');
+      return;
+    }
+    if (appUser.role === 'organizer') {
+      setRole('organizer');
+      navigate(profile ? 'organizer-dashboard' : 'profile-setup');
+      return;
+    }
+    if (appUser.role === 'admin') {
+      setRole('admin');
+      navigate('admin-dashboard');
+    }
+  }, [appUser?.role, profile]);
+
+  const handleRoleSelect = async (role: 'artist' | 'organizer') => {
+    setError(null);
+    setLoading(true);
+    const { error: err } = await updateRole(role);
+    setLoading(false);
+    if (err) {
+      setError(err.message);
+      Alert.alert('Something went wrong', err.message);
+      return;
+    }
     setRole(role);
-    navigate('profile-setup');
+    navigate(profile ? (role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard') : 'profile-setup');
+  };
+
+  const handleAdmin = async () => {
+    setError(null);
+    setLoading(true);
+    const { error: err } = await updateRole('admin');
+    setLoading(false);
+    if (err) {
+      setError(err.message);
+      Alert.alert('Something went wrong', err.message);
+      return;
+    }
+    setRole('admin');
+    navigate('admin-dashboard');
   };
 
   return (
     <LinearGradient colors={['#030712', '#000']} style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Join ArtistHub</Text>
+        <Text style={styles.title}>Join Spotlight</Text>
         <Text style={styles.subtitle}>Choose your role to get started</Text>
       </View>
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <View style={styles.cards}>
-        <Card onPress={() => handleRoleSelect('artist')} style={styles.artistCard}>
+        <Card onPress={() => !loading && handleRoleSelect('artist')} style={styles.artistCard}>
           <LinearGradient colors={['#9333ea', '#db2777']} style={styles.cardGradient}>
             <View style={styles.cardContent}>
               <View style={styles.iconCircle}>
@@ -38,7 +86,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
           </LinearGradient>
         </Card>
 
-        <Card onPress={() => handleRoleSelect('organizer')} style={styles.organizerCard}>
+        <Card onPress={() => !loading && handleRoleSelect('organizer')} style={styles.organizerCard}>
           <LinearGradient colors={['#f97316', '#eab308']} style={styles.cardGradient}>
             <View style={styles.cardContent}>
               <View style={styles.iconCircle}>
@@ -53,10 +101,11 @@ export default function RoleSelection({ navigate, setRole }: Props) {
         </Card>
       </View>
 
-        <Button variant="ghost" onPress={() => { setRole('admin'); navigate('admin-dashboard'); }} style={styles.adminBtn}>
-          <Text style={styles.adminText}>Admin Access</Text>
-        </Button>
-        <Text style={styles.skip} onPress={() => navigate('public-home')}>
+      {loading ? <ActivityIndicator size="small" color="#a855f7" style={{ marginVertical: 8 }} /> : null}
+      <Button variant="ghost" onPress={() => !loading && handleAdmin()} style={styles.adminBtn}>
+        <Text style={styles.adminText}>Admin Access</Text>
+      </Button>
+      <Text style={styles.skip} onPress={() => navigate('public-home')}>
         Skip for now
       </Text>
     </LinearGradient>
@@ -128,6 +177,12 @@ const styles = StyleSheet.create({
   },
   adminBtn: { marginTop: 16 },
   adminText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
+  errorText: {
+    color: '#f87171',
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   skip: {
     marginTop: 16,
     color: 'rgba(255,255,255,0.6)',

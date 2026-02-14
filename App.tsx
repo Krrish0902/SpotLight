@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AuthProvider, useAuth, UserRole } from './lib/auth-context';
 import SplashScreen from './screens/SplashScreen';
 import PublicHome from './screens/PublicHome';
 import SearchDiscover from './screens/SearchDiscover';
@@ -28,28 +29,47 @@ import ManageContests from './screens/ManageContests';
 import ManageLiveEvents from './screens/ManageLiveEvents';
 import ManageProfiles from './screens/ManageProfiles';
 
-export type UserRole = 'public' | 'artist' | 'organizer' | 'admin';
+export type { UserRole };
 
 export interface AppState {
   currentScreen: string;
   userRole: UserRole;
-  isAuthenticated: boolean;
   selectedArtist?: any;
   selectedEvent?: any;
 }
 
-function App() {
+function AppContent() {
+  const { appUser, profile, isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
   const [appState, setAppState] = useState<AppState>({
     currentScreen: 'public-home',
-    userRole: 'public',
-    isAuthenticated: false,
+    userRole: appUser?.role ?? 'public',
+    selectedArtist: undefined,
+    selectedEvent: undefined,
   });
+
+  const userRole = appUser?.role ?? appState.userRole;
+  const isAuthenticated = !!appUser;
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (appUser?.role) {
+      setAppState(prev => ({ ...prev, userRole: appUser.role }));
+    }
+  }, [appUser?.role]);
+
+  // Redirect logged-in users from public-home to their dashboard or profile setup
+  useEffect(() => {
+    if (isLoading || !appUser || appState.currentScreen !== 'public-home') return;
+    if (appUser.role === 'artist' || appUser.role === 'organizer') {
+      const target = profile ? (appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard') : 'profile-setup';
+      setAppState(prev => ({ ...prev, currentScreen: target, userRole: appUser.role }));
+    }
+  }, [appUser, profile, isLoading, appState.currentScreen]);
 
   const navigate = (screen: string, data?: any) => {
     setAppState(prev => ({
@@ -60,15 +80,19 @@ function App() {
   };
 
   const setRole = (role: UserRole) => {
-    setAppState(prev => ({
-      ...prev,
-      userRole: role,
-      isAuthenticated: true,
-    }));
+    setAppState(prev => ({ ...prev, userRole: role }));
   };
 
   if (showSplash) {
     return <SplashScreen />;
+  }
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#a855f7" />
+      </View>
+    );
   }
 
   const renderScreen = () => {
@@ -80,15 +104,15 @@ function App() {
       case 'event-details':
         return <EventDetails navigate={navigate} event={appState.selectedEvent} />;
       case 'login-signup':
-        return <LoginSignup navigate={navigate} />;
+        return <LoginSignup navigate={navigate} returnTo={appState.returnTo ?? 'public-home'} />;
       case 'role-selection':
         return <RoleSelection navigate={navigate} setRole={setRole} />;
       case 'profile-setup':
-        return <ProfileSetup navigate={navigate} userRole={appState.userRole} />;
+        return <ProfileSetup navigate={navigate} userRole={userRole} />;
       case 'artist-dashboard':
         return <ArtistDashboard navigate={navigate} />;
       case 'artist-profile':
-        return <ArtistProfile navigate={navigate} artist={appState.selectedArtist} userRole={appState.userRole} />;
+        return <ArtistProfile navigate={navigate} artist={appState.selectedArtist} userRole={userRole} />;
       case 'upload-video':
         return <UploadVideo navigate={navigate} />;
       case 'manage-availability':
@@ -123,10 +147,18 @@ function App() {
   };
 
   return (
+    <View style={styles.screen}>{renderScreen()}</View>
+  );
+}
+
+export default function App() {
+  return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <View style={styles.screen}>{renderScreen()}</View>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <AppContent />
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -140,6 +172,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
-
-export default App;

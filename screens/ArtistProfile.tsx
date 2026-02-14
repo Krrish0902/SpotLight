@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
+import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 const mockVideos = [
   { id: 1, thumbnail: 'photo-1493225457124-a3eb161ffa5f', title: 'Live at Jazz Night', views: 1234 },
@@ -21,16 +23,22 @@ interface Props {
 }
 
 export default function ArtistProfile({ navigate, artist, userRole = 'public' }: Props) {
+  const { profile } = useAuth();
   const isOwnProfile = artist?.id === 'me';
   const isOrganizer = userRole === 'organizer';
+  const displayName = isOwnProfile ? (profile?.display_name ?? artist?.name ?? 'Artist') : (artist?.name ?? 'Artist');
+  const genresStr = isOwnProfile ? (profile?.genres?.join(' • ') ?? artist?.genre ?? 'Artist') : (artist?.genre ?? 'Artist');
+  const cityStr = isOwnProfile ? (profile?.city ?? '') : '';
+  const bioStr = isOwnProfile ? (profile?.bio ?? '') : 'Professional artist.';
+  const isBoosted = isOwnProfile ? (profile?.is_boosted ?? false) : false;
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop' }} style={StyleSheet.absoluteFill} />
-          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate('artist-dashboard')}>
+          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? (userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard') : 'search-discover')}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
           <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => {}}>
@@ -42,17 +50,19 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
         <View style={styles.content}>
           <View style={styles.profileHeader}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>Maya Rivers</Text>
-              <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>
+              <Text style={styles.name}>{displayName}</Text>
+              {isBoosted && <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>}
             </View>
             <View style={styles.meta}>
               <Music size={20} color="#fff" />
-              <Text style={styles.metaText}>Jazz • Soul</Text>
+              <Text style={styles.metaText}>{genresStr || 'Artist'}</Text>
             </View>
-            <View style={styles.meta}>
-              <MapPin size={16} color="#fff" />
-              <Text style={styles.metaText}>New York, NY</Text>
-            </View>
+            {cityStr ? (
+              <View style={styles.meta}>
+                <MapPin size={16} color="#fff" />
+                <Text style={styles.metaText}>{cityStr}</Text>
+              </View>
+            ) : null}
             <Badge style={styles.availableBadge}>Available for Booking</Badge>
           </View>
 
@@ -75,7 +85,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
 
           <Card style={styles.bioCard}>
             <Text style={styles.bioTitle}>About</Text>
-            <Text style={styles.bioText}>Professional jazz and soul vocalist with 10+ years of experience. Available for weddings, corporate events, and private parties.</Text>
+            <Text style={styles.bioText}>{bioStr || (isOwnProfile ? 'Add your bio in profile setup.' : 'Artist profile.')}</Text>
           </Card>
 
           <View style={styles.statsRow}>
@@ -124,13 +134,16 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
           </Tabs>
         </View>
       </ScrollView>
+      {isOwnProfile && (
+        <BottomNav activeTab="profile" navigate={navigate} userRole={userRole} isAuthenticated />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  scroll: { paddingBottom: 48 },
+  scroll: {},
   coverWrap: { height: 192, position: 'relative' },
   backBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
   shareBtn: { position: 'absolute', top: 48, right: 16, backgroundColor: 'rgba(0,0,0,0.4)' },

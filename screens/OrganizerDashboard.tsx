@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 const bookingRequests = [
   { id: 1, artist: 'Maya Rivers', event: 'Summer Music Festival', date: 'June 15, 2026', status: 'pending', image: 'photo-1493225457124-a3eb161ffa5f' },
@@ -16,12 +17,15 @@ const bookingRequests = [
 interface Props { navigate: (screen: string, data?: any) => void; }
 
 export default function OrganizerDashboard({ navigate }: Props) {
+  const { profile, appUser } = useAuth();
+  const displayName = profile?.display_name ?? appUser?.email?.split('@')[0] ?? 'Organizer';
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View><Text style={styles.title}>Dashboard</Text><Text style={styles.subtitle}>Welcome back, John!</Text></View>
+          <View><Text style={styles.title}>Dashboard</Text><Text style={styles.subtitle}>Welcome back, {displayName}!</Text></View>
           <View style={styles.headerBtns}>
             <Button variant="ghost" size="icon"><Bell size={24} color="#fff" /></Button>
             <Button variant="ghost" size="icon"><Settings size={24} color="#fff" /></Button>
@@ -63,7 +67,7 @@ export default function OrganizerDashboard({ navigate }: Props) {
         ))}
         <View style={{ height: 100 }} />
       </ScrollView>
-      <BottomNav activeTab="home" navigate={navigate} userRole="organizer" />
+      <BottomNav activeTab="home" navigate={navigate} userRole="organizer" isAuthenticated />
     </View>
   );
 }

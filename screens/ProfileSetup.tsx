@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Camera, User, MapPin, Music } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Textarea } from '../components/ui/Textarea';
 import { Card } from '../components/ui/Card';
+import { useAuth } from '../lib/auth-context';
 
 interface Props {
   navigate: (screen: string) => void;
@@ -14,7 +15,39 @@ interface Props {
 }
 
 export default function ProfileSetup({ navigate, userRole }: Props) {
-  const handleComplete = () => {
+  const { saveProfile } = useAuth();
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [city, setCity] = useState('');
+  const [genres, setGenres] = useState('');
+  const [company, setCompany] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleComplete = async () => {
+    const name = (userRole === 'organizer' ? company.trim() || displayName.trim() : displayName.trim());
+    if (!name) {
+      setError(userRole === 'organizer' ? 'Please enter company name.' : 'Please enter your name.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+
+    const genresArr = genres.trim() ? genres.split(',').map((g) => g.trim()).filter(Boolean) : undefined;
+    const { error: err } = await saveProfile({
+      display_name: name,
+      bio: bio.trim() || undefined,
+      city: city.trim() || undefined,
+      genres: userRole === 'artist' ? genresArr : undefined,
+      instruments: userRole === 'artist' ? genresArr : undefined,
+    });
+
+    setLoading(false);
+    if (err) {
+      setError(err.message);
+      Alert.alert('Error', err.message);
+      return;
+    }
     if (userRole === 'artist') navigate('artist-dashboard');
     else if (userRole === 'organizer') navigate('organizer-dashboard');
   };
@@ -39,34 +72,57 @@ export default function ProfileSetup({ navigate, userRole }: Props) {
         </View>
 
         <Card style={styles.card}>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <View style={styles.field}>
             <Label>Full Name</Label>
-            <Input placeholder="Enter your name" />
+            <Input
+              placeholder="Enter your name"
+              value={displayName}
+              onChangeText={setDisplayName}
+            />
           </View>
           {userRole === 'artist' && (
             <>
               <View style={styles.field}>
                 <Label>Genre</Label>
-                <Input leftIcon={<Music size={20} color="rgba(255,255,255,0.4)" />} placeholder="e.g., Jazz, Rock, Electronic" />
+                <Input
+                  leftIcon={<Music size={20} color="rgba(255,255,255,0.4)" />}
+                  placeholder="e.g., Jazz, Rock, Electronic"
+                  value={genres}
+                  onChangeText={setGenres}
+                />
               </View>
               <View style={styles.field}>
                 <Label>Bio</Label>
-                <Textarea placeholder="Tell us about yourself and your music" />
+                <Textarea
+                  placeholder="Tell us about yourself and your music"
+                  value={bio}
+                  onChangeText={setBio}
+                />
               </View>
             </>
           )}
           <View style={styles.field}>
             <Label>Location</Label>
-            <Input leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />} placeholder="City, State" />
+            <Input
+              leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />}
+              placeholder="City, State"
+              value={city}
+              onChangeText={setCity}
+            />
           </View>
           {userRole === 'organizer' && (
             <View style={styles.field}>
               <Label>Company/Organization</Label>
-              <Input placeholder="Enter company name" />
+              <Input
+                placeholder="Enter company name"
+                value={company}
+                onChangeText={setCompany}
+              />
             </View>
           )}
-          <Button onPress={handleComplete} style={styles.completeBtn}>
-            <Text style={styles.completeText}>Complete Setup</Text>
+          <Button onPress={handleComplete} style={styles.completeBtn} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.completeText}>Complete Setup</Text>}
           </Button>
         </Card>
       </ScrollView>
@@ -84,6 +140,7 @@ const styles = StyleSheet.create({
   cameraBtn: { position: 'absolute', bottom: 0, right: '50%', marginRight: -70, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
   field: { marginBottom: 20 },
+  errorText: { color: '#f87171', fontSize: 14, marginBottom: 12 },
   completeBtn: { backgroundColor: '#a855f7', marginTop: 24 },
   completeText: { color: '#fff', fontSize: 16 },
 });

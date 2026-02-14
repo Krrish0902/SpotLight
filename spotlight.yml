@@ -1,0 +1,165 @@
+project_metadata:
+  name: "Spotlight: Music Networking App"
+  version: "1.0.0"
+  description: "A centralized mobile platform connecting emerging musicians with event organizers and the general public."
+  context: "Major Project Design Report - October 2025"
+
+tech_stack:
+  frontend_mobile:
+    framework: "React Native"
+    target_users: ["Artist", "Organizer", "General Public"]
+  frontend_web:
+    framework: "React.js"
+    target_users: ["Admin"]
+    purpose: "Dashboard for content moderation, contest management, and analytics"
+  backend:
+    service: "Supabase" # Chosen based on SQL schema requirements
+    database: "PostgreSQL"
+    auth: "Supabase Auth / Firebase Auth"
+    storage: "Supabase Storage / AWS S3" (for Video Portfolios)
+    payments: "Razorpay" (for Profile Boosts)
+  maps_location:
+    service: "Google Maps API / Mapbox" (for Discovery Module)
+
+database_schema:
+  enums:
+    UserRole: ["artist", "organizer", "public", "admin"]
+    BookingStatus: ["pending", "accepted", "rejected", "completed", "cancelled"]
+    PaymentStatus: ["pending", "success", "failed"]
+    
+  tables:
+    users:
+      description: "Core authentication table"
+      columns:
+        - { name: "user_id", type: "uuid", pk: true, default: "uuid_generate_v4()" }
+        - { name: "email", type: "varchar", unique: true, nullable: false }
+        - { name: "role", type: "UserRole", nullable: false }
+        - { name: "created_at", type: "timestamp", default: "now()" }
+
+    profiles:
+      description: "Extended user details, separated for flexibility"
+      columns:
+        - { name: "profile_id", type: "uuid", pk: true }
+        - { name: "user_id", type: "uuid", fk: "users.user_id", unique: true }
+        - { name: "display_name", type: "varchar", nullable: false }
+        - { name: "bio", type: "text" }
+        - { name: "city", type: "varchar", note: "For location filtering" }
+        - { name: "latitude", type: "decimal", note: "For proximity search" }
+        - { name: "longitude", type: "decimal", note: "For proximity search" }
+        - { name: "genres", type: "text[]", note: "Array of strings (e.g., Jazz, Rock)" }
+        - { name: "instruments", type: "text[]", note: "Array of strings" }
+        - { name: "is_boosted", type: "boolean", default: false, note: "Monetization feature" }
+        - { name: "boost_expiry", type: "timestamp" }
+
+    videos:
+      description: "Artist portfolio content (Reels-style)"
+      columns:
+        - { name: "video_id", type: "uuid", pk: true }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "video_url", type: "text", nullable: false, note: "Cloud storage link" }
+        - { name: "thumbnail_url", type: "text" }
+        - { name: "tags", type: "text[]", note: "For discovery algorithm" }
+        - { name: "views_count", type: "integer", default: 0 }
+        - { name: "likes_count", type: "integer", default: 0 }
+
+    events:
+      description: "Public live events created by Organizers"
+      columns:
+        - { name: "event_id", type: "uuid", pk: true }
+        - { name: "organizer_id", type: "uuid", fk: "users.user_id" }
+        - { name: "title", type: "varchar", nullable: false }
+        - { name: "event_date", type: "timestamp", nullable: false }
+        - { name: "location_coords", type: "point", note: "Geolocation" }
+        - { name: "poster_url", type: "text" }
+
+    bookings:
+      description: "Private gig requests between Organizer and Artist"
+      columns:
+        - { name: "booking_id", type: "uuid", pk: true }
+        - { name: "organizer_id", type: "uuid", fk: "users.user_id" }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "event_date", type: "timestamp", nullable: false }
+        - { name: "status", type: "BookingStatus", default: "pending" }
+        - { name: "price", type: "decimal" }
+        - { name: "message", type: "text" }
+
+    availability:
+      description: "Calendar management for Artists"
+      columns:
+        - { name: "availability_id", type: "uuid", pk: true }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "unavailable_date", type: "date" }
+
+    contests:
+      description: "Admin-managed competitions"
+      columns:
+        - { name: "contest_id", type: "uuid", pk: true }
+        - { name: "title", type: "varchar" }
+        - { name: "start_date", type: "timestamp" }
+        - { name: "end_date", type: "timestamp" }
+        - { name: "is_active", type: "boolean", default: true }
+
+    contest_submissions:
+      description: "Link between Artist Videos and Contests"
+      columns:
+        - { name: "submission_id", type: "uuid", pk: true }
+        - { name: "contest_id", type: "uuid", fk: "contests.contest_id" }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "video_id", type: "uuid", fk: "videos.video_id" }
+        - { name: "is_winner", type: "boolean", default: false }
+
+    payments:
+      description: "Transaction records for Profile Boosts"
+      columns:
+        - { name: "payment_id", type: "uuid", pk: true }
+        - { name: "user_id", type: "uuid", fk: "users.user_id" }
+        - { name: "amount", type: "decimal" }
+        - { name: "transaction_ref", type: "varchar", note: "Razorpay ID" }
+        - { name: "status", type: "PaymentStatus" }
+
+modules:
+  auth_module:
+    functionality: "Login, Registration, Role Assignment"
+    inputs: ["Email", "Password", "Role Selection"]
+  
+  profile_module:
+    functionality: "Manage bio, upload avatar, set location"
+    logic: "Artists define Genres/Instruments. Organizers define Company/Venue info."
+
+  discovery_module:
+    functionality: "Search for artists"
+    filters: ["Location (Proximity)", "Genre", "Instrument", "Availability"]
+    logic: "Query 'profiles' table using lat/long radius and array intersection for genres."
+
+  video_feed_module:
+    functionality: "TikTok/Reels style vertical swipe"
+    data_source: "Query 'videos' table, sorted by upload_date or algorithm."
+
+  booking_calendar_module:
+    functionality: "Request gigs, Manage Schedule"
+    conflict_check: "Check 'bookings' AND 'availability' tables before allowing a request."
+
+  contest_module:
+    functionality: "Admin creates contests, Artists submit existing portfolio videos."
+
+  payments_module:
+    functionality: "Monetization via Profile Boosts"
+    integration: "Razorpay"
+    post_success_action: "Update 'profiles.is_boosted' = true"
+
+api_endpoints_structure:
+  auth:
+    - POST /auth/signup
+    - POST /auth/login
+  discovery:
+    - GET /artists?genre=Jazz&city=Kochi
+    - GET /artists/nearby?lat=...&long=...
+  bookings:
+    - POST /bookings/request
+    - PATCH /bookings/{id}/status (Accept/Reject)
+  portfolio:
+    - POST /videos/upload
+    - GET /videos/feed
+  admin:
+    - POST /contests/create
+    - GET /analytics/usage

@@ -10,11 +10,17 @@ interface TabItem {
 interface TabsProps {
   defaultValue: string;
   tabs: TabItem[];
+  onValueChange?: (value: string) => void;
   children: (value: string) => React.ReactNode;
 }
 
-export function Tabs({ defaultValue, tabs, children }: TabsProps) {
+export function Tabs({ defaultValue, tabs, onValueChange, children }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultValue);
+
+  const setTab = (value: string) => {
+    setActiveTab(value);
+    onValueChange?.(value);
+  };
 
   return (
     <View style={styles.container}>
@@ -26,7 +32,7 @@ export function Tabs({ defaultValue, tabs, children }: TabsProps) {
               styles.tabTrigger,
               activeTab === tab.value && styles.tabTriggerActive,
             ]}
-            onPress={() => setActiveTab(tab.value)}
+            onPress={() => setTab(tab.value)}
           >
             <Text
               style={[

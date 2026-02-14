@@ -6,12 +6,18 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
 }
 
 export default function ArtistDashboard({ navigate }: Props) {
+  const { profile, appUser } = useAuth();
+  const displayName = profile?.display_name ?? appUser?.email?.split('@')[0] ?? 'Artist';
+  const genresStr = profile?.genres?.length ? profile.genres.join(' • ') : 'Artist';
+  const isBoosted = profile?.is_boosted ?? false;
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
@@ -19,7 +25,7 @@ export default function ArtistDashboard({ navigate }: Props) {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Dashboard</Text>
-            <Text style={styles.subtitle}>Welcome back, Maya!</Text>
+            <Text style={styles.subtitle}>Welcome back, {displayName}!</Text>
           </View>
           <View style={styles.headerBtns}>
             <Button variant="ghost" size="icon"><Bell size={24} color="#fff" /></Button>
@@ -27,14 +33,14 @@ export default function ArtistDashboard({ navigate }: Props) {
           </View>
         </View>
 
-        <Card style={styles.profileCard} onPress={() => navigate('artist-profile', { selectedArtist: { id: 'me' } })}>
+        <Card style={styles.profileCard} onPress={() => navigate('artist-profile', { selectedArtist: { id: 'me', name: displayName, genre: genresStr } })}>
           <LinearGradient colors={['#9333ea', '#db2777']} style={styles.profileGradient}>
             <View style={styles.profileContent}>
               <Image source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop' }} style={styles.avatar} />
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>Maya Rivers</Text>
-                <Text style={styles.profileGenre}>Jazz • Soul</Text>
-                <Badge icon={<Sparkles size={12} color="#fff" />} style={styles.boostBadge}>Profile Boosted</Badge>
+                <Text style={styles.profileName}>{displayName}</Text>
+                <Text style={styles.profileGenre}>{genresStr}</Text>
+                {isBoosted && <Badge icon={<Sparkles size={12} color="#fff" />} style={styles.boostBadge}>Profile Boosted</Badge>}
               </View>
             </View>
             <Button variant="secondary" style={styles.viewProfileBtn}><Text style={styles.viewProfileText}>View Public Profile</Text></Button>
@@ -100,7 +106,7 @@ export default function ArtistDashboard({ navigate }: Props) {
         </Card>
         <View style={{ height: 100 }} />
       </ScrollView>
-      <BottomNav activeTab="home" navigate={navigate} userRole="artist" />
+      <BottomNav activeTab="home" navigate={navigate} userRole="artist" isAuthenticated />
     </View>
   );
 }

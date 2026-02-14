@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart, Share2, User } from 'lucide-react-native';
+import { Heart, Share2, User, LogOut } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
+import { useAuth } from '../lib/auth-context';
 
 interface Artist {
   id: number;
@@ -28,6 +29,8 @@ interface Props {
 }
 
 export default function PublicHome({ navigate }: Props) {
+  const { appUser, signOut } = useAuth();
+  const isAuthenticated = !!appUser;
   const [artists, setArtists] = useState(mockArtists);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -58,13 +61,22 @@ export default function PublicHome({ navigate }: Props) {
 
       {/* Top Bar */}
       <View style={styles.topBar}>
-        <Text style={styles.logo}>ArtistHub</Text>
-        <Button variant="ghost" size="sm" onPress={() => navigate('login-signup')}>
-          <View style={styles.signInBtn}>
-            <User size={20} color="#fff" />
-            <Text style={styles.signInText}>Sign In</Text>
-          </View>
-        </Button>
+        <Text style={styles.logo}>Spotlight</Text>
+        {appUser ? (
+          <Button variant="ghost" size="sm" onPress={() => signOut()}>
+            <View style={styles.signInBtn}>
+              <LogOut size={20} color="#fff" />
+              <Text style={styles.signInText}>Sign Out</Text>
+            </View>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" onPress={() => navigate('login-signup')}>
+            <View style={styles.signInBtn}>
+              <User size={20} color="#fff" />
+              <Text style={styles.signInText}>Sign In</Text>
+            </View>
+          </Button>
+        )}
       </View>
 
       {/* Artist Info */}
@@ -106,7 +118,7 @@ export default function PublicHome({ navigate }: Props) {
         </Pressable>
       </View>
 
-      <BottomNav activeTab="home" navigate={navigate} />
+      <BottomNav activeTab="home" navigate={navigate} userRole={appUser?.role} isAuthenticated={isAuthenticated} />
     </View>
   );
 }

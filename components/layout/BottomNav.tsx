@@ -6,8 +6,9 @@ import { colors } from '../../theme';
 
 interface BottomNavProps {
   activeTab: string;
-  navigate: (screen: string) => void;
+  navigate: (screen: string, data?: any) => void;
   userRole?: string;
+  isAuthenticated?: boolean;
 }
 
 const tabs = [
@@ -17,16 +18,33 @@ const tabs = [
   { id: 'profile', Icon: User, label: 'Profile' },
 ];
 
-export default function BottomNav({ activeTab, navigate, userRole = 'public' }: BottomNavProps) {
+export default function BottomNav({ activeTab, navigate, userRole = 'public', isAuthenticated = false }: BottomNavProps) {
   const insets = useSafeAreaInsets();
 
-  const getScreen = (tabId: string) => {
+  const handleTabPress = (tabId: string) => {
     if (tabId === 'home') {
-      return userRole === 'artist' ? 'artist-dashboard' : userRole === 'organizer' ? 'organizer-dashboard' : 'public-home';
+      const screen = userRole === 'artist' ? 'artist-dashboard' : userRole === 'organizer' ? 'organizer-dashboard' : 'public-home';
+      navigate(screen);
+      return;
     }
-    if (tabId === 'search') return 'search-discover';
-    if (tabId === 'events') return 'event-details';
-    return 'login-signup';
+    if (tabId === 'search') {
+      navigate('search-discover');
+      return;
+    }
+    if (tabId === 'events') {
+      navigate('event-details');
+      return;
+    }
+    if (tabId === 'profile') {
+      if (isAuthenticated && (userRole === 'artist' || userRole === 'organizer')) {
+        navigate('artist-profile', { selectedArtist: { id: 'me' } });
+      } else if (isAuthenticated && userRole === 'admin') {
+        navigate('admin-dashboard');
+      } else {
+        navigate('login-signup', { returnTo: 'public-home' });
+      }
+      return;
+    }
   };
 
   return (
@@ -38,7 +56,7 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public' }: 
           return (
             <Pressable
               key={tab.id}
-              onPress={() => navigate(getScreen(tab.id))}
+              onPress={() => handleTabPress(tab.id)}
               style={styles.tab}
             >
               <Icon
