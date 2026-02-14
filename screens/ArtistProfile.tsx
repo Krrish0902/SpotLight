@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
@@ -8,13 +8,14 @@ import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
+import { supabase } from '../lib/supabase';
 
-const mockVideos = [
-  { id: 1, thumbnail: 'photo-1493225457124-a3eb161ffa5f', title: 'Live at Jazz Night', views: 1234 },
-  { id: 2, thumbnail: 'photo-1516450360452-9312f5e86fc7', title: 'Studio Session', views: 892 },
-  { id: 3, thumbnail: 'photo-1571609572760-64c0cd10b5ca', title: 'Summer Performance', views: 2341 },
-  { id: 4, thumbnail: 'photo-1558618666-fcd25c85cd64', title: 'Acoustic Set', views: 567 },
-];
+interface Video {
+  video_id: string;
+  thumbnail_url: string;
+  title: string;
+  views_count: number;
+}
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
@@ -23,25 +24,57 @@ interface Props {
 }
 
 export default function ArtistProfile({ navigate, artist, userRole = 'public' }: Props) {
-  const { profile } = useAuth();
-  const isOwnProfile = artist?.id === 'me';
+  const { profile, appUser } = useAuth(); // Access appUser for ID if profile is missing
+  const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
+
+  // Determine the ID to fetch videos for
+  const targetArtistId = isOwnProfile ? appUser?.id : artist?.user_id;
+
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+
+  useEffect(() => {
+    if (targetArtistId) {
+      fetchVideos();
+    }
+  }, [targetArtistId]);
+
+  const fetchVideos = async () => {
+    setLoadingVideos(true);
+    try {
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('artist_id', targetArtistId)
+        .order('upload_date', { ascending: false });
+
+      if (error) throw error;
+      setVideos(data || []);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
   const isOrganizer = userRole === 'organizer';
-  const displayName = isOwnProfile ? (profile?.display_name ?? artist?.name ?? 'Artist') : (artist?.name ?? 'Artist');
-  const genresStr = isOwnProfile ? (profile?.genres?.join(' • ') ?? artist?.genre ?? 'Artist') : (artist?.genre ?? 'Artist');
-  const cityStr = isOwnProfile ? (profile?.city ?? '') : '';
-  const bioStr = isOwnProfile ? (profile?.bio ?? '') : 'Professional artist.';
-  const isBoosted = isOwnProfile ? (profile?.is_boosted ?? false) : false;
+  const displayName = isOwnProfile ? (profile?.display_name ?? 'Artist') : (artist?.display_name ?? artist?.name ?? 'Artist');
+  const genresStr = isOwnProfile ? (profile?.genres?.join(' • ') ?? '') : (artist?.genres?.join(' • ') ?? artist?.genre ?? '');
+  const cityStr = isOwnProfile ? (profile?.city ?? '') : (artist?.city ?? '');
+  const bioStr = isOwnProfile ? (profile?.bio ?? '') : (artist?.bio ?? 'Professional artist.');
+  const isBoosted = isOwnProfile ? (profile?.is_boosted ?? false) : (artist?.is_boosted ?? false);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
+        {/* ... (keep existing cover/header code) ... */}
         <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop' }} style={StyleSheet.absoluteFill} />
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? (userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard') : 'search-discover')}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
-          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => {}}>
+          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => { }}>
             <Share2 size={24} color="#fff" />
           </Button>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop' }} style={styles.profileImg} />
@@ -55,7 +88,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
             </View>
             <View style={styles.meta}>
               <Music size={20} color="#fff" />
-              <Text style={styles.metaText}>{genresStr || 'Artist'}</Text>
+              <Text style={styles.metaText}>{genresStr || 'Gen Z Artist'}</Text>
             </View>
             {cityStr ? (
               <View style={styles.meta}>
@@ -97,16 +130,33 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
           <Tabs defaultValue="videos" tabs={[{ value: 'videos', label: 'Videos' }, { value: 'availability', label: 'Availability' }, { value: 'reviews', label: 'Reviews' }]}>
             {(tab) => tab === 'videos' ? (
               <View style={styles.videoGrid}>
-                {mockVideos.map((v) => (
-                  <View key={v.id} style={styles.videoItem}>
-                    <Image source={{ uri: `https://images.unsplash.com/${v.thumbnail}?w=400&h=600&fit=crop` }} style={styles.videoThumb} />
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={[StyleSheet.absoluteFill, styles.videoOverlay]} />
-                    <View style={styles.videoInfo}>
-                      <Text style={styles.videoTitle}>{v.title}</Text>
-                      <Text style={styles.videoViews}>{v.views.toLocaleString()} views</Text>
+                {loadingVideos ? (
+                  <ActivityIndicator color="#a855f7" style={{ marginTop: 20 }} />
+                ) : videos.length > 0 ? (
+                  videos.map((v) => (
+                    <View key={v.video_id} style={styles.videoItem}>
+                      <Image
+                        source={{ uri: v.thumbnail_url || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=400&h=600&fit=crop' }}
+                        style={styles.videoThumb}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={[StyleSheet.absoluteFill, styles.videoOverlay]} />
+                      <View style={styles.videoInfo}>
+                        <Text style={styles.videoTitle} numberOfLines={1}>{v.title || 'Untitled'}</Text>
+                        <Text style={styles.videoViews}>{v.views_count?.toLocaleString() ?? 0} views</Text>
+                      </View>
                     </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>No videos uploaded yet.</Text>
+                    {isOwnProfile && (
+                      <Button variant="outline" onPress={() => navigate('upload-video')} style={{ marginTop: 12 }}>
+                        <Text style={{ color: '#fff' }}>Upload Video</Text>
+                      </Button>
+                    )}
                   </View>
-                ))}
+                )}
               </View>
             ) : tab === 'availability' ? (
               <Card style={styles.availCard}>
@@ -124,7 +174,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
                   <Image source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' }} style={styles.reviewAvatar} />
                   <View style={styles.reviewMeta}>
                     <Text style={styles.reviewer}>John Smith</Text>
-                    <View style={styles.stars}>{[1,2,3,4,5].map(i => <Star key={i} size={16} color="#facc15" fill="#facc15" />)}</View>
+                    <View style={styles.stars}>{[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} color="#facc15" fill="#facc15" />)}</View>
                   </View>
                   <Text style={styles.reviewTime}>2 days ago</Text>
                 </View>
@@ -168,7 +218,7 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
   statLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
   videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  videoItem: { width: '47%', aspectRatio: 9/16, borderRadius: 8, overflow: 'hidden', position: 'relative' },
+  videoItem: { width: '47%', aspectRatio: 9 / 16, borderRadius: 8, overflow: 'hidden', position: 'relative' },
   videoThumb: { width: '100%', height: '100%' },
   videoOverlay: { bottom: 0 },
   videoInfo: { position: 'absolute', bottom: 8, left: 8, right: 8 },
@@ -186,4 +236,6 @@ const styles = StyleSheet.create({
   stars: { flexDirection: 'row', gap: 2 },
   reviewTime: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
   reviewText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 20 },
+  emptyState: { width: '100%', alignItems: 'center', padding: 32 },
+  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16 },
 });

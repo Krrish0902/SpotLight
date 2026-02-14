@@ -61,6 +61,7 @@ database_schema:
         - { name: "tags", type: "text[]", note: "For discovery algorithm" }
         - { name: "views_count", type: "integer", default: 0 }
         - { name: "likes_count", type: "integer", default: 0 }
+        - { name: "upload_date", type: "timestamp", default: "now()" }
 
     events:
       description: "Public live events created by Organizers"

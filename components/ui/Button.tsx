@@ -4,6 +4,7 @@ import {
   Text,
   View,
   StyleSheet,
+  StyleProp,
   ViewStyle,
   TextStyle,
   PressableProps,
@@ -16,7 +17,7 @@ type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 interface ButtonProps extends Omit<PressableProps, 'style'> {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   textStyle?: TextStyle;
   children: React.ReactNode;
 }
