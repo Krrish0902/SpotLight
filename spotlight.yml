@@ -65,14 +65,24 @@ database_schema:
         - { name: "upload_date", type: "timestamp", default: "now()" }
 
     events:
-      description: "Public live events created by Organizers"
+      description: "Public live events created by Organizers, subject to Admin approval before listing"
       columns:
         - { name: "event_id", type: "uuid", pk: true }
         - { name: "organizer_id", type: "uuid", fk: "users.user_id" }
         - { name: "title", type: "varchar", nullable: false }
-        - { name: "event_date", type: "timestamp", nullable: false }
-        - { name: "location_coords", type: "point", note: "Geolocation" }
+        - { name: "description", type: "text" }
         - { name: "poster_url", type: "text" }
+        - { name: "event_date", type: "timestamp", nullable: false }
+        - { name: "location_name", type: "varchar" }
+        - { name: "location_coords", type: "point" }
+        - { name: "city", type: "varchar", note: "Used for fast filtering by location" }
+        - { name: "ticket_links", type: "text", note: "Optional external ticketing links (legacy support)" }
+        - { name: "ticket_price", type: "decimal" }
+        - { name: "total_tickets", type: "integer" }
+        - { name: "available_tickets", type: "integer" }
+        - { name: "approval_status", type: "varchar", default: "pending", note: "pending, approved, rejected" }
+        - { name: "is_deleted", type: "boolean", default: false }
+        - { name: "created_at", type: "timestamp", default: "now()" }
 
     bookings:
       description: "Private gig requests between Organizer and Artist"

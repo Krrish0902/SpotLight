@@ -28,6 +28,8 @@ import ApproveBoost from './screens/ApproveBoost';
 import ManageContests from './screens/ManageContests';
 import ManageLiveEvents from './screens/ManageLiveEvents';
 import ManageProfiles from './screens/ManageProfiles';
+import CreateEventScreen from './screens/CreateEventScreen';
+import EventsGridScreen from './screens/EventsGridScreen';
 
 export type { UserRole };
 
@@ -36,6 +38,7 @@ export interface AppState {
   userRole: UserRole;
   selectedArtist?: any;
   selectedEvent?: any;
+  eventId?: string;
 }
 
 function AppContent() {
@@ -111,7 +114,7 @@ function AppContent() {
       case 'search-discover':
         return <SearchDiscover navigate={navigate} />;
       case 'event-details':
-        return <EventDetails navigate={navigate} event={appState.selectedEvent} />;
+        return <EventDetails navigate={navigate} event={appState.selectedEvent} eventId={appState.eventId} />;
       case 'login-signup':
         return <LoginSignup navigate={navigate} returnTo={appState.returnTo ?? 'public-home'} />;
       case 'role-selection':
@@ -134,6 +137,10 @@ function AppContent() {
         return <PurchaseBoost navigate={navigate} />;
       case 'payment':
         return <PaymentScreen navigate={navigate} />;
+      case 'create-event':
+        return <CreateEventScreen navigate={navigate} />;
+      case 'events-grid':
+        return <EventsGridScreen navigate={navigate} />;
       case 'organizer-dashboard':
         return <OrganizerDashboard navigate={navigate} />;
       case 'request-booking':
