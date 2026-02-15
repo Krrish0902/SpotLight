@@ -85,22 +85,40 @@ database_schema:
         - { name: "created_at", type: "timestamp", default: "now()" }
 
     bookings:
-      description: "Private gig requests between Organizer and Artist"
+      description: "Organizer requests Artist for a gig; private until accepted"
       columns:
-        - { name: "booking_id", type: "uuid", pk: true }
+        - { name: "booking_id", type: "uuid", pk: true, default: "gen_random_uuid()" }
         - { name: "organizer_id", type: "uuid", fk: "users.user_id" }
         - { name: "artist_id", type: "uuid", fk: "users.user_id" }
-        - { name: "event_date", type: "timestamp", nullable: false }
+        - { name: "event_date", type: "timestamptz", nullable: false }
         - { name: "status", type: "BookingStatus", default: "pending" }
         - { name: "price", type: "decimal" }
         - { name: "message", type: "text" }
+        - { name: "created_at", type: "timestamptz", default: "now()" }
 
     availability:
-      description: "Calendar management for Artists"
+      description: "Dates when Artist is unavailable (blocked)"
       columns:
-        - { name: "availability_id", type: "uuid", pk: true }
+        - { name: "availability_id", type: "uuid", pk: true, default: "gen_random_uuid()" }
         - { name: "artist_id", type: "uuid", fk: "users.user_id" }
-        - { name: "unavailable_date", type: "date" }
+        - { name: "unavailable_date", type: "date", nullable: false }
+        - { name: "created_at", type: "timestamptz", default: "now()" }
+      constraints:
+        - "UNIQUE(artist_id, unavailable_date)"
+
+    artist_schedule:
+      description: "Manual work entries (gigs added by artist, e.g. outside the app)"
+      columns:
+        - { name: "schedule_id", type: "uuid", pk: true, default: "gen_random_uuid()" }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "schedule_date", type: "date", nullable: false }
+        - { name: "title", type: "varchar(255)", nullable: false }
+        - { name: "notes", type: "text" }
+        - { name: "start_time", type: "time", note: "Optional; for schedule entries with specific time" }
+        - { name: "duration_minutes", type: "integer", note: "Optional; event length in minutes" }
+        - { name: "venue", type: "varchar(255)", note: "Venue or location name" }
+        - { name: "location_address", type: "text", note: "Full address if needed" }
+        - { name: "created_at", type: "timestamptz", default: "now()" }
 
     contests:
       description: "Admin-managed competitions"
@@ -149,7 +167,11 @@ modules:
 
   booking_calendar_module:
     functionality: "Request gigs, Manage Schedule"
-    conflict_check: "Check 'bookings' AND 'availability' tables before allowing a request."
+    conflict_check: "Check 'bookings', 'availability', and 'artist_schedule' tables before allowing a request."
+    tables:
+      - "bookings: Organizer→Artist gig requests"
+      - "availability: Artist blocked/unavailable dates"
+      - "artist_schedule: Artist manual work entries (time, duration, venue)"
 
   contest_module:
     functionality: "Admin creates contests, Artists submit existing portfolio videos."

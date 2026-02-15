@@ -12,10 +12,11 @@ interface TabsProps {
   defaultValue: string;
   tabs: TabItem[];
   onValueChange?: (value: string) => void;
+  fullWidth?: boolean;
   children: (value: string) => React.ReactNode;
 }
 
-export function Tabs({ defaultValue, tabs, onValueChange, children }: TabsProps) {
+export function Tabs({ defaultValue, tabs, onValueChange, fullWidth, children }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultValue);
 
   const setTab = (value: string) => {
@@ -23,34 +24,61 @@ export function Tabs({ defaultValue, tabs, onValueChange, children }: TabsProps)
     onValueChange?.(value);
   };
 
+  const TabBar = fullWidth ? (
+    <View style={[styles.tabList, styles.tabListFullWidth]}>
+      {tabs.map((tab) => (
+        <Pressable
+          key={tab.value}
+          style={[
+            styles.tabTrigger,
+            fullWidth && styles.tabTriggerFullWidth,
+            activeTab === tab.value && styles.tabTriggerActive,
+          ]}
+          onPress={() => setTab(tab.value)}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === tab.value && styles.tabTextActive,
+            ]}
+          >
+            {tab.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  ) : (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.tabList}
+      style={styles.tabListScroll}
+    >
+      {tabs.map((tab) => (
+        <Pressable
+          key={tab.value}
+          style={[
+            styles.tabTrigger,
+            activeTab === tab.value && styles.tabTriggerActive,
+          ]}
+          onPress={() => setTab(tab.value)}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === tab.value && styles.tabTextActive,
+            ]}
+          >
+            {tab.label}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabList}
-        style={styles.tabListScroll}
-      >
-        {tabs.map((tab) => (
-          <Pressable
-            key={tab.value}
-            style={[
-              styles.tabTrigger,
-              activeTab === tab.value && styles.tabTriggerActive,
-            ]}
-            onPress={() => setTab(tab.value)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.value && styles.tabTextActive,
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {TabBar}
       <View style={styles.content}>{children(activeTab)}</View>
     </View>
   );
@@ -70,12 +98,19 @@ const styles = StyleSheet.create({
     padding: 4,
     gap: 4,
   },
+  tabListFullWidth: {
+    width: '100%',
+    marginBottom: 24,
+  },
   tabTrigger: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
+  },
+  tabTriggerFullWidth: {
+    flex: 1,
   },
   tabTriggerActive: {
     backgroundColor: colors.primary,

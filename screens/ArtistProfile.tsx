@@ -18,6 +18,16 @@ interface Video {
   views_count: number;
 }
 
+interface ScheduleEvent {
+  id: string;
+  date: string;
+  time: string | null;
+  title: string;
+  venue: string | null;
+  source: 'schedule' | 'booking';
+  status?: string;
+}
+
 interface Props {
   navigate: (screen: string, data?: any) => void;
   artist?: any;
@@ -33,6 +43,8 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
 
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<ScheduleEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   // Refetch profile when viewing own profile to ensure we have latest data (fixes stale/empty data on tab switch)
   useEffect(() => {
@@ -44,8 +56,76 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
   useEffect(() => {
     if (targetArtistId) {
       fetchVideos();
+      fetchUpcomingEvents();
     }
   }, [targetArtistId]);
+
+  const fetchUpcomingEvents = async () => {
+    if (!targetArtistId) return;
+    setLoadingEvents(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const events: ScheduleEvent[] = [];
+
+      const { data: scheduleData } = await supabase
+        .from('artist_schedule')
+        .select('schedule_id, schedule_date, start_time, title, venue')
+        .eq('artist_id', targetArtistId)
+        .gte('schedule_date', today)
+        .order('schedule_date', { ascending: true })
+        .limit(5);
+
+      (scheduleData || []).forEach((s: any) => {
+        const time = s.start_time ? String(s.start_time).slice(0, 5) : null;
+        events.push({
+          id: s.schedule_id,
+          date: s.schedule_date,
+          time,
+          title: s.title,
+          venue: s.venue,
+          source: 'schedule',
+        });
+      });
+
+      if (isOwnProfile) {
+        const { data: bookingsData } = await supabase
+          .from('bookings')
+          .select('booking_id, event_date, status')
+          .eq('artist_id', targetArtistId)
+          .in('status', ['accepted', 'pending'])
+          .gte('event_date', today)
+          .order('event_date', { ascending: true })
+          .limit(5);
+
+        (bookingsData || []).forEach((b: any) => {
+          const d = new Date(b.event_date);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          events.push({
+            id: b.booking_id,
+            date: dateStr,
+            time: timeStr,
+            title: 'Booking',
+            venue: null,
+            source: 'booking',
+            status: b.status,
+          });
+        });
+      }
+
+      events.sort((a, b) => {
+        const cmp = a.date.localeCompare(b.date);
+        if (cmp !== 0) return cmp;
+        return (a.time || '00:00').localeCompare(b.time || '00:00');
+      });
+      setUpcomingEvents(events.slice(0, 3));
+    } catch (e) {
+      console.error('Error fetching events:', e);
+      setUpcomingEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
 
   const fetchVideos = async () => {
     setLoadingVideos(true);
@@ -159,7 +239,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
             <Card style={styles.statCard}><Text style={styles.statNum}>4.9</Text><Text style={styles.statLabel}>Rating</Text></Card>
           </View>
 
-          <Tabs defaultValue="videos" tabs={[{ value: 'videos', label: 'Videos' }, { value: 'availability', label: 'Availability' }, { value: 'reviews', label: 'Reviews' }]}>
+          <Tabs defaultValue="videos" fullWidth tabs={[{ value: 'videos', label: 'Videos' }, { value: 'schedule', label: 'Schedule' }, { value: 'reviews', label: 'Reviews' }]}>
             {(tab) => tab === 'videos' ? (
               <View style={styles.videoGrid}>
                 {loadingVideos ? (
@@ -190,15 +270,43 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
                   </View>
                 )}
               </View>
-            ) : tab === 'availability' ? (
-              <Card style={styles.availCard}>
-                {['Feb 15, 2026', 'Feb 20-22, 2026', 'Mar 5, 2026'].map((d, i) => (
-                  <View key={i} style={styles.availRow}>
-                    <Calendar size={20} color="#a855f7" />
-                    <Text style={styles.availDate}>{d}</Text>
-                    <Badge style={styles.availBadge}>Available</Badge>
+            ) : tab === 'schedule' ? (
+              <Card style={styles.scheduleCard}>
+                {loadingEvents ? (
+                  <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
+                ) : upcomingEvents.length === 0 ? (
+                  <View style={styles.emptySchedule}>
+                    <Calendar size={40} color="rgba(255,255,255,0.3)" />
+                    <Text style={styles.emptyScheduleText}>No upcoming events</Text>
+                    {isOwnProfile && (
+                      <Button variant="outline" size="sm" onPress={() => navigate('manage-availability')} style={{ marginTop: 12 }}>
+                        <Text style={{ color: '#fff' }}>Manage Schedule</Text>
+                      </Button>
+                    )}
                   </View>
-                ))}
+                ) : (
+                  upcomingEvents.map((ev) => (
+                    <View key={ev.id} style={styles.scheduleRow}>
+                      <Calendar size={20} color="#a855f7" />
+                      <View style={styles.scheduleInfo}>
+                        <Text style={styles.scheduleTitle}>{ev.title}</Text>
+                        <Text style={styles.scheduleMeta}>
+                          {new Date(ev.date + 'T12:00:00').toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                          {ev.time ? ` • ${ev.time}` : ''}
+                          {ev.venue ? ` • ${ev.venue}` : ''}
+                        </Text>
+                        {ev.source === 'booking' && ev.status && (
+                          <Badge style={styles.scheduleBadge}>{ev.status}</Badge>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                )}
               </Card>
             ) : (
               <Card style={styles.reviewCard}>
@@ -262,10 +370,14 @@ const styles = StyleSheet.create({
   videoInfo: { position: 'absolute', bottom: 8, left: 8, right: 8 },
   videoTitle: { color: '#fff', fontWeight: '500', fontSize: 14 },
   videoViews: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  availCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
-  availRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  availDate: { flex: 1, color: '#fff' },
-  availBadge: { backgroundColor: 'rgba(34,197,94,0.2)', borderWidth: 0 },
+  scheduleCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
+  scheduleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  scheduleInfo: { flex: 1, minWidth: 0 },
+  scheduleTitle: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  scheduleMeta: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 4 },
+  scheduleBadge: { marginTop: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(168,85,247,0.2)', borderWidth: 0 },
+  emptySchedule: { alignItems: 'center', padding: 32 },
+  emptyScheduleText: { color: 'rgba(255,255,255,0.5)', fontSize: 15, marginTop: 12 },
   reviewCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   reviewAvatar: { width: 40, height: 40, borderRadius: 20 },
