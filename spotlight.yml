@@ -146,6 +146,15 @@ database_schema:
         - { name: "amount", type: "decimal" }
         - { name: "transaction_ref", type: "varchar", note: "Razorpay ID" }
         - { name: "status", type: "PaymentStatus" }
+    tickets:
+      description: "Public ticket bookings made by users for approved events"
+      columns:
+        - { name: "ticket_id", type: "uuid", pk: true }
+        - { name: "user_id", type: "uuid", fk: "users.user_id", nullable: false }
+        - { name: "event_id", type: "uuid", fk: "events.event_id", nullable: false }
+        - { name: "quantity", type: "integer", nullable: false }
+        - { name: "total_amount", type: "decimal", nullable: false }
+        - { name: "booked_at", type: "timestamp", default: "now()" }
 
 modules:
   auth_module:
@@ -180,6 +189,16 @@ modules:
     functionality: "Monetization via Profile Boosts"
     integration: "Razorpay"
     post_success_action: "Update 'profiles.is_boosted' = true"
+  ticket_booking_module:
+    functionality: "Allow users to book tickets for approved events"
+    accessible_to: ["public", "artist", "organizer"]
+    logic:
+      - "Check event availability"
+      - "Insert booking record into tickets table"
+      - "Decrement available_tickets in events table"
+      - "Update availability status dynamically"
+    constraints:
+      - "Booking not allowed if event is sold out"
 
 api_endpoints_structure:
   auth:

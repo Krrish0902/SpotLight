@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
-import { Text } from '../components/ui/Text';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, Modal, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, MapPin, Share2 } from 'lucide-react-native';
+import { ChevronLeft, MapPin, Share2, X, Minus, Plus } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
@@ -33,6 +32,11 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
   const { appUser } = useAuth();
   const [event, setEvent] = useState<any>(initialEvent || (eventId ? null : mockEvent));
   const [loading, setLoading] = useState(false);
+
+  // Booking State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   useEffect(() => {
     // If we have an eventId but no full event data, fetch it
@@ -85,6 +89,67 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
     if (available === 0) return { label: 'SOLD OUT', color: '#ef4444', disabled: true }; // Red
     if (total > 0 && available <= total * 0.2) return { label: 'FAST FILLING', color: '#f97316', disabled: false }; // Orange
     return { label: 'AVAILABLE', color: '#22c55e', disabled: false }; // Green
+  };
+
+  const incrementQty = () => {
+    if (quantity < 5 && quantity < event.available) setQuantity(q => q + 1);
+  };
+
+  const decrementQty = () => {
+    if (quantity > 1) setQuantity(q => q - 1);
+  };
+
+  const handleBooking = async () => {
+    if (!appUser) {
+      Alert.alert('Login Required', 'Please login to book tickets.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigate('login-signup', { returnTo: 'event-details' }) }
+      ]);
+      return;
+    }
+
+    if (quantity > event.available) {
+      Alert.alert('Unavailable', `Only ${event.available} tickets left.`);
+      return;
+    }
+
+    setBookingLoading(true);
+    try {
+      // 1. Insert into tickets
+      const { error: ticketError } = await supabase.from('tickets').insert({
+        user_id: appUser.id,
+        event_id: event.id,
+        quantity: quantity,
+        total_amount: quantity * (event.price || 0),
+      });
+
+      if (ticketError) throw ticketError;
+
+      // 2. Update events availability (Optimistic update on UI, but critical on DB)
+      const newAvailable = event.available - quantity;
+      const { error: eventError } = await supabase
+        .from('events')
+        .update({ available_tickets: newAvailable })
+        .eq('event_id', event.id);
+
+      if (eventError) {
+        console.error("Event update failed", eventError);
+        throw eventError;
+      }
+
+      Alert.alert('Success', 'Tickets booked successfully!', [
+        {
+          text: 'OK', onPress: () => {
+            setModalVisible(false);
+            fetchEventDetails(event.id); // Refresh UI
+          }
+        }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Booking Failed', error.message || 'Something went wrong.');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   if (loading) {
@@ -151,12 +216,12 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
             <Button
               style={[styles.ticketBtn, status.disabled && styles.disabledBtn]}
               disabled={status.disabled}
+              onPress={() => { setQuantity(1); setModalVisible(true); }}
             >
               {status.disabled ? 'Sold Out' : 'Get Tickets'}
             </Button>
           </Card>
 
-          {/* Rest of the content */}
           <Text style={styles.sectionTitle}>About This Event</Text>
           <Text style={styles.description}>{event.description}</Text>
 
@@ -174,6 +239,47 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Booking Modal */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Tickets</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.qtyContainer}>
+              <Text style={styles.qtyLabel}>Quantity</Text>
+              <View style={styles.qtyControls}>
+                <TouchableOpacity onPress={decrementQty} style={styles.qtyBtn}>
+                  <Minus size={20} color={quantity > 1 ? "#fff" : "#555"} />
+                </TouchableOpacity>
+                <Text style={styles.qtyValue}>{quantity}</Text>
+                <TouchableOpacity onPress={incrementQty} style={styles.qtyBtn}>
+                  <Plus size={20} color={quantity < 5 && quantity < event.available ? "#fff" : "#555"} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalValue}>${(quantity * (event.price || 0)).toFixed(2)}</Text>
+            </View>
+
+            <Button
+              onPress={handleBooking}
+              disabled={bookingLoading}
+              style={{ marginTop: 24, backgroundColor: '#a855f7' }}
+            >
+              {bookingLoading ? <ActivityIndicator color="#fff" /> : 'Confirm Booking'}
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
       <BottomNav activeTab="events" navigate={navigate} userRole={appUser?.role} isAuthenticated={!!appUser} />
     </View>
   );
@@ -214,4 +320,16 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
   disabledBtn: { backgroundColor: '#374151', opacity: 0.7 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1f2937', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  qtyContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  qtyLabel: { color: '#fff', fontSize: 16 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#374151', padding: 8, borderRadius: 12 },
+  qtyBtn: { padding: 4 },
+  qtyValue: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#374151', paddingTop: 16 },
+  totalLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
+  totalValue: { color: '#fbbf24', fontSize: 24, fontWeight: 'bold' },
 });
