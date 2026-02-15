@@ -41,6 +41,18 @@ export default function OrganizerDashboard({ navigate }: Props) {
           </LinearGradient>
         </Card>
 
+        <Card style={styles.createEventCard} onPress={() => navigate('create-event')}>
+          <LinearGradient colors={['#a855f7', '#7c3aed']} style={styles.createEventGradient}>
+            <View style={styles.searchContent}>
+              <View style={styles.searchIcon}><Calendar size={28} color="#fff" /></View>
+              <View style={styles.searchText}>
+                <Text style={styles.searchTitle}>Create Event</Text>
+                <Text style={styles.searchDesc}>Host a new live event</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </Card>
+
         <View style={styles.statsGrid}>
           <Card style={styles.statCard}><TrendingUp size={24} color="#a855f7" /><Text style={styles.statNum}>12</Text><Text style={styles.statLabel}>Events</Text></Card>
           <Card style={styles.statCard}><MessageSquare size={24} color="#60a5fa" /><Text style={styles.statNum}>8</Text><Text style={styles.statLabel}>Bookings</Text></Card>
@@ -79,7 +91,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
   subtitle: { color: 'rgba(255,255,255,0.6)', marginTop: 4 },
   headerBtns: { flexDirection: 'row', gap: 8 },
-  searchCard: { borderWidth: 0, overflow: 'hidden', marginBottom: 24 },
+  searchCard: { borderWidth: 0, overflow: 'hidden', marginBottom: 12 },
+  createEventCard: { borderWidth: 0, overflow: 'hidden', marginBottom: 24 },
+  createEventGradient: { padding: 24 },
   searchGradient: { padding: 24 },
   searchContent: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   searchIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },

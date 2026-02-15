@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, MapPin, Share2 } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
+import { supabase } from '../lib/supabase';
 
 const mockEvent = {
   id: 1,
@@ -23,28 +24,115 @@ const mockEvent = {
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
-  event?: typeof mockEvent;
+  event?: any;
+  eventId?: string;
 }
 
-export default function EventDetails({ navigate, event = mockEvent }: Props) {
+export default function EventDetails({ navigate, event: initialEvent, eventId }: Props) {
   const { appUser } = useAuth();
+  const [event, setEvent] = useState<any>(initialEvent || (eventId ? null : mockEvent));
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // If we have an eventId but no full event data, fetch it
+    if (eventId && (!event || !event.title)) {
+      fetchEventDetails(eventId);
+    } else if (initialEvent) {
+      setEvent(initialEvent);
+    }
+  }, [eventId, initialEvent]);
+
+  const fetchEventDetails = async (id: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('event_id', id)
+        .single();
+
+      if (error) throw error;
+
+      // Transform data to match UI expectations if needed
+      // Map database fields to UI fields
+      const mappedEvent = {
+        ...data,
+        id: data.event_id,
+        date: new Date(data.event_date).toLocaleDateString(),
+        venue: data.location_name + (data.city ? `, ${data.city}` : ''),
+        image: data.poster_url, // Poster URL might need fallback if null in DB, handled in Image source
+        lineup: mockEvent.lineup, // Placeholder as we don't have lineup in DB yet
+        price: data.ticket_price,
+        available: data.available_tickets,
+        total: data.total_tickets,
+      };
+      setEvent(mappedEvent);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+      // Fallback to mock on error or show alert
+      setEvent(mockEvent);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('events-grid');
+  };
+
+  const getAvailabilityStatus = (available: number, total: number) => {
+    if (available === 0) return { label: 'SOLD OUT', color: '#ef4444', disabled: true }; // Red
+    if (total > 0 && available <= total * 0.2) return { label: 'FAST FILLING', color: '#f97316', disabled: false }; // Orange
+    return { label: 'AVAILABLE', color: '#22c55e', disabled: false }; // Green
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#a855f7" />
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#fff' }}>Event not found</Text>
+        <Button onPress={handleBack} style={{ marginTop: 20 }}>Go Back</Button>
+      </View>
+    );
+  }
+
+  // Handle image source: if it starts with http, use uri, else use unsplash ID logic from mock
+  const imageSource = event.image?.startsWith('http')
+    ? { uri: event.image }
+    : { uri: `https://images.unsplash.com/${event.image || mockEvent.image}?w=800&h=600&fit=crop` };
+
+  const status = getAvailabilityStatus(event.available, event.total);
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerImage}>
-          <Image source={{ uri: `https://images.unsplash.com/${event.image}?w=800&h=600&fit=crop` }} style={styles.headerImg} />
+          <Image source={imageSource} style={styles.headerImg} />
           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={StyleSheet.absoluteFill} />
-          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate('public-home')}>
+          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={handleBack}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
-          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => {}}>
+          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => { }}>
             <Share2 size={24} color="#fff" />
           </Button>
         </View>
 
         <View style={styles.content}>
           <Card style={styles.eventCard}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.eventTitle}>{event.title}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: status.color }]}>
+                <Text style={styles.statusText}>{status.label}</Text>
+              </View>
+            </View>
+
             <View style={styles.eventMeta}>
               <MapPin size={20} color="#a855f7" />
               <Text style={styles.metaText}>{event.date}</Text>
@@ -53,14 +141,26 @@ export default function EventDetails({ navigate, event = mockEvent }: Props) {
               <MapPin size={20} color="#a855f7" />
               <Text style={styles.metaText}>{event.venue}</Text>
             </View>
-            <Button style={styles.ticketBtn}>Get Tickets</Button>
+            <View style={styles.eventMeta}>
+              <Text style={[styles.metaText, { color: '#fbbf24', fontWeight: 'bold' }]}>
+                {event.price ? `$${event.price}` : 'Free'}
+              </Text>
+            </View>
+
+            <Button
+              style={[styles.ticketBtn, status.disabled && styles.disabledBtn]}
+              disabled={status.disabled}
+            >
+              {status.disabled ? 'Sold Out' : 'Get Tickets'}
+            </Button>
           </Card>
 
+          {/* Rest of the content */}
           <Text style={styles.sectionTitle}>About This Event</Text>
           <Text style={styles.description}>{event.description}</Text>
 
           <Text style={styles.sectionTitle}>Lineup</Text>
-          {event.lineup.map((artist: any) => (
+          {event.lineup && event.lineup.map((artist: any) => (
             <Card key={artist.id} onPress={() => navigate('artist-profile', { selectedArtist: artist })} style={styles.lineupCard}>
               <Image source={{ uri: `https://images.unsplash.com/${artist.image}?w=200&h=200&fit=crop` }} style={styles.lineupImg} />
               <View style={styles.lineupInfo}>
@@ -108,4 +208,9 @@ const styles = StyleSheet.create({
   lineupInfo: { flex: 1, marginLeft: 16 },
   lineupName: { color: '#fff', fontWeight: '600', fontSize: 16 },
   lineupGenre: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  ticketBtnText: { color: '#fff', fontWeight: '600' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
+  disabledBtn: { backgroundColor: '#374151', opacity: 0.7 },
 });

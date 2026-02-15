@@ -32,7 +32,7 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
       return;
     }
     if (tabId === 'events') {
-      navigate('event-details');
+      navigate('events-grid');
       return;
     }
     if (tabId === 'profile') {
