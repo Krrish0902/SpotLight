@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, Image, ScrollView, StyleSheet } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Plus, MapPin, Calendar, Users, Edit, Trash2 } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';

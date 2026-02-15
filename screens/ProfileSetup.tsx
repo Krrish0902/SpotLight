@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Camera, User, MapPin, Music } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
@@ -73,8 +74,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       return;
     }
     if (isEdit && returnTo) navigate(returnTo, { selectedArtist: { id: 'me' } });
-    else if (userRole === 'artist') navigate('artist-dashboard');
-    else if (userRole === 'organizer') navigate('organizer-dashboard');
+    else navigate('public-home');
   };
 
   const goBack = () => {

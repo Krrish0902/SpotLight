@@ -1,14 +1,15 @@
 import React from 'react';
-import { TextInput, StyleSheet, TextInputProps } from 'react-native';
+import { TextInput, StyleSheet, TextInputProps, Platform } from 'react-native';
 import { colors } from '../../theme';
 
 export function Textarea(props: TextInputProps) {
   return (
     <TextInput
-      style={styles.textarea}
+      style={[styles.textarea, Platform.OS === 'android' && { lineHeight: 22 }]}
       placeholderTextColor={colors['white/40']}
       multiline
       textAlignVertical="top"
+      includeFontPadding={Platform.OS === 'android' ? false : undefined}
       {...props}
     />
   );

@@ -1,17 +1,29 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Users, Video, Calendar, Trophy, DollarSign, TrendingUp } from 'lucide-react-native';
+import { Users, Video, Calendar, Trophy, DollarSign, TrendingUp, LogOut } from 'lucide-react-native';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { useAuth } from '../lib/auth-context';
 
 interface Props { navigate: (screen: string) => void; }
 
 export default function AdminDashboard({ navigate }: Props) {
+  const { signOut } = useAuth();
   return (
     <LinearGradient colors={['#030712', '#000']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}><Text style={styles.title}>Admin Dashboard</Text><Text style={styles.subtitle}>Manage your platform</Text></View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.subtitle}>Manage your platform</Text>
+          </View>
+          <Button variant="outline" size="sm" onPress={async () => { await signOut(); navigate('public-home'); }} style={styles.signOutBtn}>
+            <LogOut size={18} color="#fff" />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </Button>
+        </View>
 
         <View style={styles.statsGrid}>
           <Card style={styles.statCardPurple}><Users size={32} color="#c084fc" /><Text style={styles.statNum}>1,234</Text><Text style={styles.statLabel}>Total Users</Text></Card>
@@ -55,7 +67,9 @@ export default function AdminDashboard({ navigate }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 24 },
-  header: { marginBottom: 32 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
+  signOutBtn: { flexDirection: 'row', gap: 6, borderColor: 'rgba(255,255,255,0.3)' },
+  signOutText: { color: '#fff', fontSize: 14 },
   title: { fontSize: 36, fontWeight: 'bold', color: '#fff' },
   subtitle: { color: 'rgba(255,255,255,0.6)', marginTop: 8 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 32 },

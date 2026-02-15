@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Pressable } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Upload, X, Calendar, MapPin, DollarSign, Users } from 'lucide-react-native';
@@ -29,6 +30,7 @@ export default function CreateEventScreen({ navigate }: Props) {
     const [description, setDescription] = useState('');
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
     const [locationName, setLocationName] = useState('');
     const [city, setCity] = useState('');
     const [ticketPrice, setTicketPrice] = useState('');
@@ -131,10 +133,32 @@ export default function CreateEventScreen({ navigate }: Props) {
         }
     };
 
+    // mode="datetime" is iOS-only; Android requires separate date + time pickers
     const onDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(false);
-        if (selectedDate) {
+        if (event?.type === 'dismissed') {
+            setShowDatePicker(false);
+            setShowTimePicker(false);
+            return;
+        }
+        if (!selectedDate) return;
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
             setDate(selectedDate);
+            setShowTimePicker(true);
+        } else {
+            setDate(selectedDate);
+            setShowDatePicker(false);
+        }
+    };
+
+    const onTimeChange = (event: any, selectedTime?: Date) => {
+        if (event?.type === 'dismissed') {
+            setShowTimePicker(false);
+            return;
+        }
+        if (selectedTime) {
+            setDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate(), selectedTime.getHours(), selectedTime.getMinutes()));
+            setShowTimePicker(false);
         }
     };
 
@@ -195,17 +219,25 @@ export default function CreateEventScreen({ navigate }: Props) {
                             <View style={styles.row}>
                                 <View style={[styles.field, { flex: 1 }]}>
                                     <Label>Date & Time</Label>
-                                    <Pressable onPress={() => setShowDatePicker(true)} style={styles.datePickerBtn} disabled={loading}>
+                                    <Pressable onPress={() => { setShowDatePicker(true); setShowTimePicker(false); }} style={styles.datePickerBtn} disabled={loading}>
                                         <Calendar size={20} color="rgba(255,255,255,0.6)" />
                                         <Text style={styles.dateText}>{date.toLocaleString()}</Text>
                                     </Pressable>
                                     {showDatePicker && (
                                         <DateTimePicker
                                             value={date}
-                                            mode="datetime"
+                                            mode={Platform.OS === 'ios' ? 'datetime' : 'date'}
                                             display="default"
                                             onChange={onDateChange}
                                             minimumDate={new Date()}
+                                        />
+                                    )}
+                                    {showTimePicker && Platform.OS === 'android' && (
+                                        <DateTimePicker
+                                            value={date}
+                                            mode="time"
+                                            display="default"
+                                            onChange={onTimeChange}
                                         />
                                     )}
                                 </View>

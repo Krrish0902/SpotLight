@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Music, Briefcase } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
@@ -16,17 +17,17 @@ export default function RoleSelection({ navigate, setRole }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Returning users (login): go straight to dashboard; profile-setup is only for signup
+  // Returning users (login): go to home; dashboard is only through profile
   useEffect(() => {
     if (!appUser) return;
     if (appUser.role === 'artist') {
       setRole('artist');
-      navigate('artist-dashboard');
+      navigate('public-home');
       return;
     }
     if (appUser.role === 'organizer') {
       setRole('organizer');
-      navigate('organizer-dashboard');
+      navigate('public-home');
       return;
     }
     if (appUser.role === 'admin') {
@@ -46,7 +47,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
       return;
     }
     setRole(role);
-    navigate(profile ? (role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard') : 'profile-setup');
+    navigate(profile ? 'public-home' : 'profile-setup');
   };
 
   const handleAdmin = async () => {

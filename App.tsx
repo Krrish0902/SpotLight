@@ -65,23 +65,7 @@ function AppContent() {
     }
   }, [appUser?.role]);
 
-  // Redirect logged-in artist/organizer from public-home to dashboard (profile-setup only on signup)
-  useEffect(() => {
-    if (isLoading || !appUser || appState.currentScreen !== 'public-home') return;
-    if (appUser.role === 'artist' || appUser.role === 'organizer') {
-      const target = appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard';
-      setAppState(prev => ({ ...prev, currentScreen: target, userRole: appUser.role }));
-    }
-  }, [appUser, isLoading, appState.currentScreen]);
-
-  // Avoid "pop" by rendering target screen directly when we would redirect from public-home
-  const effectiveScreen = (() => {
-    if (appState.currentScreen !== 'public-home' || isLoading || !appUser) return appState.currentScreen;
-    if (appUser.role === 'artist' || appUser.role === 'organizer') {
-      return appUser.role === 'artist' ? 'artist-dashboard' : 'organizer-dashboard';
-    }
-    return appState.currentScreen;
-  })();
+  // Home always shows static public-home; dashboard is only through profile
 
   const navigate = (screen: string, data?: any) => {
     setAppState(prev => ({
@@ -108,7 +92,7 @@ function AppContent() {
   }
 
   const renderScreen = () => {
-    switch (effectiveScreen) {
+    switch (appState.currentScreen) {
       case 'public-home':
         return <PublicHome navigate={navigate} />;
       case 'search-discover':

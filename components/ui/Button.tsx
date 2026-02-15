@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Pressable,
-  Text,
   View,
   StyleSheet,
   StyleProp,
@@ -9,6 +8,7 @@ import {
   TextStyle,
   PressableProps,
 } from 'react-native';
+import { Text } from './Text';
 import { colors } from '../../theme';
 
 type ButtonVariant = 'default' | 'outline' | 'ghost' | 'secondary' | 'link';
@@ -93,7 +93,10 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
   },
   text: {
     fontSize: 14,

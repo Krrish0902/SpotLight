@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { Text } from './Text';
 import { colors } from '../../theme';
 
 interface TabItem {
@@ -24,7 +25,12 @@ export function Tabs({ defaultValue, tabs, onValueChange, children }: TabsProps)
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabList}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabList}
+        style={styles.tabListScroll}
+      >
         {tabs.map((tab) => (
           <Pressable
             key={tab.value}
@@ -44,7 +50,7 @@ export function Tabs({ defaultValue, tabs, onValueChange, children }: TabsProps)
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
       <View style={styles.content}>{children(activeTab)}</View>
     </View>
   );
@@ -54,16 +60,19 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  tabListScroll: {
+    marginBottom: 24,
+  },
   tabList: {
     flexDirection: 'row',
     backgroundColor: colors['white/5'],
     borderRadius: 12,
     padding: 4,
-    marginBottom: 24,
+    gap: 4,
   },
   tabTrigger: {
-    flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,

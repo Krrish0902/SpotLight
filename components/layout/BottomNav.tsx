@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { Text } from '../ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Search, Calendar, User } from 'lucide-react-native';
 import { colors } from '../../theme';
@@ -23,8 +24,7 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
 
   const handleTabPress = (tabId: string) => {
     if (tabId === 'home') {
-      const screen = userRole === 'artist' ? 'artist-dashboard' : userRole === 'organizer' ? 'organizer-dashboard' : 'public-home';
-      navigate(screen);
+      navigate('public-home');
       return;
     }
     if (tabId === 'search') {

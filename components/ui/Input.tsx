@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { colors } from '../../theme';
 
@@ -27,9 +28,11 @@ export function Input({
         style={[
           styles.input,
           leftIcon ? styles.inputWithIcon : undefined,
+          Platform.OS === 'android' && { lineHeight: 22 },
           style,
         ]}
         placeholderTextColor={placeholderTextColor}
+        includeFontPadding={Platform.OS === 'android' ? false : undefined}
         {...props}
       />
     </View>

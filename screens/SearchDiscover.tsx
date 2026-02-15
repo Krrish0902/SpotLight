@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Image, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Search, Filter, MapPin, Music } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';

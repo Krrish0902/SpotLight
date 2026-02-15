@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, ActivityIndicator, Dimensions, Pressable } from 'react-native';
+import { View, StyleSheet, FlatList, Image, ActivityIndicator, Dimensions, Pressable } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Calendar, AlertCircle } from 'lucide-react-native';

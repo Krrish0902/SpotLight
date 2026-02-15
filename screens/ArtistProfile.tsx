@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil } from 'lucide-react-native';
+import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export default function ArtistProfile({ navigate, artist, userRole = 'public' }: Props) {
-  const { profile, appUser, fetchProfile } = useAuth();
+  const { profile, appUser, fetchProfile, signOut } = useAuth();
   const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
 
   // Determine the ID to fetch videos for
@@ -79,7 +80,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
         <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop' }} style={StyleSheet.absoluteFill} />
-          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? (userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard') : 'search-discover')}>
+          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? 'public-home' : 'search-discover')}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
           <View style={styles.headerRight}>
@@ -118,7 +119,13 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
           </View>
 
           <View style={styles.actionRow}>
-            {isOrganizer && (
+            {isOwnProfile && (
+              <Button onPress={() => navigate(userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard')} style={styles.dashboardBtn}>
+                <LayoutDashboard size={20} color="#fff" />
+                <Text style={styles.bookBtnText}>My Dashboard</Text>
+              </Button>
+            )}
+            {isOrganizer && !isOwnProfile && (
               <>
                 <Button onPress={() => navigate('request-booking', { selectedArtist: artist })} style={styles.bookBtn}>
                   <Calendar size={20} color="#fff" />
@@ -138,6 +145,13 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
             <Text style={styles.bioTitle}>About</Text>
             <Text style={styles.bioText}>{bioStr || (isOwnProfile ? 'Add your bio in profile setup.' : 'Artist profile.')}</Text>
           </Card>
+
+          {isOwnProfile && (
+            <Button variant="outline" onPress={async () => { await signOut(); navigate('public-home'); }} style={[styles.signOutBtn, { alignSelf: 'stretch', width: '100%' }]}>
+              <LogOut size={20} color="#fff" />
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </Button>
+          )}
 
           <View style={styles.statsRow}>
             <Card style={styles.statCard}><Text style={styles.statNum}>2.8K</Text><Text style={styles.statLabel}>Followers</Text></Card>
@@ -228,14 +242,17 @@ const styles = StyleSheet.create({
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
   availableBadge: { backgroundColor: 'rgba(34,197,94,0.2)', marginTop: 12, borderColor: 'rgba(34,197,94,0.3)' },
   actionRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  bookBtn: { flex: 1, backgroundColor: '#a855f7', flexDirection: 'row', gap: 8 },
+  bookBtn: { flex: 1, minWidth: 0, backgroundColor: '#a855f7', flexDirection: 'row', gap: 8 },
+  dashboardBtn: { flex: 1, minWidth: 0, backgroundColor: '#7e22ce', flexDirection: 'row', gap: 8 },
   bookBtnText: { color: '#fff' },
   msgBtn: { borderColor: 'rgba(255,255,255,0.2)' },
   bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, marginBottom: 24 },
+  signOutBtn: { flexDirection: 'row', gap: 8, marginBottom: 24, borderColor: 'rgba(255,255,255,0.3)' },
+  signOutText: { color: '#fff', fontSize: 16 },
   bioTitle: { color: '#fff', fontWeight: '600', marginBottom: 8 },
   bioText: { color: 'rgba(255,255,255,0.7)', lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, alignItems: 'center' },
+  statCard: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, alignItems: 'center', overflow: 'visible' },
   statNum: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
   statLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
   videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
