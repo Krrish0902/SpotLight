@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Camera, User, MapPin, Music } from 'lucide-react-native';
+import { ChevronLeft, Camera, User, MapPin, Music, Crosshair } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
@@ -27,8 +28,11 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [genres, setGenres] = useState('');
   const [company, setCompany] = useState('');
+  const [capturingLocation, setCapturingLocation] = useState(false);
 
   React.useEffect(() => {
     if (isEdit && profile) {
@@ -36,10 +40,41 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       setDisplayName(profile.display_name ?? '');
       setBio(profile.bio ?? '');
       setCity(profile.city ?? '');
+      setLatitude(profile.latitude ?? null);
+      setLongitude(profile.longitude ?? null);
       setGenres(profile.genres?.join(', ') ?? '');
       if (userRole === 'organizer') setCompany(profile.display_name ?? '');
     }
   }, [isEdit, profile, userRole]);
+
+  const captureLocation = async () => {
+    setCapturingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Location access is required to capture your coordinates.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+      setLatitude(loc.coords.latitude);
+      setLongitude(loc.coords.longitude);
+      try {
+        const [addr] = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        if (addr?.city || addr?.region) {
+          setCity([addr.city, addr.region].filter(Boolean).join(', ') || city);
+        }
+      } catch {
+        // Keep current city if reverse geocode fails
+      }
+    } catch (e: any) {
+      Alert.alert('Location error', e.message || 'Could not get your location.');
+    } finally {
+      setCapturingLocation(false);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +98,8 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       display_name: name,
       bio: bio.trim() || undefined,
       city: city.trim() || undefined,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
       genres: userRole === 'artist' ? genresArr : undefined,
       instruments: userRole === 'artist' ? genresArr : undefined,
     });
@@ -147,12 +184,33 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
           )}
           <View style={styles.field}>
             <Label>Location</Label>
-            <Input
-              leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />}
-              placeholder="City, State"
-              value={city}
-              onChangeText={setCity}
-            />
+            <View style={styles.locationRow}>
+              <Input
+                leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />}
+                placeholder="City, State"
+                value={city}
+                onChangeText={setCity}
+                containerStyle={styles.locationInput}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={captureLocation}
+                disabled={capturingLocation}
+                style={styles.captureBtn}
+              >
+                {capturingLocation ? (
+                  <ActivityIndicator color="#a855f7" size="small" />
+                ) : (
+                  <Crosshair size={18} color="#a855f7" />
+                )}
+              </Button>
+            </View>
+            {(latitude != null && longitude != null) && (
+              <Text style={styles.coordsText}>
+                lat: {latitude.toFixed(4)}, long: {longitude.toFixed(4)}
+              </Text>
+            )}
           </View>
           {userRole === 'organizer' && (
             <View style={styles.field}>
@@ -190,6 +248,10 @@ const styles = StyleSheet.create({
   cameraBtn: { position: 'absolute', bottom: 0, right: '50%', marginRight: -70, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
   field: { marginBottom: 20 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  locationInput: { flex: 1, minWidth: 0 },
+  captureBtn: { width: 44, height: 44, padding: 0, borderColor: 'rgba(168,85,247,0.5)' },
+  coordsText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 6 },
   errorText: { color: '#f87171', fontSize: 14, marginBottom: 12 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24, alignItems: 'center' },
   cancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.3)' },
