@@ -1,23 +1,14 @@
-import React, { useState } from 'react';
-import { View, Image, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Image, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Filter, MapPin, Music } from 'lucide-react-native';
+import { ChevronLeft, Search, Filter, X } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Badge } from '../components/ui/Badge';
-import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
-
-const mockArtists = [
-  { id: 1, name: 'Maya Rivers', genre: 'Jazz • Soul', location: 'New York, NY', image: 'photo-1493225457124-a3eb161ffa5f', available: true, boosted: true },
-  { id: 2, name: 'The Neon Lights', genre: 'Indie Rock', location: 'Austin, TX', image: 'photo-1516450360452-9312f5e86fc7', available: true, boosted: false },
-  { id: 3, name: 'DJ Eclipse', genre: 'Electronic', location: 'Los Angeles, CA', image: 'photo-1571609572760-64c0cd10b5ca', available: false, boosted: true },
-  { id: 4, name: 'Sofia Chen', genre: 'Classical', location: 'San Francisco', image: 'photo-1558618666-fcd25c85cd64', available: true, boosted: false },
-  { id: 5, name: 'Marcus Stone', genre: 'Hip Hop', location: 'Atlanta, GA', image: 'photo-1493225457124-a3eb161ffa5f', available: true, boosted: false },
-  { id: 6, name: 'Luna Sky', genre: 'Pop', location: 'Miami, FL', image: 'photo-1516450360452-9312f5e86fc7', available: true, boosted: true },
-];
+import { searchArtists, Artist } from './searchService';
+import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from '../lib/searchHistory';
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
@@ -25,109 +16,255 @@ interface Props {
 
 export default function SearchDiscover({ navigate }: Props) {
   const { appUser } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [recentSearches, setRecentSearches] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (appUser?.id) {
+      getRecentSearches(appUser.id).then(setRecentSearches);
+    } else {
+      setRecentSearches([]);
+    }
+  }, [appUser?.id]);
+
+  const showRecent = searchQuery.length < 3;
+
+  useEffect(() => {
+    let isActive = true;
+
+    const delayDebounce = setTimeout(async () => {
+      if (searchQuery.length >= 3) {
+        setLoading(true);
+        const results = await searchArtists(searchQuery);
+        if (isActive) {
+          setArtists(results ?? []);
+          setLoading(false);
+        }
+      } else {
+        if (isActive) {
+          setArtists([]);
+          setLoading(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      isActive = false;
+      clearTimeout(delayDebounce);
+    };
+  }, [searchQuery]);
+
+  const handleArtistSelect = async (artist: Artist) => {
+    // Save full artist object to history
+    if (appUser?.id) {
+      const updated = await addRecentSearch(appUser.id, artist);
+      setRecentSearches(updated);
+    }
+    navigate('artist-profile', { selectedArtist: artist });
+  };
+
+  const handleSearchSubmit = () => {
+    // No action needed on submit, we save on selection
+  };
+
+  const handleRemoveRecent = async (id: string) => {
+    if (appUser?.id) {
+      const updated = await removeRecentSearch(appUser.id, id);
+      setRecentSearches(updated);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (appUser?.id) {
+      await clearRecentSearches(appUser.id);
+      setRecentSearches([]);
+    }
+  };
+
+  const renderItem = ({ item }: { item: Artist }) => {
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.resultItem, pressed && styles.pressedItem]}
+        onPress={() => handleArtistSelect(item)}
+      >
+        <Image source={{ uri: item.profile_image }} style={styles.avatar} />
+        <View style={styles.textContainer}>
+          <Text style={styles.name}>{item.display_name || item.name}</Text>
+          <Text style={styles.username}>
+            {item.username ? `@${item.username}` : item.genre}
+          </Text>
+        </View>
+        {showRecent && (
+          <Pressable onPress={() => handleRemoveRecent(item.id)} hitSlop={12} style={styles.removeBtn}>
+            <X size={18} color="rgba(255,255,255,0.4)" />
+          </Pressable>
+        )}
+      </Pressable>
+    );
+  };
+
 
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Button variant="ghost" size="icon" onPress={() => navigate('public-home')}>
-            <ChevronLeft size={24} color="#fff" />
-          </Button>
-          <Text style={styles.title}>Discover Artists</Text>
-        </View>
 
-        <View style={styles.searchRow}>
-          <Input
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search artists, genres..."
-            leftIcon={<Search size={20} color="rgba(255,255,255,0.4)" />}
-            style={styles.searchInput}
-          />
-          <Button size="icon" style={styles.filterBtn} onPress={() => setShowFilters(!showFilters)}>
-            <Filter size={20} color="#fff" />
-          </Button>
-        </View>
+      <FlatList
+        data={showRecent ? recentSearches : artists}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <Button variant="ghost" size="icon" onPress={() => navigate('public-home')}>
+                <ChevronLeft size={24} color="#fff" />
+              </Button>
+              <Text style={styles.title}>Discover Artists</Text>
+            </View>
 
-        {showFilters && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterPills}>
-            <Badge style={[styles.pill, { backgroundColor: '#a855f7' }]}>All Genres</Badge>
-            <Badge variant="outline" style={styles.pill}>Jazz</Badge>
-            <Badge variant="outline" style={styles.pill}>Rock</Badge>
-            <Badge variant="outline" style={styles.pill}>Electronic</Badge>
-            <Badge variant="outline" style={styles.pill}>Hip Hop</Badge>
-          </ScrollView>
-        )}
+            <View style={styles.searchRow}>
+              <Input
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search artists, genres..."
+                leftIcon={<Search size={20} color="rgba(255,255,255,0.4)" />}
+                containerStyle={styles.searchInput}
+                onSubmitEditing={handleSearchSubmit}
+                returnKeyType="search"
+              />
+              <Button size="icon" style={styles.filterBtn} onPress={() => setShowFilters(!showFilters)}>
+                <Filter size={20} color="#fff" />
+              </Button>
+            </View>
 
-        <View style={styles.grid}>
-          {mockArtists.map((artist) => (
-            <Card key={artist.id} onPress={() => navigate('artist-profile', { selectedArtist: artist })} style={styles.artistCard}>
-              <View style={styles.artistImageWrap}>
-                <Image
-                  source={{ uri: `https://images.unsplash.com/${artist.image}?w=400&h=500&fit=crop` }}
-                  style={styles.artistImage}
-                />
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={StyleSheet.absoluteFill} />
-                <View style={styles.badges}>
-                  {artist.boosted && <Badge style={[styles.imgBadge, { backgroundColor: '#9333ea' }]}>⭐ Boosted</Badge>}
-                  {artist.available && <Badge style={[styles.imgBadge, { backgroundColor: '#22c55e' }]}>Available</Badge>}
-                </View>
-                <View style={styles.artistInfo}>
-                  <Text style={styles.artistName}>{artist.name}</Text>
-                  <View style={styles.artistMeta}>
-                    <Music size={12} color="rgba(255,255,255,0.7)" />
-                    <Text style={styles.artistGenre}>{artist.genre}</Text>
-                  </View>
-                  <View style={styles.artistMeta}>
-                    <MapPin size={12} color="rgba(255,255,255,0.6)" />
-                    <Text style={styles.artistLocation}>{artist.location}</Text>
-                  </View>
-                </View>
+            {showRecent && recentSearches.length > 0 && (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Searches</Text>
+                <Pressable onPress={handleClearAll}>
+                  <Text style={styles.clearText}>Clear All</Text>
+                </Pressable>
               </View>
-            </Card>
-          ))}
-        </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
-      <BottomNav activeTab="search" navigate={navigate} userRole={appUser?.role} isAuthenticated={!!appUser} />
+            )}
+
+            {loading && <ActivityIndicator color="#a855f7" style={styles.loader} />}
+          </>
+        }
+        ListEmptyComponent={
+          !loading && !showRecent ? (
+            <Text style={styles.emptyText}>No artists found.</Text>
+          ) : null
+        }
+      />
+
+      <BottomNav
+        activeTab={"search" as any}
+        navigate={navigate}
+        userRole={appUser?.role}
+        isAuthenticated={!!appUser}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 120 },
+  listContent: { paddingBottom: 120 }, // Removed vertical padding to allow edge-to-edge feel
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+
   searchInput: { flex: 1 },
-  filterBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
-  filterPills: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  pill: { marginRight: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between' },
-  artistCard: {
-    width: '47%',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
-    padding: 0,
+
+  filterBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
   },
-  artistImageWrap: { aspectRatio: 3 / 4, position: 'relative' },
-  artistImage: { width: '100%', height: '100%' },
-  badges: { position: 'absolute', top: 8, right: 8, gap: 4 },
-  imgBadge: { fontSize: 10 },
-  artistInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 },
-  artistName: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  artistMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  artistGenre: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
-  artistLocation: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
+
+  loader: {
+    marginTop: 20,
+  },
+
+  emptyText: {
+    color: '#777',
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+  },
+
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+
+  pressedItem: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginRight: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+
+  textContainer: { flex: 1, justifyContent: 'center' },
+  name: { color: '#fff', fontWeight: '600', fontSize: 16, marginBottom: 1 },
+  username: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginLeft: 84, // Inset separator (Avatar width + margins)
+  },
+
+  // Recent Search Styles
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  clearText: {
+    color: '#a855f7',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  removeBtn: { padding: 8, marginLeft: 8 },
 });

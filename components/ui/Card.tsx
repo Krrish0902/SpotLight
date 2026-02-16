@@ -9,19 +9,22 @@ interface CardProps {
 }
 
 export function Card({ children, style, onPress }: CardProps) {
-  const content = (
-    <View style={[styles.card, style]}>{children}</View>
-  );
-
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.95 }]}>
-        {content}
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.card,
+          style,
+          pressed && { opacity: 0.95 },
+        ]}
+      >
+        {children}
       </Pressable>
     );
   }
 
-  return content;
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

@@ -8,6 +8,8 @@ tech_stack:
   frontend_mobile:
     framework: "React Native"
     target_users: ["Artist", "Organizer", "General Public"]
+    state_management: "React Context (Auth)"
+    local_storage: "AsyncStorage (Search History)"
   frontend_web:
     framework: "React.js"
     target_users: ["Admin"]
@@ -44,6 +46,7 @@ database_schema:
         - { name: "username", type: "varchar", note: "User-chosen unique handle (e.g. maya_rivers)" }
         - { name: "display_name", type: "varchar", nullable: false }
         - { name: "bio", type: "text" }
+        - { name: "profile_image_url", type: "text", note: "Avatar URL" }
         - { name: "city", type: "varchar", note: "For location filtering" }
         - { name: "latitude", type: "decimal", note: "For proximity search" }
         - { name: "longitude", type: "decimal", note: "For proximity search" }
@@ -166,9 +169,9 @@ modules:
     logic: "Artists define Genres/Instruments. Organizers define Company/Venue info."
 
   discovery_module:
-    functionality: "Search for artists"
-    filters: ["Location (Proximity)", "Genre", "Instrument", "Availability"]
-    logic: "Query 'profiles' table using lat/long radius and array intersection for genres."
+    functionality: "Search for artists, View Recent Searches"
+    filters: ["Location (Proximity)", "Genre", "Instrument", "Availability", "Text Search (Username/Display Name)"]
+    logic: "Supabase 'ilike' query on profiles. Recent searches cached locally via AsyncStorage, scoped to authenticated user_id."
 
   video_feed_module:
     functionality: "TikTok/Reels style vertical swipe"
