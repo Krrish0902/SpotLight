@@ -56,7 +56,7 @@ database_schema:
       description: "Artist portfolio content (Reels-style)"
       columns:
         - { name: "video_id", type: "uuid", pk: true }
-        - { name: "artist_id", type: "uuid", fk: "users.user_id" }
+        - { name: "artist_id", type: "uuid", fk: "profiles.user_id" }
         - { name: "video_url", type: "text", nullable: false, note: "Cloud storage link" }
         - { name: "thumbnail_url", type: "text" }
         - { name: "tags", type: "text[]", note: "For discovery algorithm" }
@@ -172,7 +172,8 @@ modules:
 
   video_feed_module:
     functionality: "TikTok/Reels style vertical swipe"
-    data_source: "Query 'videos' table, sorted by upload_date or algorithm."
+    data_source: "Query 'videos' table with inner join on 'profiles' (FK: videos.artist_id -> profiles.user_id)"
+    implementation: "Uses expo-video for playback (migrated from expo-av)"
 
   booking_calendar_module:
     functionality: "Request gigs, Manage Schedule"
