@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Image, Pressable, StyleSheet, Dimensions, FlatList, ActivityIndicator, StatusBar } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart, Share2, User, Music, MapPin, MoreVertical } from 'lucide-react-native';
+import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
@@ -37,23 +37,59 @@ interface Props {
   navigate: (screen: string, data?: any) => void;
 }
 
-const VideoFeedItem = ({ item, isActive, navigate }: { item: VideoItem; isActive: boolean; navigate: (screen: string, data?: any) => void }) => {
+const VideoFeedItem = ({
+  item,
+  isActive,
+  navigate,
+  muted,
+  onToggleMute,
+}: {
+  item: VideoItem;
+  isActive: boolean;
+  navigate: (screen: string, data?: any) => void;
+  muted: boolean;
+  onToggleMute: () => void;
+}) => {
   const player = useVideoPlayer(item.video_url, player => {
     player.loop = true;
   });
+  const [pausedByHold, setPausedByHold] = useState(false);
 
   useEffect(() => {
+    player.muted = muted;
+  }, [muted, player]);
+
+  useEffect(() => {
+    if (pausedByHold) return;
     if (isActive) {
       player.play();
     } else {
       player.pause();
     }
-  }, [isActive, player]);
+  }, [isActive, pausedByHold, player]);
+
+  const handleTap = () => onToggleMute();
+  const handleLongPress = () => {
+    setPausedByHold(true);
+    player.pause();
+  };
+  const handlePressOut = () => {
+    if (pausedByHold) {
+      setPausedByHold(false);
+      if (isActive) player.play();
+    }
+  };
 
   const profile = item.profiles;
 
   return (
-    <View style={styles.videoContainer}>
+    <Pressable
+      style={styles.videoContainer}
+      onPress={handleTap}
+      onLongPress={handleLongPress}
+      onPressOut={handlePressOut}
+      delayLongPress={250}
+    >
       <VideoView
         player={player}
         style={styles.video}
@@ -70,6 +106,12 @@ const VideoFeedItem = ({ item, isActive, navigate }: { item: VideoItem; isActive
         colors={['rgba(0,0,0,0.6)', 'transparent']}
         style={styles.topGradient}
       />
+
+      {muted && (
+        <View style={styles.muteBadge}>
+          <VolumeX size={24} color="#fff" />
+        </View>
+      )}
 
       <View style={styles.rightActions}>
         <View style={styles.actionItem}>
@@ -121,7 +163,7 @@ const VideoFeedItem = ({ item, isActive, navigate }: { item: VideoItem; isActive
 
         {item.title && <Text style={styles.description} numberOfLines={2}>{item.title}</Text>}
       </View>
-    </View>
+    </Pressable>
   );
 };
 
@@ -131,6 +173,7 @@ export default function PublicHome({ navigate }: Props) {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [muted, setMuted] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const fetchVideos = async () => {
@@ -194,6 +237,8 @@ export default function PublicHome({ navigate }: Props) {
         item={item}
         isActive={index === activeIndex}
         navigate={navigate}
+        muted={muted}
+        onToggleMute={() => setMuted((m) => !m)}
       />
     );
   };
@@ -269,6 +314,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
+  },
+  muteBadge: {
+    position: 'absolute',
+    top: 56,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rightActions: {
     position: 'absolute',
