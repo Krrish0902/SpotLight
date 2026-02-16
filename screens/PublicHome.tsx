@@ -1,204 +1,367 @@
-import React, { useState } from 'react';
-import { View, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Image, Pressable, StyleSheet, Dimensions, FlatList, ActivityIndicator, StatusBar } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart, Share2, User } from 'lucide-react-native';
+import { Heart, Share2, User, Music, MapPin, MoreVertical } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
+import { supabase } from '../lib/supabase';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
-interface Artist {
-  id: number;
-  name: string;
-  genre: string;
-  location: string;
-  likes: number;
-  isLiked: boolean;
+const { width, height } = Dimensions.get('window');
+const BOTTOM_NAV_HEIGHT = 80;
+
+interface VideoItem {
+  video_id: string;
+  video_url: string;
+  thumbnail_url: string;
+  title: string;
+  description?: string;
+  likes_count: number;
+  views_count: number;
+  upload_date: string;
+  artist_id: string;
+  profiles?: {
+    user_id: string;
+    display_name: string;
+    username: string;
+    genres: string[];
+    city: string;
+    is_boosted: boolean;
+  };
 }
-
-const mockArtists: Artist[] = [
-  { id: 1, name: 'Maya Rivers', genre: 'Jazz • Soul', location: 'New York, NY', likes: 2847, isLiked: false },
-  { id: 2, name: 'The Neon Lights', genre: 'Indie Rock', location: 'Austin, TX', likes: 5234, isLiked: false },
-  { id: 3, name: 'DJ Eclipse', genre: 'Electronic • House', location: 'Los Angeles, CA', likes: 8921, isLiked: false },
-  { id: 4, name: 'Sofia Chen', genre: 'Classical • Piano', location: 'San Francisco, CA', likes: 3456, isLiked: false },
-  { id: 5, name: 'Marcus Stone', genre: 'Hip Hop • R&B', location: 'Atlanta, GA', likes: 12453, isLiked: false },
-];
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
 }
 
+const VideoFeedItem = ({ item, isActive, navigate }: { item: VideoItem; isActive: boolean; navigate: (screen: string, data?: any) => void }) => {
+  const player = useVideoPlayer(item.video_url, player => {
+    player.loop = true;
+  });
+
+  useEffect(() => {
+    if (isActive) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [isActive, player]);
+
+  const profile = item.profiles;
+
+  return (
+    <View style={styles.videoContainer}>
+      <VideoView
+        player={player}
+        style={styles.video}
+        contentFit="cover"
+        nativeControls={false}
+      />
+
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+        style={styles.overlay}
+      />
+
+      <LinearGradient
+        colors={['rgba(0,0,0,0.6)', 'transparent']}
+        style={styles.topGradient}
+      />
+
+      <View style={styles.rightActions}>
+        <View style={styles.actionItem}>
+          <Pressable style={styles.iconCircle}>
+            <Heart size={28} color="#fff" />
+          </Pressable>
+          <Text style={styles.actionText}>{item.likes_count}</Text>
+        </View>
+
+        <View style={styles.actionItem}>
+          <Pressable style={styles.iconCircle}>
+            <Share2 size={28} color="#fff" />
+          </Pressable>
+          <Text style={styles.actionText}>Share</Text>
+        </View>
+
+        <View style={styles.actionItem}>
+          <Pressable style={styles.iconCircle}>
+            <MoreVertical size={28} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.bottomInfo}>
+        <View style={styles.userInfoRow}>
+          <Pressable onPress={() => navigate('artist-profile', { selectedArtist: { user_id: item.artist_id, ...profile } })} style={styles.profileBtn}>
+            <View style={[styles.avatar, { backgroundColor: '#555', alignItems: 'center', justifyContent: 'center' }]}>
+              <User size={20} color="#fff" />
+            </View>
+            <Text style={styles.username}>@{profile?.username}</Text>
+          </Pressable>
+          {profile?.is_boosted && <Badge style={styles.boostBadge}>Boosted</Badge>}
+        </View>
+
+        <View style={styles.metaRow}>
+          {profile?.genres && (
+            <View style={styles.metaItem}>
+              <Music size={14} color="#ddd" />
+              <Text style={styles.metaText}>{Array.isArray(profile.genres) ? profile.genres.join(' • ') : profile.genres}</Text>
+            </View>
+          )}
+          {profile?.city && (
+            <View style={styles.metaItem}>
+              <MapPin size={14} color="#ddd" />
+              <Text style={styles.metaText}>{profile.city}</Text>
+            </View>
+          )}
+        </View>
+
+        {item.title && <Text style={styles.description} numberOfLines={2}>{item.title}</Text>}
+      </View>
+    </View>
+  );
+};
+
 export default function PublicHome({ navigate }: Props) {
   const { appUser } = useAuth();
   const isAuthenticated = !!appUser;
-  const [artists, setArtists] = useState(mockArtists);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
 
-  const handleLike = () => {
-    setArtists(prev => prev.map((artist, idx) =>
-      idx === currentIndex
-        ? { ...artist, isLiked: !artist.isLiked, likes: artist.isLiked ? artist.likes - 1 : artist.likes + 1 }
-        : artist
-    ));
+  const fetchVideos = async () => {
+    try {
+      // Direct join videos -> profiles (enabled by Foreign Key)
+      const { data, error } = await supabase
+        .from('videos')
+        .select(`
+          video_id,
+          video_url,
+          thumbnail_url,
+          title,
+          description,
+          likes_count,
+          views_count,
+          upload_date,
+          artist_id,
+          profiles!inner (
+            user_id,
+            display_name,
+            username,
+            genres,
+            city,
+            is_boosted
+          )
+        `)
+        .order('upload_date', { ascending: false });
+
+      if (error) throw error;
+
+      const validVideos: VideoItem[] = (data || []).map((v: any) => {
+        // Handle if profiles is returned as array or object
+        const profile = Array.isArray(v.profiles) ? v.profiles[0] : v.profiles;
+        return {
+          ...v,
+          profiles: profile,
+        };
+      });
+
+      setVideos(validVideos);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentArtist = artists[currentIndex];
+  useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setActiveIndex(viewableItems[0].index ?? 0);
+    }
+  }).current;
+
+  const renderItem = ({ item, index }: { item: VideoItem; index: number }) => {
+    return (
+      <VideoFeedItem
+        item={item}
+        isActive={index === activeIndex}
+        navigate={navigate}
+      />
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#a855f7" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Image
-        source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=1400&fit=crop' }}
-        style={styles.bgImage}
-      />
-      <LinearGradient
-        colors={['rgba(147,51,234,0.4)', 'rgba(219,39,119,0.4)', 'rgba(249,115,22,0.4)']}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.6)']}
-        style={[StyleSheet.absoluteFill, { top: 0, height: 100 }]}
-      />
-
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <Text style={styles.logo}>Spotlight</Text>
-      </View>
-
-      {/* Artist Info */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.8)', '#000']}
-        style={styles.artistInfo}
-      >
-        <Text style={styles.artistName}>{currentArtist.name}</Text>
-        <Text style={styles.artistGenre}>{currentArtist.genre}</Text>
-        <View style={styles.location}>
-          <View style={styles.greenDot} />
-          <Text style={styles.locationText}>{currentArtist.location}</Text>
-        </View>
-        <View style={styles.badges}>
-          <Badge variant="secondary" style={styles.badge}>Available</Badge>
-          <Badge style={[styles.badge, { backgroundColor: '#9333ea', borderWidth: 0 }]}>Boosted</Badge>
-        </View>
-      </LinearGradient>
-
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        <Pressable onPress={handleLike} style={styles.actionBtn}>
-          <View style={[styles.actionCircle, currentArtist.isLiked ? styles.actionCircleLiked : undefined]}>
-            <Heart size={28} color="#fff" fill={currentArtist.isLiked ? '#fff' : 'transparent'} />
+      <StatusBar barStyle="light-content" />
+      <FlatList
+        ref={flatListRef}
+        data={videos}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.video_id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        getItemLayout={(data, index) => ({
+          length: height,
+          offset: height * index,
+          index,
+        })}
+        ListEmptyComponent={
+          <View style={[styles.centerContainer, { height }]}>
+            <Text style={{ color: '#fff' }}>No videos found.</Text>
+            <Button variant="outline" onPress={fetchVideos} style={{ marginTop: 20 }}>Refresh</Button>
           </View>
-          <Text style={styles.actionLabel}>{currentArtist.likes}</Text>
-        </Pressable>
-        <Pressable onPress={() => navigate('artist-profile', { selectedArtist: currentArtist })} style={styles.actionBtn}>
-          <View style={styles.actionCircle}>
-            <User size={28} color="#fff" />
-          </View>
-          <Text style={styles.actionLabel}>Profile</Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn}>
-          <View style={styles.actionCircle}>
-            <Share2 size={28} color="#fff" />
-          </View>
-          <Text style={styles.actionLabel}>Share</Text>
-        </Pressable>
-      </View>
-
+        }
+      />
       <BottomNav activeTab="home" navigate={navigate} userRole={appUser?.role} isAuthenticated={isAuthenticated} />
     </View>
   );
 }
 
-const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
   },
-  bgImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-  },
-  logo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  artistInfo: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
-    padding: 24,
-  },
-  artistName: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  artistGenre: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 4,
-  },
-  location: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  greenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4ade80',
-  },
-  locationText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  badges: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  badge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 0,
-  },
-  actions: {
-    position: 'absolute',
-    right: 16,
-    bottom: 140,
-    flexDirection: 'column',
-    gap: 24,
-  },
-  actionBtn: {
-    alignItems: 'center',
-  },
-  actionCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
-  actionCircleLiked: {
-    backgroundColor: '#ec4899',
+  videoContainer: {
+    width: width,
+    height: height,
+    position: 'relative',
+    backgroundColor: '#000',
   },
-  actionLabel: {
+  video: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    paddingBottom: BOTTOM_NAV_HEIGHT + 20,
+    paddingHorizontal: 16,
+  },
+  topGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+  },
+  rightActions: {
+    position: 'absolute',
+    right: 16,
+    bottom: BOTTOM_NAV_HEIGHT + 100,
+    alignItems: 'center',
+    gap: 20,
+  },
+  actionItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)'
+  },
+  actionText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  bottomInfo: {
+    position: 'absolute',
+    bottom: BOTTOM_NAV_HEIGHT + 24,
+    left: 16,
+    right: 80,
+  },
+  userInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  profileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  username: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  boostBadge: {
+    backgroundColor: '#a855f7',
+    height: 20,
+    paddingHorizontal: 6,
+  },
+  displayName: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+  },
+  description: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 20,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 });

@@ -40,9 +40,8 @@ export default function UploadVideo({ navigate }: Props) {
 
   const pickVideo = async () => {
     try {
-      // Reverting to MediaTypeOptions as MediaType might not be exported in this version
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ImagePicker.MediaType.Videos,
         allowsEditing: true,
         quality: 1,
       });
@@ -63,7 +62,7 @@ export default function UploadVideo({ navigate }: Props) {
   const pickThumbnail = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
