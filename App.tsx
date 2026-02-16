@@ -110,7 +110,7 @@ function AppContent() {
       case 'artist-dashboard':
         return <ArtistDashboard navigate={navigate} />;
       case 'artist-profile':
-        return <ArtistProfile navigate={navigate} artist={appState.selectedArtist} userRole={userRole} />;
+        return <ArtistProfile navigate={navigate} artist={appState.selectedArtist} userRole={userRole} returnTo={appState.returnTo} />;
       case 'upload-video':
         return <UploadVideo navigate={navigate} />;
       case 'manage-availability':

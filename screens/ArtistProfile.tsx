@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut } from 'lucide-react-native';
@@ -8,13 +8,16 @@ import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
 import BottomNav from '../components/layout/BottomNav';
+import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 
-interface Video {
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+interface Video extends VideoFeedItemData {
   video_id: string;
-  thumbnail_url: string;
-  title: string;
+  thumbnail_url?: string;
+  title?: string;
   views_count: number;
 }
 
@@ -32,9 +35,10 @@ interface Props {
   navigate: (screen: string, data?: any) => void;
   artist?: any;
   userRole?: string;
+  returnTo?: string;
 }
 
-export default function ArtistProfile({ navigate, artist, userRole = 'public' }: Props) {
+export default function ArtistProfile({ navigate, artist, userRole = 'public', returnTo }: Props) {
   const { profile, appUser, fetchProfile, signOut } = useAuth();
   const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
 
@@ -45,6 +49,22 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<ScheduleEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(false);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [videoFeedVisible, setVideoFeedVisible] = useState(false);
+  const [videoFeedInitialIndex, setVideoFeedInitialIndex] = useState(0);
+  const videoListRef = useRef<FlatList>(null);
+  const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setActiveVideoIndex(viewableItems[0].index ?? 0);
+    }
+  }).current;
+
+  const openVideoFeed = (index: number) => {
+    setVideoFeedInitialIndex(index);
+    setActiveVideoIndex(index);
+    setVideoFeedVisible(true);
+  };
 
   // Refetch profile when viewing own profile to ensure we have latest data (fixes stale/empty data on tab switch)
   useEffect(() => {
@@ -160,7 +180,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
         <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop' }} style={StyleSheet.absoluteFill} />
-          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(isOwnProfile ? 'public-home' : 'search-discover')}>
+          <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(returnTo ?? (isOwnProfile ? 'public-home' : 'search-discover'))}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
           <View style={styles.headerRight}>
@@ -246,7 +266,11 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
                   <ActivityIndicator color="#a855f7" style={{ marginTop: 20 }} />
                 ) : videos.length > 0 ? (
                   videos.map((v) => (
-                    <View key={v.video_id} style={styles.videoItem}>
+                    <Pressable
+                      key={v.video_id}
+                      style={styles.videoItem}
+                      onPress={() => openVideoFeed(videos.findIndex((x) => x.video_id === v.video_id))}
+                    >
                       <Image
                         source={{ uri: v.thumbnail_url || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=400&h=600&fit=crop' }}
                         style={styles.videoThumb}
@@ -257,7 +281,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
                         <Text style={styles.videoTitle} numberOfLines={1}>{v.title || 'Untitled'}</Text>
                         <Text style={styles.videoViews}>{v.views_count?.toLocaleString() ?? 0} views</Text>
                       </View>
-                    </View>
+                    </Pressable>
                   ))
                 ) : (
                   <View style={styles.emptyState}>
@@ -327,6 +351,44 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public' }:
       {isOwnProfile && (
         <BottomNav activeTab="profile" navigate={navigate} userRole={userRole} isAuthenticated />
       )}
+
+      <Modal visible={videoFeedVisible} animationType="slide" statusBarTranslucent>
+        <View style={styles.videoFeedModal}>
+          <View style={styles.videoFeedHeader} pointerEvents="box-none">
+            <Button variant="ghost" size="icon" onPress={() => setVideoFeedVisible(false)} style={styles.videoFeedBackBtn}>
+              <ChevronLeft size={24} color="#fff" />
+            </Button>
+          </View>
+          <FlatList
+            ref={videoListRef}
+            data={videos}
+            keyExtractor={(item) => item.video_id}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            onViewableItemsChanged={onViewableVideosChanged}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+            initialScrollIndex={videoFeedInitialIndex}
+            getItemLayout={(_d, index) => ({
+              length: SCREEN_HEIGHT,
+              offset: SCREEN_HEIGHT * index,
+              index,
+            })}
+            renderItem={({ item, index }) => (
+              <VideoFeedItem
+                item={item}
+                isActive={index === activeVideoIndex}
+                muted={videoMuted}
+                onToggleMute={() => setVideoMuted((m) => !m)}
+                showProfileOverlay={false}
+                containerHeight={SCREEN_HEIGHT}
+                containerWidth={SCREEN_WIDTH}
+              />
+            )}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -370,6 +432,16 @@ const styles = StyleSheet.create({
   videoInfo: { position: 'absolute', bottom: 8, left: 8, right: 8 },
   videoTitle: { color: '#fff', fontWeight: '500', fontSize: 14 },
   videoViews: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
+  videoFeedModal: { flex: 1, backgroundColor: '#000' },
+  videoFeedHeader: {
+    position: 'absolute',
+    top: 48,
+    left: 16,
+    zIndex: 10,
+  },
+  videoFeedBackBtn: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
   scheduleCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
   scheduleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
   scheduleInfo: { flex: 1, minWidth: 0 },

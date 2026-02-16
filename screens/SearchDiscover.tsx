@@ -64,7 +64,7 @@ export default function SearchDiscover({ navigate }: Props) {
       const updated = await addRecentSearch(appUser.id, artist);
       setRecentSearches(updated);
     }
-    navigate('artist-profile', { selectedArtist: artist });
+    navigate('artist-profile', { selectedArtist: artist, returnTo: 'search-discover' });
   };
 
   const handleSearchSubmit = () => {
