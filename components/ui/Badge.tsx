@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { Text } from './Text';
 import { colors } from '../../theme';
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'default' | 'secondary' | 'outline';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   icon?: React.ReactNode;
 }
 
