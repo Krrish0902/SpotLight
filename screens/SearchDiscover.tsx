@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Image, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Filter, X } from 'lucide-react-native';
+import { ChevronLeft, Search, Filter, X, MapPin } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
 import { searchArtists, Artist } from './searchService';
@@ -15,13 +17,14 @@ interface Props {
 }
 
 export default function SearchDiscover({ navigate }: Props) {
-  const { appUser } = useAuth();
+  const { appUser, profile } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [recentSearches, setRecentSearches] = useState<Artist[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [distanceInput, setDistanceInput] = useState<string>('');
 
   useEffect(() => {
     if (appUser?.id) {
@@ -36,10 +39,40 @@ export default function SearchDiscover({ navigate }: Props) {
   useEffect(() => {
     let isActive = true;
 
-    const delayDebounce = setTimeout(async () => {
+    const runSearch = async () => {
       if (searchQuery.length >= 3) {
         setLoading(true);
-        const results = await searchArtists(searchQuery);
+        let userLat: number | undefined;
+        let userLon: number | undefined;
+
+        const maxDistanceKm = distanceInput.trim() ? parseFloat(distanceInput.trim()) : null;
+        const hasDistanceFilter = maxDistanceKm != null && !isNaN(maxDistanceKm) && maxDistanceKm > 0;
+
+        if (hasDistanceFilter) {
+          if (profile?.latitude != null && profile?.longitude != null) {
+            userLat = profile.latitude;
+            userLon = profile.longitude;
+          } else {
+            try {
+              const { status } = await Location.requestForegroundPermissionsAsync();
+              if (status === 'granted') {
+                const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+                userLat = loc.coords.latitude;
+                userLon = loc.coords.longitude;
+              } else {
+                Alert.alert('Location needed', 'Allow location access to filter by distance, or set your location in profile.');
+              }
+            } catch {
+              Alert.alert('Location error', 'Could not get your location.');
+            }
+          }
+        }
+
+        const results = await searchArtists(searchQuery, {
+          maxDistanceKm: hasDistanceFilter ? maxDistanceKm! : undefined,
+          userLat,
+          userLon,
+        });
         if (isActive) {
           setArtists(results ?? []);
           setLoading(false);
@@ -50,13 +83,14 @@ export default function SearchDiscover({ navigate }: Props) {
           setLoading(false);
         }
       }
-    }, 400);
+    };
 
+    const delayDebounce = setTimeout(runSearch, 400);
     return () => {
       isActive = false;
       clearTimeout(delayDebounce);
     };
-  }, [searchQuery]);
+  }, [searchQuery, distanceInput, profile?.latitude, profile?.longitude]);
 
   const handleArtistSelect = async (artist: Artist) => {
     // Save full artist object to history
@@ -140,10 +174,31 @@ export default function SearchDiscover({ navigate }: Props) {
                 onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
               />
-              <Button size="icon" style={styles.filterBtn} onPress={() => setShowFilters(!showFilters)}>
+              <Button
+                size="icon"
+                style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
+                onPress={() => setShowFilters(!showFilters)}
+              >
                 <Filter size={20} color="#fff" />
               </Button>
             </View>
+
+            {showFilters && (
+              <Card style={styles.filterCard}>
+                <View style={styles.filterHeader}>
+                  <MapPin size={18} color="#a855f7" />
+                  <Text style={styles.filterTitle}>Filter by distance (km)</Text>
+                </View>
+                <Input
+                  value={distanceInput}
+                  onChangeText={setDistanceInput}
+                  placeholder="e.g. 5, 10, 25..."
+                  keyboardType="decimal-pad"
+                  containerStyle={styles.distanceInput}
+                />
+                <Text style={styles.distanceHint}>Leave empty for no distance limit</Text>
+              </Card>
+            )}
 
             {showRecent && recentSearches.length > 0 && (
               <View style={styles.sectionHeader}>
@@ -204,6 +259,34 @@ const styles = StyleSheet.create({
   filterBtn: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
+  },
+  filterBtnActive: {
+    backgroundColor: 'rgba(168,85,247,0.5)',
+  },
+  filterCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  distanceInput: {
+    marginTop: 4,
+  },
+  distanceHint: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 8,
   },
 
   loader: {
