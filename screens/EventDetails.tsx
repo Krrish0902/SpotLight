@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, Modal, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, MapPin, Share2, X, Minus, Plus } from 'lucide-react-native';
+import { ChevronLeft, MapPin, Share2, X, Minus, Plus, Edit, Trash2 } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
@@ -79,6 +79,38 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Delete Event',
+      'Are you sure you want to delete this event? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const { error } = await supabase
+                .from('events')
+                .update({ is_deleted: true })
+                .eq('event_id', event.id);
+
+              if (error) throw error;
+
+              Alert.alert('Success', 'Event deleted successfully.');
+              navigate('organizer-dashboard');
+            } catch (error: any) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete event.');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleBack = () => {
@@ -185,9 +217,26 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={handleBack}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
-          <Button variant="ghost" size="icon" style={styles.shareBtn} onPress={() => { }}>
-            <Share2 size={24} color="#fff" />
-          </Button>
+          <View style={styles.headerActions}>
+            {appUser?.id === event.organizer_id && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={styles.actionBtn}
+                  onPress={() => navigate('create-event', { mode: 'edit', event })}
+                >
+                  <Edit size={24} color="#fff" />
+                </Button>
+                <Button variant="ghost" size="icon" style={[styles.actionBtn, { backgroundColor: 'rgba(239,68,68,0.2)' }]} onPress={handleDelete}>
+                  <Trash2 size={24} color="#ef4444" />
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" size="icon" style={styles.actionBtn} onPress={() => { }}>
+              <Share2 size={24} color="#fff" />
+            </Button>
+          </View>
         </View>
 
         <View style={styles.content}>
@@ -291,7 +340,9 @@ const styles = StyleSheet.create({
   headerImage: { height: 320, position: 'relative' },
   headerImg: { width: '100%', height: '100%' },
   backBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
-  shareBtn: { position: 'absolute', top: 48, right: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
+  headerActions: { position: 'absolute', top: 48, right: 16, flexDirection: 'row', gap: 8 },
+  actionBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
+  shareBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
   content: { padding: 24, marginTop: -32 },
   eventCard: {
     backgroundColor: 'rgba(17,24,39,0.9)',

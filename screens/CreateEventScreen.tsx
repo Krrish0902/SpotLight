@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Pressable } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,10 +17,11 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 
 interface Props {
-    navigate: (screen: string) => void;
+    navigate: (screen: string, data?: any) => void;
+    route?: any;
 }
 
-export default function CreateEventScreen({ navigate }: Props) {
+export default function CreateEventScreen({ navigate, route }: Props) {
     const { appUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [posterUri, setPosterUri] = useState<string | null>(null);
@@ -35,6 +36,26 @@ export default function CreateEventScreen({ navigate }: Props) {
     const [city, setCity] = useState('');
     const [ticketPrice, setTicketPrice] = useState('');
     const [totalTickets, setTotalTickets] = useState('');
+    const [availableTickets, setAvailableTickets] = useState(''); // Hidden state for edit mode
+
+    const params = route?.params ?? {};
+    const mode = params.mode ?? 'create';
+    const event = params.event ?? null;
+    const isEditMode = mode === 'edit';
+
+    useEffect(() => {
+        if (isEditMode && event) {
+            setTitle(event.title || '');
+            setDescription(event.description || '');
+            setDate(new Date(event.event_date));
+            setLocationName(event.location_name || '');
+            setCity(event.city || '');
+            setTicketPrice(event.ticket_price?.toString() || '');
+            setTotalTickets(event.total_tickets?.toString() || '');
+            setAvailableTickets(event.available_tickets?.toString() || '');
+            setPosterUri(event.poster_url || null);
+        }
+    }, [isEditMode, event]);
 
     const pickPoster = async () => {
         try {
@@ -99,32 +120,55 @@ export default function CreateEventScreen({ navigate }: Props) {
 
         setLoading(true);
         try {
-            let posterUrl = null;
-            if (posterUri) {
+            let posterUrl = event?.poster_url || null;
+            if (posterUri && posterUri !== event?.poster_url) {
                 posterUrl = await uploadPoster(posterUri, appUser.id);
             }
 
-            const { error } = await supabase
-                .from('events')
-                .insert({
-                    organizer_id: appUser.id, // Using standard American spelling (likely key)
-                    title,
-                    description,
-                    event_date: date.toISOString(),
-                    location_name: locationName,
-                    city,
-                    ticket_price: parseFloat(ticketPrice),
-                    total_tickets: parseInt(totalTickets),
-                    available_tickets: parseInt(totalTickets),
-                    poster_url: posterUrl,
-                    approval_status: 'pending',
-                    is_deleted: false,
-                });
+            if (isEditMode) {
+                const { error } = await supabase
+                    .from('events')
+                    .update({
+                        title,
+                        description,
+                        event_date: date.toISOString(),
+                        location_name: locationName,
+                        city,
+                        ticket_price: parseFloat(ticketPrice),
+                        total_tickets: parseInt(totalTickets),
+                        available_tickets: (event.available_tickets || 0) + (parseInt(totalTickets) - (event.total_tickets || 0)),
+                        poster_url: posterUrl,
+                        approval_status: 'pending', // Reset approval on update
+                    })
+                    .eq('event_id', event.event_id)
+                    .eq('organizer_id', appUser.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                Alert.alert('Success', 'Event updated successfully! It is now pending approval.');
+                navigate('event-details', { eventId: event.event_id });
+            } else {
+                const { error } = await supabase
+                    .from('events')
+                    .insert({
+                        organizer_id: appUser.id, // Using standard American spelling (likely key)
+                        title,
+                        description,
+                        event_date: date.toISOString(),
+                        location_name: locationName,
+                        city,
+                        ticket_price: parseFloat(ticketPrice),
+                        total_tickets: parseInt(totalTickets),
+                        available_tickets: parseInt(totalTickets),
+                        poster_url: posterUrl,
+                        approval_status: 'pending',
+                        is_deleted: false,
+                    });
 
-            Alert.alert('Success', 'Event created successfully! It is now pending approval.');
-            navigate('organizer-dashboard');
+                if (error) throw error;
+
+                Alert.alert('Success', 'Event created successfully! It is now pending approval.');
+                navigate('organizer-dashboard');
+            }
         } catch (error: any) {
             console.error('Create event error:', error);
             Alert.alert('Error', error.message || 'Failed to create event.');
@@ -169,7 +213,7 @@ export default function CreateEventScreen({ navigate }: Props) {
                     <Button variant="ghost" size="icon" onPress={() => navigate('organizer-dashboard')} disabled={loading}>
                         <ChevronLeft size={24} color="#fff" />
                     </Button>
-                    <Text style={styles.title}>Create Event</Text>
+                    <Text style={styles.title}>{isEditMode ? 'Edit Event' : 'Create Event'}</Text>
                 </View>
 
                 <KeyboardAvoidingView
@@ -287,7 +331,7 @@ export default function CreateEventScreen({ navigate }: Props) {
                             </View>
 
                             <Button style={[styles.submitBtn]} onPress={handleSubmit} disabled={loading}>
-                                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Create Event</Text>}
+                                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>{isEditMode ? 'Update Event' : 'Create Event'}</Text>}
                             </Button>
                         </Card>
                     </ScrollView>

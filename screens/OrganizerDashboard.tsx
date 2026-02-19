@@ -42,7 +42,7 @@ export default function OrganizerDashboard({ navigate }: Props) {
           </LinearGradient>
         </Card>
 
-        <Card style={styles.createEventCard} onPress={() => navigate('create-event')}>
+        <Card style={styles.createEventCard} onPress={() => navigate('create-event', { mode: 'create', event: null })}>
           <LinearGradient colors={['#a855f7', '#7c3aed']} style={styles.createEventGradient}>
             <View style={styles.searchContent}>
               <View style={styles.searchIcon}><Calendar size={28} color="#fff" /></View>
