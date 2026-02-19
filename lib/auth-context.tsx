@@ -36,6 +36,8 @@ export interface Profile {
   instruments: string[] | null;
   is_boosted: boolean;
   boost_expiry: string | null;
+  profile_image_url?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface ProfileInput {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable } from 'react-native';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut } from 'lucide-react-native';
+import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut, Camera } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
@@ -46,6 +48,10 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const targetArtistId = isOwnProfile ? appUser?.id : artist?.user_id;
 
   const [videos, setVideos] = useState<Video[]>([]);
+  const [viewedProfile, setViewedProfile] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [fetchedAt, setFetchedAt] = useState(Date.now());
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<ScheduleEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -77,8 +83,28 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     if (targetArtistId) {
       fetchVideos();
       fetchUpcomingEvents();
+      if (!isOwnProfile) {
+        fetchViewedProfile();
+      }
     }
-  }, [targetArtistId]);
+  }, [targetArtistId, isOwnProfile]);
+
+  const fetchViewedProfile = async () => {
+    if (!targetArtistId) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', targetArtistId)
+        .single();
+      if (!error && data) {
+        setViewedProfile(data);
+        setFetchedAt(Date.now());
+      }
+    } catch (e) {
+      console.error('Error fetching viewed profile:', e);
+    }
+  };
 
   const fetchUpcomingEvents = async () => {
     if (!targetArtistId) return;
@@ -147,6 +173,46 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     }
   };
 
+  const handleUploadAvatar = async () => {
+    if (!isOwnProfile) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      const filePath = `${user.id}/avatar.jpg`;
+      const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: 'base64' });
+      const fileData = Uint8Array.from(atob(base64), c => c.charCodeAt(0)).buffer;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, fileData, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ profile_image_url: publicUrl })
+        .eq('user_id', user.id);
+      if (dbError) throw dbError;
+
+      if (fetchProfile) await fetchProfile();
+      setLastUpdate(Date.now());
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to upload profile picture');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const fetchVideos = async () => {
     setLoadingVideos(true);
     try {
@@ -165,13 +231,22 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     }
   };
 
+  const effectiveProfile = isOwnProfile ? profile : (viewedProfile || artist);
   const isOrganizer = userRole === 'organizer';
-  const displayName = isOwnProfile ? (profile?.display_name ?? 'Artist') : (artist?.display_name ?? artist?.name ?? 'Artist');
-  const usernameStr = isOwnProfile ? (profile?.username ?? '') : (artist?.username ?? '');
-  const genresStr = isOwnProfile ? (profile?.genres?.join(' • ') ?? '') : (artist?.genres?.join(' • ') ?? artist?.genre ?? '');
-  const cityStr = isOwnProfile ? (profile?.city ?? '') : (artist?.city ?? '');
-  const bioStr = isOwnProfile ? (profile?.bio ?? '') : (artist?.bio ?? 'Professional artist.');
-  const isBoosted = isOwnProfile ? (profile?.is_boosted ?? false) : (artist?.is_boosted ?? false);
+  const displayName = effectiveProfile?.display_name ?? effectiveProfile?.name ?? 'Artist';
+  const usernameStr = effectiveProfile?.username ?? '';
+  const genresStr = Array.isArray(effectiveProfile?.genres) ? effectiveProfile.genres.join(' • ') : (effectiveProfile?.genres ?? effectiveProfile?.genre ?? '');
+  const cityStr = effectiveProfile?.city ?? '';
+  const bioStr = effectiveProfile?.bio ?? 'Professional artist.';
+  const isBoosted = effectiveProfile?.is_boosted ?? false;
+
+  const dbAvatar = effectiveProfile?.profile_image_url ?? effectiveProfile?.avatar_url;
+  const navAvatar = artist?.profile_image_url ?? artist?.avatar_url ?? artist?.profile_image ?? artist?.profile_image_url;
+  const defaultAvatar = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop';
+  const rawAvatarUrl = dbAvatar || navAvatar || defaultAvatar;
+  const separator = rawAvatarUrl.includes('?') ? '&' : '?';
+  const timestamp = isOwnProfile ? lastUpdate : fetchedAt;
+  const displayAvatarUrl = `${rawAvatarUrl}${separator}t=${timestamp}`;
 
   return (
     <View style={styles.container}>
@@ -193,7 +268,23 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               <Share2 size={24} color="#fff" />
             </Button>
           </View>
-          <Image source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop' }} style={styles.profileImg} />
+          <Pressable
+            style={styles.profileImgContainer}
+            onPress={handleUploadAvatar}
+            disabled={!isOwnProfile || uploading}
+          >
+            <Image source={{ uri: displayAvatarUrl }} style={styles.profileImg} />
+            {uploading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
+            {isOwnProfile && !uploading && (
+              <View style={styles.editBadge}>
+                <Camera size={14} color="#fff" />
+              </View>
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.content}>
@@ -401,7 +492,38 @@ const styles = StyleSheet.create({
   headerRight: { position: 'absolute', top: 48, right: 16, flexDirection: 'row', gap: 4 },
   iconBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
   shareBtn: {},
-  profileImg: { position: 'absolute', bottom: -64, left: 24, width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: '#030712' },
+  profileImgContainer: {
+    position: 'absolute',
+    bottom: -64,
+    left: 24,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    borderWidth: 4,
+    borderColor: '#030712',
+    backgroundColor: '#1f2937',
+  },
+  profileImg: { width: '100%', height: '100%', borderRadius: 64 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#a855f7',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#030712',
+  },
   content: { padding: 24, paddingTop: 80 },
   profileHeader: { marginBottom: 24 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
