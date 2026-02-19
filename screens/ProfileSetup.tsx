@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, Alert, Image, Pressable, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Camera, User, MapPin, Music, Crosshair } from 'lucide-react-native';
@@ -10,6 +12,7 @@ import { Label } from '../components/ui/Label';
 import { Textarea } from '../components/ui/Textarea';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../lib/auth-context';
+import { supabase } from '../lib/supabase';
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
@@ -21,10 +24,12 @@ interface Props {
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
 
 export default function ProfileSetup({ navigate, userRole, mode = 'setup', returnTo }: Props) {
-  const { saveProfile, profile } = useAuth();
+  const { saveProfile, profile, fetchProfile } = useAuth();
   const isEdit = mode === 'edit';
 
   const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
@@ -38,6 +43,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
     if (isEdit && profile) {
       setUsername(profile.username ?? '');
       setDisplayName(profile.display_name ?? '');
+      setAvatarUrl((profile as any).avatar_url ?? null);
       setBio(profile.bio ?? '');
       setCity(profile.city ?? '');
       setLatitude(profile.latitude ?? null);
@@ -46,6 +52,61 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       if (userRole === 'organizer') setCompany(profile.display_name ?? '');
     }
   }, [isEdit, profile, userRole]);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        await uploadAvatar(result.assets[0].uri);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadAvatar = async (uri: string) => {
+    try {
+      setUploadingAvatar(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const filePath = `${user.id}/avatar.jpg`;
+      
+      // Read file as base64 and convert to ArrayBuffer for reliable upload
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      const fileData = Uint8Array.from(atob(base64), c => c.charCodeAt(0)).buffer;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, fileData, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrlWithTime = `${publicUrl}?t=${new Date().getTime()}`;
+
+      const { error: dbError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
+      if (dbError) throw dbError;
+
+      setAvatarUrl(publicUrlWithTime);
+      if (fetchProfile) await fetchProfile();
+    } catch (e: any) {
+      Alert.alert('Upload Failed', e.message);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const captureLocation = async () => {
     setCapturingLocation(true);
@@ -132,14 +193,18 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.avatarWrap}>
-          <LinearGradient colors={['#a855f7', '#ec4899']} style={styles.avatar}>
-            <User size={64} color="#fff" />
-          </LinearGradient>
+        <Pressable style={styles.avatarWrap} onPress={handlePickImage} disabled={uploadingAvatar || loading}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+          ) : (
+            <LinearGradient colors={['#a855f7', '#ec4899']} style={styles.avatar}>
+              <User size={64} color="#fff" />
+            </LinearGradient>
+          )}
           <View style={styles.cameraBtn}>
-            <Camera size={20} color="#111" />
+            {uploadingAvatar ? <ActivityIndicator size="small" color="#000" /> : <Camera size={20} color="#111" />}
           </View>
-        </View>
+        </Pressable>
 
         <Card style={styles.card}>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -245,6 +310,7 @@ const styles = StyleSheet.create({
   scroll: { padding: 24, paddingBottom: 48 },
   avatarWrap: { alignItems: 'center', marginBottom: 32 },
   avatar: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center' },
+  avatarImg: { width: 128, height: 128, borderRadius: 64, borderWidth: 2, borderColor: '#a855f7' },
   cameraBtn: { position: 'absolute', bottom: 0, right: '50%', marginRight: -70, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
   field: { marginBottom: 20 },
