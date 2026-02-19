@@ -34,19 +34,24 @@ export default function SearchDiscover({ navigate }: Props) {
     }
   }, [appUser?.id]);
 
-  const showRecent = searchQuery.length < 3;
+  const hasDistanceFilter =
+    distanceInput.trim() &&
+    !isNaN(parseFloat(distanceInput.trim())) &&
+    parseFloat(distanceInput.trim()) > 0;
+  const showRecent = searchQuery.length < 3 && !hasDistanceFilter;
 
   useEffect(() => {
     let isActive = true;
 
     const runSearch = async () => {
-      if (searchQuery.length >= 3) {
+      const maxDistanceKm = distanceInput.trim() ? parseFloat(distanceInput.trim()) : null;
+      const hasDistanceFilter = maxDistanceKm != null && !isNaN(maxDistanceKm) && maxDistanceKm > 0;
+      const hasTextSearch = searchQuery.length >= 3;
+
+      if (hasTextSearch || hasDistanceFilter) {
         setLoading(true);
         let userLat: number | undefined;
         let userLon: number | undefined;
-
-        const maxDistanceKm = distanceInput.trim() ? parseFloat(distanceInput.trim()) : null;
-        const hasDistanceFilter = maxDistanceKm != null && !isNaN(maxDistanceKm) && maxDistanceKm > 0;
 
         if (hasDistanceFilter) {
           if (profile?.latitude != null && profile?.longitude != null) {
@@ -66,6 +71,11 @@ export default function SearchDiscover({ navigate }: Props) {
               Alert.alert('Location error', 'Could not get your location.');
             }
           }
+        }
+
+        if (hasDistanceFilter && (userLat == null || userLon == null)) {
+          if (isActive) setLoading(false);
+          return;
         }
 
         const results = await searchArtists(searchQuery, {

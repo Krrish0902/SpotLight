@@ -57,14 +57,18 @@ export const searchArtists = async (
   options?: SearchOptions
 ): Promise<Artist[]> => {
   try {
-    const sanitizedQuery = query.replace(/[,()]/g, ' ').trim();
-    if (!sanitizedQuery || sanitizedQuery.length < 3) return [];
-
+    const sanitizedQuery = (query || '').replace(/[,()]/g, ' ').trim();
     const { maxDistanceKm, userLat, userLon } = options || {};
+    const hasDistanceFilter =
+      maxDistanceKm != null && userLat != null && userLon != null && maxDistanceKm > 0;
+    const hasTextSearch = sanitizedQuery.length >= 3;
+
+    if (!hasTextSearch && !hasDistanceFilter) return [];
+
     const rpcParams: Record<string, unknown> = {
-      search_text: sanitizedQuery,
+      search_text: hasTextSearch ? sanitizedQuery : '',
     };
-    if (maxDistanceKm != null && userLat != null && userLon != null) {
+    if (hasDistanceFilter) {
       rpcParams.max_dist_km = maxDistanceKm;
       rpcParams.user_lat = userLat;
       rpcParams.user_lon = userLon;
