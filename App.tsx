@@ -122,7 +122,7 @@ function AppContent() {
       case 'payment':
         return <PaymentScreen navigate={navigate} />;
       case 'create-event':
-        return <CreateEventScreen navigate={navigate} />;
+        return <CreateEventScreen navigate={navigate} route={{ params: appState }} />;
       case 'events-grid':
         return <EventsGridScreen navigate={navigate} />;
       case 'organizer-dashboard':
