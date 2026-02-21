@@ -41,6 +41,7 @@ export default function PublicHome({ navigate }: Props) {
             user_id,
             display_name,
             username,
+            avatar_url,
             genres,
             city,
             is_boosted
