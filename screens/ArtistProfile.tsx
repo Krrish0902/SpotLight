@@ -200,7 +200,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const { error: dbError } = await supabase
         .from('profiles')
-        .update({ profile_image_url: publicUrl })
+        .update({ avatar_url: publicUrl })
         .eq('user_id', user.id);
       if (dbError) throw dbError;
 
@@ -277,7 +277,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const bioStr = effectiveProfile?.bio ?? 'Professional artist.';
   const isBoosted = effectiveProfile?.is_boosted ?? false;
 
-  const dbAvatar = effectiveProfile?.profile_image_url ?? effectiveProfile?.avatar_url;
+  const dbAvatar =  effectiveProfile?.avatar_url;
   const navAvatar = artist?.profile_image_url ?? artist?.avatar_url ?? artist?.profile_image ?? artist?.profile_image_url;
   const defaultAvatar = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop';
   const rawAvatarUrl = dbAvatar || navAvatar || defaultAvatar;

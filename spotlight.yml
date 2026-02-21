@@ -46,7 +46,7 @@ database_schema:
         - { name: "username", type: "varchar", note: "User-chosen unique handle (e.g. maya_rivers)" }
         - { name: "display_name", type: "varchar", nullable: false }
         - { name: "bio", type: "text" }
-        - { name: "profile_image_url", type: "text", note: "Avatar URL" }
+        - { name: "avatar_url", type: "text", note: "Avatar URL" }
         - { name: "cover_url", type: "text", note: "Banner/Cover image URL" }
         - { name: "city", type: "varchar", note: "For location filtering" }
         - { name: "avatar_url", type: "text", note: "profile photo link" }

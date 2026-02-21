@@ -45,7 +45,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
     if (isEdit && profile) {
       setUsername(profile.username ?? '');
       setDisplayName(profile.display_name ?? '');
-      setAvatarUrl(profile.profile_image_url ?? profile.avatar_url ?? null);
+      setAvatarUrl(profile.avatar_url ?? null);
       setBio(profile.bio ?? '');
       setCity(profile.city ?? '');
       setLatitude(profile.latitude ?? null);
@@ -88,7 +88,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       const publicUrlWithTime = `${publicUrl}?t=${Date.now()}`;
       const { error: dbError } = await supabase
         .from('profiles')
-        .update({ profile_image_url: publicUrl })
+        .update({ avatar_url: publicUrl })
         .eq('user_id', user.id);
       if (dbError) throw dbError;
       setAvatarUrl(publicUrlWithTime);
