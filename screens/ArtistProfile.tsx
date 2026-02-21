@@ -213,6 +213,43 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     }
   };
 
+  const handleUploadCover = async () => {
+    if (!isOwnProfile) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [2, 1], // Standard cover aspect ratio
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      const filePath = `${user.id}/cover.jpg`;
+      const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: 'base64' });
+      const fileData = Uint8Array.from(atob(base64), c => c.charCodeAt(0)).buffer;
+
+      const { error: uploadError } = await supabase.storage
+        .from('covers')
+        .upload(filePath, fileData, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('covers').getPublicUrl(filePath);
+      const { error: dbError } = await supabase.from('profiles').update({ cover_url: publicUrl }).eq('user_id', user.id);
+      if (dbError) throw dbError;
+
+      if (fetchProfile) await fetchProfile();
+      setLastUpdate(Date.now());
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to upload cover image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const fetchVideos = async () => {
     setLoadingVideos(true);
     try {
@@ -248,16 +285,28 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const timestamp = isOwnProfile ? lastUpdate : fetchedAt;
   const displayAvatarUrl = `${rawAvatarUrl}${separator}t=${timestamp}`;
 
+  const dbCover = effectiveProfile?.cover_url;
+  const defaultCover = 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop';
+  const rawCoverUrl = dbCover || defaultCover;
+  const coverSeparator = rawCoverUrl.includes('?') ? '&' : '?';
+  const displayCoverUrl = `${rawCoverUrl}${coverSeparator}t=${timestamp}`;
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
         {/* ... (keep existing cover/header code) ... */}
         <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
-          <Image source={{ uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop' }} style={StyleSheet.absoluteFill} />
+          <Image source={{ uri: displayCoverUrl }} style={StyleSheet.absoluteFill} />
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(returnTo ?? (isOwnProfile ? 'public-home' : 'search-discover'))}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
+          {isOwnProfile && (
+            <Pressable style={styles.editCoverBtn} onPress={handleUploadCover} disabled={uploading}>
+              <Camera size={14} color="#fff" />
+              <Text style={styles.editCoverText}>Change Cover</Text>
+            </Pressable>
+          )}
           <View style={styles.headerRight}>
             {isOwnProfile && (
               <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => navigate('edit-profile', { selectedArtist: artist ?? { id: 'me' } })}>
@@ -523,6 +572,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#030712',
+  },
+  editCoverBtn: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  editCoverText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
   },
   content: { padding: 24, paddingTop: 80 },
   profileHeader: { marginBottom: 24 },
