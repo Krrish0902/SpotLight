@@ -41,7 +41,7 @@ export default function UploadVideo({ navigate }: Props) {
   const pickVideo = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Videos,
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         quality: 1,
       });
@@ -62,7 +62,7 @@ export default function UploadVideo({ navigate }: Props) {
   const pickThumbnail = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
@@ -80,7 +80,7 @@ export default function UploadVideo({ navigate }: Props) {
     const fileExt = uri.split('.').pop();
     const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
     // Restoring user_id folder for both 'videos' and 'thumbnails'
-    const filePath = `${appUser.id}/${fileName}`;
+    const filePath = `${appUser?.id}/${fileName}`;
 
     let fileData;
     if (Platform.OS === 'web') {

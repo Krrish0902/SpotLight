@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Pressable, StyleSheet, Dimensions, Image } from 'react-native';
 import { Text } from './ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX } from 'lucide-react-native';
@@ -21,6 +21,7 @@ export interface VideoFeedItemData {
     user_id: string;
     display_name?: string;
     username?: string;
+    avatar_url?: string;
     genres?: string[] | string;
     city?: string;
     is_boosted?: boolean;
@@ -150,9 +151,13 @@ export function VideoFeedItem({
           <View style={styles.bottomInfo}>
             <View style={styles.userInfoRow}>
               <Pressable onPress={onProfilePress} style={styles.profileBtn}>
-                <View style={[styles.avatar, { backgroundColor: '#555', alignItems: 'center', justifyContent: 'center' }]}>
-                  <User size={20} color="#fff" />
-                </View>
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.avatar, { backgroundColor: '#555', alignItems: 'center', justifyContent: 'center' }]}>
+                    <User size={20} color="#fff" />
+                  </View>
+                )}
                 <Text style={styles.username}>@{profile?.username ?? 'artist'}</Text>
               </Pressable>
               {profile?.is_boosted && <Badge style={styles.boostBadge}>Boosted</Badge>}
