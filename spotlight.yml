@@ -47,7 +47,9 @@ database_schema:
         - { name: "display_name", type: "varchar", nullable: false }
         - { name: "bio", type: "text" }
         - { name: "profile_image_url", type: "text", note: "Avatar URL" }
+        - { name: "cover_url", type: "text", note: "Banner/Cover image URL" }
         - { name: "city", type: "varchar", note: "For location filtering" }
+        - { name: "avatar_url", type: "text", note: "profile photo link" }
         - { name: "latitude", type: "decimal", note: "For proximity search" }
         - { name: "longitude", type: "decimal", note: "For proximity search" }
         - { name: "genres", type: "text[]", note: "Array of strings (e.g., Jazz, Rock)" }
@@ -62,6 +64,7 @@ database_schema:
         - { name: "artist_id", type: "uuid", fk: "profiles.user_id" }
         - { name: "video_url", type: "text", nullable: false, note: "Cloud storage link" }
         - { name: "thumbnail_url", type: "text" }
+        - { name: "title", type: "varchar", note: "Video title" }
         - { name: "tags", type: "text[]", note: "For discovery algorithm" }
         - { name: "views_count", type: "integer", default: 0 }
         - { name: "likes_count", type: "integer", default: 0 }

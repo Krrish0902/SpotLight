@@ -38,6 +38,8 @@ export interface Profile {
   boost_expiry: string | null;
   profile_image_url?: string | null;
   avatar_url?: string | null;
+  cover_url?: string | null;
+  artist_url?: string | null;
 }
 
 export interface ProfileInput {
@@ -49,6 +51,7 @@ export interface ProfileInput {
   longitude?: number;
   genres?: string[];
   instruments?: string[];
+  artist_url?: string;
 }
 
 interface AuthContextType {
@@ -181,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       longitude: data.longitude ?? null,
       genres: data.genres ?? null,
       instruments: data.instruments ?? null,
+      artist_url: data.artist_url ?? null,
     };
     // Update existing profile (edit) — never create duplicate
     if (profile) {
@@ -248,6 +252,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (ctx === undefined) throw new Error('useAuth must be used within AuthProvider');
+  if (ctx === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 }
