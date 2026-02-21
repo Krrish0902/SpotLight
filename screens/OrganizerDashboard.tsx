@@ -1,25 +1,58 @@
-import React from 'react';
-import { View, Image, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, Calendar, MessageSquare, TrendingUp, Bell, Settings, CheckCircle2, Clock, X } from 'lucide-react-native';
+import { Search, Calendar, MessageSquare, TrendingUp, Bell, Settings, CheckCircle2, Clock, X, MapPin } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
+import { supabase } from '../lib/supabase';
 
-const bookingRequests = [
-  { id: 1, artist: 'Maya Rivers', event: 'Summer Music Festival', date: 'June 15, 2026', status: 'pending', image: 'photo-1493225457124-a3eb161ffa5f' },
-  { id: 2, artist: 'DJ Eclipse', event: 'Corporate Party', date: 'July 20, 2026', status: 'confirmed', image: 'photo-1571609572760-64c0cd10b5ca' },
-  { id: 3, artist: 'The Neon Lights', event: 'Wedding Reception', date: 'August 5, 2026', status: 'declined', image: 'photo-1516450360452-9312f5e86fc7' },
-];
+interface OrganizerEvent {
+  event_id: string;
+  title: string;
+  event_date: string;
+  location_name: string | null;
+  city: string | null;
+  poster_url: string | null;
+  approval_status: 'pending' | 'approved' | 'rejected';
+}
 
 interface Props { navigate: (screen: string, data?: any) => void; }
 
 export default function OrganizerDashboard({ navigate }: Props) {
   const { profile, appUser } = useAuth();
   const displayName = profile?.display_name ?? appUser?.email?.split('@')[0] ?? 'Organizer';
+  const [events, setEvents] = useState<OrganizerEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEvents = async () => {
+    if (!appUser?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('event_id, title, event_date, location_name, city, poster_url, approval_status')
+        .eq('organizer_id', appUser.id)
+        .eq('is_deleted', false)
+        .order('event_date', { ascending: false });
+      if (error) throw error;
+      setEvents(data ?? []);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [appUser?.id]);
+
+  const now = new Date().toISOString();
+  const totalEvents = events.length;
+  const upcomingCount = events.filter((e) => e.event_date >= now).length;
 
   return (
     <View style={styles.container}>
@@ -55,29 +88,44 @@ export default function OrganizerDashboard({ navigate }: Props) {
         </Card>
 
         <View style={styles.statsGrid}>
-          <Card style={styles.statCard}><TrendingUp size={24} color="#a855f7" /><Text style={styles.statNum}>12</Text><Text style={styles.statLabel}>Events</Text></Card>
-          <Card style={styles.statCard}><MessageSquare size={24} color="#60a5fa" /><Text style={styles.statNum}>8</Text><Text style={styles.statLabel}>Bookings</Text></Card>
-          <Card style={styles.statCard}><Calendar size={24} color="#4ade80" /><Text style={styles.statNum}>3</Text><Text style={styles.statLabel}>Upcoming</Text></Card>
+          <Card style={styles.statCard}><TrendingUp size={24} color="#a855f7" /><Text style={styles.statNum}>{totalEvents}</Text><Text style={styles.statLabel}>Events</Text></Card>
+          <Card style={styles.statCard}><MessageSquare size={24} color="#60a5fa" /><Text style={styles.statNum}>—</Text><Text style={styles.statLabel}>Bookings</Text></Card>
+          <Card style={styles.statCard}><Calendar size={24} color="#4ade80" /><Text style={styles.statNum}>{upcomingCount}</Text><Text style={styles.statLabel}>Upcoming</Text></Card>
         </View>
 
-        <Text style={styles.sectionTitle}>Booking Requests</Text>
-        {bookingRequests.map((r) => (
-          <Card key={r.id} style={styles.bookingCard}>
-            <View style={styles.bookingRow}>
-              <Image source={{ uri: `https://images.unsplash.com/${r.image}?w=200&h=200&fit=crop` }} style={styles.bookingImg} />
-              <View style={styles.bookingInfo}><Text style={styles.bookingArtist}>{r.artist}</Text><Text style={styles.bookingEvent}>{r.event}</Text><Text style={styles.bookingDate}>{r.date}</Text></View>
-              {r.status === 'pending' && <Badge icon={<Clock size={12} color="#fb923c" />} style={styles.pendingBadge}>Pending</Badge>}
-              {r.status === 'confirmed' && <Badge icon={<CheckCircle2 size={12} color="#4ade80" />} style={styles.confirmedBadge}>Confirmed</Badge>}
-              {r.status === 'declined' && <Badge icon={<X size={12} color="#f87171" />} style={styles.declinedBadge}>Declined</Badge>}
-            </View>
-            {r.status === 'pending' && (
-              <View style={styles.bookingActions}>
-                <Button variant="outline" size="sm" style={styles.bookingBtn}><Text style={styles.bookingBtnText}>Cancel</Text></Button>
-                <Button size="sm" style={[styles.bookingBtn, styles.primaryBtn]} onPress={() => navigate('messaging', { selectedArtist: { name: r.artist } })}><MessageSquare size={16} color="#fff" /><Text style={styles.bookingBtnText}>Message</Text></Button>
-              </View>
-            )}
+        <Text style={styles.sectionTitle}>My Events</Text>
+        {loading ? (
+          <View style={styles.loadingRow}><ActivityIndicator size="large" color="#a855f7" /></View>
+        ) : events.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyText}>You haven't created any events yet.</Text>
+            <Button style={styles.emptyBtn} onPress={() => navigate('create-event', { mode: 'create', event: null })}>Create Event</Button>
           </Card>
-        ))}
+        ) : (
+          events.map((e) => (
+            <Pressable key={e.event_id} onPress={() => navigate('event-details', { eventId: e.event_id })}>
+              <Card style={styles.eventCard}>
+                <Image source={{ uri: e.poster_url || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&h=200&fit=crop' }} style={styles.eventImg} />
+                <View style={styles.eventInfo}>
+                  <Text style={styles.eventTitle} numberOfLines={2}>{e.title}</Text>
+                  <View style={styles.eventMeta}>
+                    <Calendar size={12} color="rgba(255,255,255,0.6)" />
+                    <Text style={styles.eventDate}>{new Date(e.event_date).toLocaleDateString()}</Text>
+                  </View>
+                  {(e.location_name || e.city) && (
+                    <View style={styles.eventMeta}>
+                      <MapPin size={12} color="rgba(255,255,255,0.6)" />
+                      <Text style={styles.eventLocation} numberOfLines={1}>{[e.location_name, e.city].filter(Boolean).join(', ')}</Text>
+                    </View>
+                  )}
+                  {e.approval_status === 'pending' && <Badge icon={<Clock size={12} color="#fb923c" />} style={styles.pendingBadge}>Pending</Badge>}
+                  {e.approval_status === 'approved' && <Badge icon={<CheckCircle2 size={12} color="#4ade80" />} style={styles.confirmedBadge}>Approved</Badge>}
+                  {e.approval_status === 'rejected' && <Badge icon={<X size={12} color="#f87171" />} style={styles.declinedBadge}>Rejected</Badge>}
+                </View>
+              </Card>
+            </Pressable>
+          ))
+        )}
         <View style={{ height: 100 }} />
       </ScrollView>
       <BottomNav activeTab="home" navigate={navigate} userRole="organizer" isAuthenticated />
@@ -106,18 +154,18 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginTop: 8 },
   statLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
-  bookingCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, marginBottom: 12 },
-  bookingRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  bookingImg: { width: 56, height: 56, borderRadius: 8 },
-  bookingInfo: { flex: 1 },
-  bookingArtist: { color: '#fff', fontWeight: '600' },
-  bookingEvent: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  bookingDate: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
+  loadingRow: { padding: 32, alignItems: 'center' },
+  emptyCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 24, marginBottom: 12, alignItems: 'center' },
+  emptyText: { color: 'rgba(255,255,255,0.6)', marginBottom: 16 },
+  emptyBtn: { minWidth: 140 },
+  eventCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 0, marginBottom: 12, overflow: 'hidden', flexDirection: 'row' },
+  eventImg: { width: 80, height: 80, borderRadius: 0 },
+  eventInfo: { flex: 1, padding: 12, justifyContent: 'center' },
+  eventTitle: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  eventDate: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
+  eventLocation: { color: 'rgba(255,255,255,0.6)', fontSize: 13, flex: 1 },
   pendingBadge: { backgroundColor: 'rgba(249,115,22,0.2)', borderWidth: 0 },
   confirmedBadge: { backgroundColor: 'rgba(34,197,94,0.2)', borderWidth: 0 },
   declinedBadge: { backgroundColor: 'rgba(239,68,68,0.2)', borderWidth: 0 },
-  bookingActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  bookingBtn: { flex: 1 },
-  primaryBtn: { backgroundColor: '#a855f7' },
-  bookingBtnText: { color: '#fff' },
 });
