@@ -1,50 +1,85 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { useEffect, useState, useRef } from 'react'
+import { Session } from '@supabase/supabase-js'
+import { supabase, getStoredSession } from './supabase'
 import Login from './pages/Login'
 import Events from './pages/Events'
 
 export type UserRole = 'artist' | 'organizer' | 'public' | 'admin'
 
+async function fetchRole(userId: string): Promise<UserRole | null> {
+  try {
+    const { data } = await supabase.from('users').select('role').eq('user_id', userId).single()
+    return data?.role ?? null
+  } catch {
+    return null
+  }
+}
+
 function App() {
-  const [session, setSession] = useState<{ userId: string } | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [authReady, setAuthReady] = useState(false)
+
+  const hasSessionRef = useRef(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      if (!cancelled) setAuthReady(true)
+    }, 3000)
+
+    // Important: do NOT call supabase.* inside onAuthStateChange – it causes signInWithPassword to deadlock
+    const applySession = (s: Session | null) => {
+      if (cancelled) return
+      hasSessionRef.current = !!s?.user
       if (s?.user) {
-        setSession({ userId: s.user.id })
-        const { data } = await supabase
-          .from('users')
-          .select('role')
-          .eq('user_id', s.user.id)
-          .single()
-        setRole(data?.role ?? null)
+        setSession(s)
       } else {
         setSession(null)
         setRole(null)
       }
-      setLoading(false)
-    })
+      setAuthReady(true)
+      clearTimeout(timeout)
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
-        if (s?.user) {
-          setSession({ userId: s.user.id })
-          const { data } = await supabase
-            .from('users')
-            .select('role')
-            .eq('user_id', s.user.id)
-            .single()
-          setRole(data?.role ?? null)
-        } else {
-          setSession(null)
-          setRole(null)
-        }
+      (_event, s) => {
+        if (cancelled) return
+        applySession(s)
       }
     )
-    return () => subscription.unsubscribe()
+
+    // Fallback: auth client can miss session after custom sign-in + reload. Check localStorage.
+    const fallback = setTimeout(() => {
+      if (cancelled || hasSessionRef.current) return
+      const stored = getStoredSession()
+      if (stored?.user) {
+        applySession(stored)
+      }
+    }, 800)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      clearTimeout(fallback)
+      subscription.unsubscribe()
+    }
   }, [])
+
+  // Fetch role in a separate effect – never inside onAuthStateChange to avoid auth deadlock
+  useEffect(() => {
+    if (!session?.user) {
+      setRole(null)
+      return
+    }
+    let cancelled = false
+    fetchRole(session.user.id).then((r) => {
+      if (!cancelled) setRole(r)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.id])
 
   const onLogout = async () => {
     await supabase.auth.signOut()
@@ -52,15 +87,21 @@ function App() {
     setRole(null)
   }
 
-  if (loading) {
+  if (!authReady) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <span style={{ color: '#94a3b8' }}>Loading…</span>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: '#09090b',
+      }}>
+        <span style={{ color: '#71717a', fontSize: 14 }}>Loading…</span>
       </div>
     )
   }
 
-  if (!session || role !== 'admin') {
+  if (!session?.user || role !== 'admin') {
     return <Login role={role} />
   }
 

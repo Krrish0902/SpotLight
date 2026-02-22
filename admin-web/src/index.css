@@ -1,17 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
 * {
   box-sizing: border-box;
 }
+
 :root {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #e5e7eb;
-  background: #0f172a;
+  color: #a1a1aa;
+  background: #09090b;
+  --bg-base: #09090b;
+  --bg-elevated: #141414;
+  --bg-card: #18181b;
+  --border: rgba(255, 255, 255, 0.06);
+  --text: #fafafa;
+  --text-muted: #71717a;
+  --accent: #a1a1aa;
+  --accent-hover: #d4d4d8;
+  --success: #22c55e;
+  --warning: #eab308;
+  --error: #ef4444;
 }
+
 body {
   margin: 0;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
+
 #root {
   min-height: 100vh;
+}
+
+input, button {
+  font-family: inherit;
+}
+
+input:focus, button:focus {
+  outline: none;
+}
+
+button:not(:disabled):hover {
+  opacity: 0.9;
 }

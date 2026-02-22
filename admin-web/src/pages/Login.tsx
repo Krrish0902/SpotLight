@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
+import { signInWithPassword } from '../supabase'
 import type { UserRole } from '../App'
 
 interface Props {
@@ -17,8 +17,7 @@ export default function Login({ role }: Props) {
     setError('')
     setLoading(true)
     try {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) throw err
+      await signInWithPassword(email, password)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -34,34 +33,36 @@ export default function Login({ role }: Props) {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
+      background: '#09090b',
     }}>
       <div style={{
         width: '100%',
-        maxWidth: 360,
-        background: 'rgba(30,41,59,0.8)',
-        borderRadius: 12,
-        padding: 28,
-        border: '1px solid rgba(148,163,184,0.15)',
+        maxWidth: 340,
+        background: '#18181b',
+        borderRadius: 10,
+        padding: 32,
+        border: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: 24, color: '#f1f5f9' }}>
+        <h1 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
           SpotLight Admin
         </h1>
-        <p style={{ margin: '0 0 24px', color: '#94a3b8', fontSize: 14 }}>
+        <p style={{ margin: '0 0 28px', color: '#71717a', fontSize: 13 }}>
           Sign in to moderate events
         </p>
         {role && role !== 'admin' && (
           <div style={{
-            padding: 12,
-            marginBottom: 16,
-            background: 'rgba(234,179,8,0.15)',
-            borderRadius: 8,
-            color: '#facc15',
+            padding: '10px 14px',
+            marginBottom: 20,
+            background: 'rgba(234,179,8,0.08)',
+            borderRadius: 6,
+            color: '#eab308',
+            fontSize: 13,
           }}>
             Your account is not an admin. Only admin users can access this page.
           </div>
         )}
         <form onSubmit={handleLogin}>
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, color: '#cbd5e1' }}>
+          <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: '#71717a', fontWeight: 500 }}>
             Email
           </label>
           <input
@@ -71,16 +72,19 @@ export default function Login({ role }: Props) {
             required
             style={{
               width: '100%',
-              padding: 12,
-              marginBottom: 16,
-              fontSize: 16,
-              borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.3)',
-              background: 'rgba(15,23,42,0.8)',
-              color: '#e2e8f0',
+              padding: '10px 12px',
+              marginBottom: 18,
+              fontSize: 14,
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: '#09090b',
+              color: '#fafafa',
+              transition: 'border-color 0.15s',
             }}
+            onFocus={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)' }}
+            onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)' }}
           />
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, color: '#cbd5e1' }}>
+          <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: '#71717a', fontWeight: 500 }}>
             Password
           </label>
           <input
@@ -90,17 +94,20 @@ export default function Login({ role }: Props) {
             required
             style={{
               width: '100%',
-              padding: 12,
-              marginBottom: 16,
-              fontSize: 16,
-              borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.3)',
-              background: 'rgba(15,23,42,0.8)',
-              color: '#e2e8f0',
+              padding: '10px 12px',
+              marginBottom: 20,
+              fontSize: 14,
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: '#09090b',
+              color: '#fafafa',
+              transition: 'border-color 0.15s',
             }}
+            onFocus={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)' }}
+            onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)' }}
           />
           {error && (
-            <div style={{ marginBottom: 16, color: '#f87171', fontSize: 14 }}>
+            <div style={{ marginBottom: 18, color: '#ef4444', fontSize: 13 }}>
               {error}
             </div>
           )}
@@ -109,15 +116,16 @@ export default function Login({ role }: Props) {
             disabled={loading}
             style={{
               width: '100%',
-              padding: 12,
-              fontSize: 16,
-              fontWeight: 600,
-              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 14,
+              fontWeight: 500,
+              borderRadius: 6,
               border: 'none',
-              background: '#a855f7',
-              color: '#fff',
+              background: '#fafafa',
+              color: '#09090b',
               cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
+              opacity: loading ? 0.6 : 1,
+              transition: 'opacity 0.15s',
             }}
           >
             {loading ? 'Signing in…' : 'Sign in'}

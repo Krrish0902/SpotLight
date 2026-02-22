@@ -75,15 +75,15 @@ export default function Events({ onLogout }: Props) {
   const filtered = events.filter((e) => filter === 'all' || e.approval_status === filter)
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', background: '#09090b' }}>
       <header style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 24px',
-        borderBottom: '1px solid rgba(148,163,184,0.2)',
+        padding: '14px 24px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#f1f5f9' }}>
+        <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
           Event Moderation
         </h1>
         <button
@@ -91,34 +91,46 @@ export default function Events({ onLogout }: Props) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
+            gap: 6,
+            padding: '6px 12px',
             background: 'transparent',
-            border: '1px solid rgba(148,163,184,0.3)',
-            borderRadius: 8,
-            color: '#94a3b8',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 6,
+            color: '#71717a',
             cursor: 'pointer',
+            fontSize: 13,
+            transition: 'color 0.15s, border-color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#fafafa'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#71717a'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
           }}
         >
-          <LogOut size={18} />
+          <LogOut size={16} />
           Log out
         </button>
       </header>
 
-      <div style={{ padding: 24 }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
           {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               style={{
-                padding: '8px 16px',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.3)',
-                background: filter === f ? 'rgba(168,85,247,0.25)' : 'transparent',
-                color: filter === f ? '#c084fc' : '#94a3b8',
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: 'none',
+                background: filter === f ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: filter === f ? '#fafafa' : '#71717a',
                 cursor: 'pointer',
-                textTransform: 'capitalize',
+                fontSize: 13,
+                fontWeight: filter === f ? 500 : 400,
+                transition: 'background 0.15s, color 0.15s',
               }}
             >
               {f}
@@ -127,21 +139,21 @@ export default function Events({ onLogout }: Props) {
         </div>
 
         {loading ? (
-          <div style={{ color: '#94a3b8' }}>Loading events…</div>
+          <div style={{ color: '#71717a', fontSize: 14 }}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ color: '#94a3b8' }}>No events found</div>
+          <div style={{ color: '#71717a', fontSize: 14 }}>No events found</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {filtered.map((ev) => (
               <div
                 key={ev.event_id}
                 style={{
-                  background: 'rgba(30,41,59,0.6)',
-                  borderRadius: 12,
-                  border: '1px solid rgba(148,163,184,0.15)',
+                  background: '#18181b',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.06)',
                   overflow: 'hidden',
                   display: 'grid',
-                  gridTemplateColumns: '120px 1fr auto',
+                  gridTemplateColumns: '100px 1fr auto',
                   gap: 20,
                   alignItems: 'start',
                 }}
@@ -149,63 +161,66 @@ export default function Events({ onLogout }: Props) {
                 <img
                   src={ev.poster_url || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=600&fit=crop'}
                   alt=""
-                  style={{ width: 120, height: 160, objectFit: 'cover' }}
+                  style={{ width: 100, height: 140, objectFit: 'cover' }}
                 />
                 <div style={{ padding: '16px 0' }}>
-                  <h3 style={{ margin: '0 0 8px', color: '#f1f5f9' }}>{ev.title}</h3>
-                  <p style={{ margin: '0 0 8px', color: '#94a3b8', fontSize: 14 }}>
+                  <h3 style={{ margin: '0 0 6px', color: '#fafafa', fontSize: 15, fontWeight: 600 }}>{ev.title}</h3>
+                  <p style={{ margin: '0 0 10px', color: '#71717a', fontSize: 13, lineHeight: 1.5 }}>
                     {ev.description || '—'}
                   </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 14, color: '#cbd5e1' }}>
-                    <span>📅 {new Date(ev.event_date).toLocaleString()}</span>
-                    {ev.location_name && <span>📍 {ev.location_name}</span>}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#71717a' }}>
+                    <span>{new Date(ev.event_date).toLocaleString()}</span>
+                    {ev.location_name && <span>{ev.location_name}</span>}
                     {ev.city && <span>{ev.city}</span>}
                     {ev.ticket_price != null && <span>${ev.ticket_price}</span>}
-                    {ev.total_tickets != null && <span>Cap: {ev.total_tickets}</span>}
+                    {ev.total_tickets != null && <span>{ev.total_tickets} cap</span>}
                     <span
                       style={{
-                        padding: '2px 8px',
-                        borderRadius: 6,
+                        padding: '2px 6px',
+                        borderRadius: 4,
                         background:
                           ev.approval_status === 'approved'
-                            ? 'rgba(34,197,94,0.2)'
+                            ? 'rgba(34,197,94,0.15)'
                             : ev.approval_status === 'rejected'
-                            ? 'rgba(239,68,68,0.2)'
-                            : 'rgba(234,179,8,0.2)',
+                            ? 'rgba(239,68,68,0.15)'
+                            : 'rgba(234,179,8,0.12)',
                         color:
                           ev.approval_status === 'approved'
-                            ? '#4ade80'
+                            ? '#22c55e'
                             : ev.approval_status === 'rejected'
-                            ? '#f87171'
-                            : '#facc15',
-                        fontWeight: 600,
+                            ? '#ef4444'
+                            : '#eab308',
+                        fontWeight: 500,
+                        fontSize: 11,
                       }}
                     >
                       {ev.approval_status}
                     </span>
                   </div>
                 </div>
-                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: '#64748b' }}>Change status</span>
+                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: '#52525b' }}>Change status</span>
                   {(['approved', 'rejected', 'pending'] as const).map((st) => (
                     <button
                       key={st}
                       onClick={() => updateStatus(ev.event_id, st)}
                       disabled={updating === ev.event_id || ev.approval_status === st}
                       style={{
-                        padding: '8px 12px',
-                        borderRadius: 8,
+                        padding: '6px 10px',
+                        borderRadius: 6,
                         border: 'none',
                         background:
                           st === 'approved'
-                            ? 'rgba(34,197,94,0.3)'
+                            ? 'rgba(34,197,94,0.15)'
                             : st === 'rejected'
-                            ? 'rgba(239,68,68,0.3)'
-                            : 'rgba(148,163,184,0.2)',
-                        color: '#e2e8f0',
+                            ? 'rgba(239,68,68,0.15)'
+                            : 'rgba(255,255,255,0.06)',
+                        color: '#fafafa',
                         cursor: updating === ev.event_id || ev.approval_status === st ? 'not-allowed' : 'pointer',
-                        opacity: ev.approval_status === st ? 0.6 : 1,
-                        textTransform: 'capitalize',
+                        opacity: ev.approval_status === st ? 0.5 : 1,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        transition: 'opacity 0.15s',
                       }}
                     >
                       {updating === ev.event_id ? '…' : st}
