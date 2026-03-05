@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  boostBadge: { backgroundColor: '#a855f7', height: 20, paddingHorizontal: 6 },
+  boostBadge: { backgroundColor: '#C8A2C8', height: 20, paddingHorizontal: 6 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },

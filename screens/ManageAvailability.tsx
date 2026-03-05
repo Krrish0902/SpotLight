@@ -41,8 +41,8 @@ type WorkItem = Booking | ScheduleEntry;
 
 interface Props { navigate: (screen: string) => void; }
 
-const WORK_DATE_COLOR = '#a855f7';
-const SELECTED_COLOR = '#7e22ce';
+const WORK_DATE_COLOR = '#C8A2C8';
+const SELECTED_COLOR = '#B18CB1';
 
 export default function ManageAvailability({ navigate }: Props) {
   const { appUser } = useAuth();
@@ -87,8 +87,8 @@ export default function ManageAvailability({ navigate }: Props) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const getWorkDates = (): Record<string, { marked: boolean; dotColor: string }> => {
-    const marked: Record<string, { marked: boolean; dotColor: string }> = {};
+  const getWorkDates = (): Record<string, any> => {
+    const marked: Record<string, any> = {};
     bookings.forEach((b) => {
       const d = b.event_date.split('T')[0];
       marked[d] = { marked: true, dotColor: b.status === 'accepted' || b.status === 'completed' ? '#4ade80' : '#fb923c' };
@@ -213,7 +213,7 @@ export default function ManageAvailability({ navigate }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('artist-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
@@ -236,11 +236,11 @@ export default function ManageAvailability({ navigate }: Props) {
               textSectionTitleColor: '#fff',
               selectedDayBackgroundColor: SELECTED_COLOR,
               selectedDayTextColor: '#fff',
-              todayTextColor: '#a855f7',
+              todayTextColor: '#C8A2C8',
               dayTextColor: '#fff',
               monthTextColor: '#fff',
               textDisabledColor: 'rgba(255,255,255,0.3)',
-              arrowColor: '#a855f7',
+              arrowColor: '#C8A2C8',
             }}
             markedDates={markedDates()}
             onDayPress={(day) => setSelectedDate(day.dateString)}
@@ -278,7 +278,7 @@ export default function ManageAvailability({ navigate }: Props) {
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
+              <ActivityIndicator color="#C8A2C8" style={{ marginVertical: 24 }} />
             ) : (
               <>
                 {itemsForDate(selectedDate).length === 0 ? (
@@ -319,7 +319,7 @@ export default function ManageAvailability({ navigate }: Props) {
                               </View>
                               <View style={styles.itemActions}>
                                 <Button variant="ghost" size="icon" onPress={() => setEditItem(item as ScheduleEntry)}>
-                                  <Pencil size={18} color="#a855f7" />
+                                  <Pencil size={18} color="#C8A2C8" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onPress={() => handleDeleteSchedule(item as ScheduleEntry)}>
                                   <Trash2 size={18} color="#f87171" />
@@ -362,7 +362,7 @@ export default function ManageAvailability({ navigate }: Props) {
                   onPress={() => setShowTimePicker((v) => !v)}
                   style={styles.timeBtn}
                 >
-                  <Clock size={18} color="#a855f7" />
+                  <Clock size={18} color="#C8A2C8" />
                   <Text style={styles.timeBtnText}>
                     {addStartTime
                       ? addStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -406,13 +406,13 @@ export default function ManageAvailability({ navigate }: Props) {
                 style={styles.modalTextarea}
               />
               <View style={styles.modalActions}>
-              <Button variant="outline" onPress={() => setShowAddModal(false)} style={styles.modalBtn}>
-                Cancel
-              </Button>
-              <Button onPress={handleAddWork} disabled={saving} style={styles.modalBtn}>
-                {saving ? <ActivityIndicator color="#fff" /> : 'Add'}
-              </Button>
-            </View>
+                <Button variant="outline" onPress={() => setShowAddModal(false)} style={styles.modalBtn}>
+                  Cancel
+                </Button>
+                <Button onPress={handleAddWork} disabled={saving} style={styles.modalBtn}>
+                  {saving ? <ActivityIndicator color="#fff" /> : 'Add'}
+                </Button>
+              </View>
             </Pressable>
           </ScrollView>
         </Pressable>
@@ -485,7 +485,7 @@ function EditScheduleForm({
       <Input placeholder="Title" value={title} onChangeText={setTitle} containerStyle={styles.editInput} />
       <View style={styles.timeRow}>
         <Button variant="outline" onPress={() => setShowTimePicker((v) => !v)} style={styles.editTimeBtn}>
-          <Clock size={16} color="#a855f7" />
+          <Clock size={16} color="#C8A2C8" />
           <Text style={styles.timeBtnText}>
             {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Set time'}
           </Text>
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   editTextarea: { minHeight: 60, marginBottom: 12 },
   editActions: { flexDirection: 'row', gap: 12 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#111827', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalContent: { backgroundColor: '#121212', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
   modalSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 20 },
   modalScroll: { flex: 1 },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   timeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeBtnText: { color: '#a855f7', fontSize: 14 },
+  timeBtnText: { color: '#C8A2C8', fontSize: 14 },
   durationInput: { width: 100 },
   editTimeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   editDurationInput: { width: 90 },

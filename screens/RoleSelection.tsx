@@ -65,7 +65,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Join Spotlight</Text>
         <Text style={styles.subtitle}>Choose your role to get started</Text>
@@ -74,7 +74,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <View style={styles.cards}>
         <Card onPress={() => !loading && handleRoleSelect('artist')} style={styles.artistCard}>
-          <LinearGradient colors={['#9333ea', '#db2777']} style={styles.cardGradient}>
+          <LinearGradient colors={['#1A1A1A', '#121212']} style={styles.cardGradient}>
             <View style={styles.cardContent}>
               <View style={styles.iconCircle}>
                 <Music size={32} color="#fff" />
@@ -88,7 +88,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
         </Card>
 
         <Card onPress={() => !loading && handleRoleSelect('organizer')} style={styles.organizerCard}>
-          <LinearGradient colors={['#f97316', '#eab308']} style={styles.cardGradient}>
+          <LinearGradient colors={['#1A1A1A', '#121212']} style={styles.cardGradient}>
             <View style={styles.cardContent}>
               <View style={styles.iconCircle}>
                 <Briefcase size={32} color="#fff" />
@@ -102,7 +102,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
         </Card>
       </View>
 
-      {loading ? <ActivityIndicator size="small" color="#a855f7" style={{ marginVertical: 8 }} /> : null}
+      {loading ? <ActivityIndicator size="small" color="#C8A2C8" style={{ marginVertical: 8 }} /> : null}
       <Button variant="ghost" onPress={() => !loading && handleAdmin()} style={styles.adminBtn}>
         <Text style={styles.adminText}>Admin Access</Text>
       </Button>

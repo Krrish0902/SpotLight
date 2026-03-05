@@ -61,7 +61,7 @@ export default function SearchDiscover({ navigate }: Props) {
             try {
               const { status } = await Location.requestForegroundPermissionsAsync();
               if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
                 userLat = loc.coords.latitude;
                 userLon = loc.coords.longitude;
               } else {
@@ -154,7 +154,7 @@ export default function SearchDiscover({ navigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#000000', '#000']} style={StyleSheet.absoluteFill} />
 
       <FlatList
         data={showRecent ? recentSearches : artists}
@@ -196,7 +196,7 @@ export default function SearchDiscover({ navigate }: Props) {
             {showFilters && (
               <Card style={styles.filterCard}>
                 <View style={styles.filterHeader}>
-                  <MapPin size={18} color="#a855f7" />
+                  <MapPin size={18} color="#C8A2C8" />
                   <Text style={styles.filterTitle}>Filter by distance (km)</Text>
                 </View>
                 <Input
@@ -219,7 +219,7 @@ export default function SearchDiscover({ navigate }: Props) {
               </View>
             )}
 
-            {loading && <ActivityIndicator color="#a855f7" style={styles.loader} />}
+            {loading && <ActivityIndicator color="#C8A2C8" style={styles.loader} />}
           </>
         }
         ListEmptyComponent={
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   clearText: {
-    color: '#a855f7',
+    color: '#C8A2C8',
     fontSize: 14,
     fontWeight: '500',
   },

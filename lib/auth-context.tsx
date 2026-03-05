@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { PostgrestError } from '@supabase/supabase-js';
 import { Session, User } from '@supabase/supabase-js';
+import { useSendbirdChat } from '@sendbird/uikit-react-native';
 import { supabase } from './supabase';
 
 async function upsertUser(userId: string, email: string, role: UserRole): Promise<{ error: PostgrestError | null }> {
@@ -39,7 +40,9 @@ export interface Profile {
   profile_image_url?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
-  artist_url?: string | null;
+  artist_url?: string | null; // Keep for DB compatibility, mapped to instagram locally
+  age?: number | null;
+  profile_video_url?: string | null;
 }
 
 export interface ProfileInput {
@@ -52,6 +55,9 @@ export interface ProfileInput {
   genres?: string[];
   instruments?: string[];
   artist_url?: string;
+  instagram_url?: string;
+  age?: number;
+  profile_video_url?: string;
 }
 
 interface AuthContextType {
@@ -76,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const { sdk } = useSendbirdChat();
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
@@ -87,15 +95,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data as Profile;
   };
 
-  const fetchAppUser = async (userId: string): Promise<AppUser | null> => {
+  const fetchAppUser = async (sessionUser: { id: string; email?: string; user_metadata?: any }): Promise<AppUser | null> => {
+    // 1. Try to build AppUser from auth session metadata (always available, no RLS)
+    const metaRole = sessionUser.user_metadata?.role as UserRole | undefined;
+    if (metaRole) {
+      return { id: sessionUser.id, email: sessionUser.email ?? '', role: metaRole };
+    }
+
+    // 2. Fallback: try the users table (may be blocked by RLS)
     const { data, error } = await supabase
       .from('users')
       .select('user_id, email, role')
-      .eq('user_id', userId)
+      .eq('user_id', sessionUser.id)
       .maybeSingle();
 
-    if (error || !data) return null;
-    return { id: data.user_id, email: data.email, role: data.role as UserRole };
+    if (!error && data) {
+      return { id: data.user_id, email: data.email, role: data.role as UserRole };
+    }
+
+    // 3. Last resort: default to 'public' role so they at least get in
+    return { id: sessionUser.id, email: sessionUser.email ?? '', role: 'public' };
   };
 
   useEffect(() => {
@@ -103,13 +122,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        const au = await fetchAppUser(session.user.id);
+        const [au, prof] = await Promise.all([
+          fetchAppUser(session.user),
+          fetchProfile(session.user.id),
+        ]);
         setAppUser(au);
-        const prof = await fetchProfile(session.user.id);
         setProfile(prof);
+        
+        // Connect to Sendbird
+        try {
+          await sdk.connect(session.user.id);
+          const nickname = prof?.display_name || session.user.email || 'User';
+          await sdk.updateCurrentUserInfo({ nickname });
+        } catch (err) {
+          console.warn('Failed to connect to Sendbird:', err);
+        }
       } else {
         setAppUser(null);
         setProfile(null);
+        await sdk.disconnect();
       }
       setIsLoading(false);
     });
@@ -119,13 +150,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          const au = await fetchAppUser(session.user.id);
+          const [au, prof] = await Promise.all([
+            fetchAppUser(session.user),
+            fetchProfile(session.user.id),
+          ]);
           setAppUser(au);
-          const prof = await fetchProfile(session.user.id);
           setProfile(prof);
+          
+          // Connect to Sendbird
+          try {
+            await sdk.connect(session.user.id);
+            const nickname = prof?.display_name || session.user.email || 'User';
+            await sdk.updateCurrentUserInfo({ nickname });
+          } catch (err) {
+            console.warn('Failed to connect to Sendbird on auth change:', err);
+          }
         } else {
           setAppUser(null);
           setProfile(null);
+          await sdk.disconnect();
         }
       }
     );
@@ -160,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    await sdk.disconnect();
     setAppUser(null);
     setProfile(null);
   };
@@ -184,7 +228,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       longitude: data.longitude ?? null,
       genres: data.genres ?? null,
       instruments: data.instruments ?? null,
-      artist_url: data.artist_url ?? null,
+      artist_url: data.instagram_url ?? data.artist_url ?? null,
+      age: data.age ?? null,
+      profile_video_url: data.profile_video_url ?? null,
     };
     // Update existing profile (edit) — never create duplicate
     if (profile) {

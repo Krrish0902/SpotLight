@@ -16,7 +16,7 @@ interface Props { navigate: (screen: string) => void; }
 
 export default function ManageLiveEvents({ navigate }: Props) {
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('admin-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
@@ -32,9 +32,9 @@ export default function ManageLiveEvents({ navigate }: Props) {
               <Image source={{ uri: `https://images.unsplash.com/${e.image}?w=600&h=400&fit=crop` }} style={styles.eventImg} />
               <View style={styles.eventInfo}>
                 <Text style={styles.eventTitle}>{e.title}</Text>
-                <View style={styles.meta}><Calendar size={16} color="#a855f7" /><Text style={styles.metaText}>{e.date}</Text></View>
-                <View style={styles.meta}><MapPin size={16} color="#a855f7" /><Text style={styles.metaText}>{e.venue}</Text></View>
-                <View style={styles.meta}><Users size={16} color="#a855f7" /><Text style={styles.metaText}>{e.lineup.length} artists</Text></View>
+                <View style={styles.meta}><Calendar size={16} color="#C8A2C8" /><Text style={styles.metaText}>{e.date}</Text></View>
+                <View style={styles.meta}><MapPin size={16} color="#C8A2C8" /><Text style={styles.metaText}>{e.venue}</Text></View>
+                <View style={styles.meta}><Users size={16} color="#C8A2C8" /><Text style={styles.metaText}>{e.lineup.length} artists</Text></View>
                 <View style={styles.lineup}>{e.lineup.map((a, i) => <Badge key={i} variant="secondary" style={styles.lineupBadge}>{a}</Badge>)}</View>
                 <View style={styles.actions}><Button variant="outline" size="sm" style={styles.actionBtn}><Edit size={14} color="#fff" /><Text style={styles.actionText}>Edit</Text></Button><Button variant="outline" size="sm" style={[styles.actionBtn, styles.delBtn]}><Trash2 size={14} color="#f87171" /><Text style={styles.delText}>Delete</Text></Button><Button size="sm" style={styles.viewBtn}><Text style={styles.viewText}>View</Text></Button></View>
               </View>
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', flex: 1 },
-  createBtn: { backgroundColor: '#a855f7' },
+  createBtn: { backgroundColor: '#C8A2C8' },
   createText: { color: '#fff' },
   scroll: { padding: 24 },
   eventCard: { marginBottom: 24 },
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
   actionText: { color: '#fff' },
   delBtn: { borderColor: 'rgba(239,68,68,0.3)' },
   delText: { color: '#f87171' },
-  viewBtn: { backgroundColor: '#a855f7' },
+  viewBtn: { backgroundColor: '#C8A2C8' },
   viewText: { color: '#fff' },
 });

@@ -22,7 +22,7 @@ export default function PaymentScreen({ navigate }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('purchase-boost')}>
           <ChevronLeft size={24} color="#fff" />
@@ -83,6 +83,6 @@ const styles = StyleSheet.create({
   securityRow: { flexDirection: 'row', gap: 12, padding: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, marginBottom: 24 },
   securityTitle: { color: '#fff', fontWeight: '500', marginBottom: 4 },
   securityText: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  payBtn: { backgroundColor: '#a855f7', paddingVertical: 16 },
+  payBtn: { backgroundColor: '#C8A2C8', paddingVertical: 16 },
   payText: { color: '#fff', fontSize: 18 },
 });

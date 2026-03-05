@@ -12,7 +12,7 @@ interface Props { navigate: (screen: string) => void; }
 export default function AdminDashboard({ navigate }: Props) {
   const { signOut } = useAuth();
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
@@ -34,7 +34,7 @@ export default function AdminDashboard({ navigate }: Props) {
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <Card style={styles.actionCard} onPress={() => navigate('moderate-content')}>
-          <View style={styles.actionIcon}><Video size={24} color="#a855f7" /></View>
+          <View style={styles.actionIcon}><Video size={24} color="#C8A2C8" /></View>
           <View style={styles.actionInfo}><Text style={styles.actionTitle}>Moderate Content</Text><Text style={styles.actionDesc}>Review pending videos</Text></View>
           <View style={styles.badge}><Text style={styles.badgeText}>12</Text></View>
         </Card>
@@ -52,7 +52,7 @@ export default function AdminDashboard({ navigate }: Props) {
           <Card style={styles.manageCard}>
             <Text style={styles.manageTitle}>Content & Events</Text>
             <Button variant="ghost" onPress={() => navigate('manage-contests')}><Trophy size={20} color="#facc15" /><Text style={styles.menuText}>Manage Contests</Text></Button>
-            <Button variant="ghost" onPress={() => navigate('manage-live-events')}><Calendar size={20} color="#a855f7" /><Text style={styles.menuText}>Manage Live Events</Text></Button>
+            <Button variant="ghost" onPress={() => navigate('manage-live-events')}><Calendar size={20} color="#C8A2C8" /><Text style={styles.menuText}>Manage Live Events</Text></Button>
           </Card>
           <Card style={styles.manageCard}>
             <Text style={styles.manageTitle}>Recent Activity</Text>

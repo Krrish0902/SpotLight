@@ -64,11 +64,11 @@ export default function EventsGridScreen({ navigate }: Props) {
                 <View style={styles.info}>
                     <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
                     <View style={styles.metaRow}>
-                        <Calendar size={12} color="#a855f7" />
+                        <Calendar size={12} color="#C8A2C8" />
                         <Text style={styles.metaText}>{new Date(item.event_date).toLocaleDateString()}</Text>
                     </View>
                     <View style={styles.metaRow}>
-                        <MapPin size={12} color="#a855f7" />
+                        <MapPin size={12} color="#C8A2C8" />
                         <Text style={styles.metaText} numberOfLines={1}>{item.location_name}</Text>
                     </View>
                 </View>
@@ -77,7 +77,7 @@ export default function EventsGridScreen({ navigate }: Props) {
     );
 
     return (
-        <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+        <LinearGradient colors={['#000000', '#000']} style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Upcoming Events</Text>
@@ -85,7 +85,7 @@ export default function EventsGridScreen({ navigate }: Props) {
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#a855f7" />
+                        <ActivityIndicator size="large" color="#C8A2C8" />
                     </View>
                 ) : events.length === 0 ? (
                     <View style={styles.center}>

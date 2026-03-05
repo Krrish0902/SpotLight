@@ -17,7 +17,7 @@ interface Props { navigate: (screen: string) => void; }
 
 export default function PurchaseBoost({ navigate }: Props) {
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('artist-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
@@ -27,7 +27,7 @@ export default function PurchaseBoost({ navigate }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.infoCard}>
-          <View style={styles.infoRow}><TrendingUp size={24} color="#a855f7" /><View><Text style={styles.infoTitle}>Get More Bookings</Text><Text style={styles.infoText}>Boost your visibility and reach more event organizers.</Text></View></View>
+          <View style={styles.infoRow}><TrendingUp size={24} color="#C8A2C8" /><View><Text style={styles.infoTitle}>Get More Bookings</Text><Text style={styles.infoText}>Boost your visibility and reach more event organizers.</Text></View></View>
         </Card>
 
         {plans.map((p) => {
@@ -72,17 +72,17 @@ const styles = StyleSheet.create({
   infoText: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
   planCard: { backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 16 },
   planCardPopular: { borderColor: 'rgba(168,85,247,0.5)' },
-  popularBar: { backgroundColor: '#a855f7', paddingVertical: 4, alignItems: 'center' },
+  popularBar: { backgroundColor: '#C8A2C8', paddingVertical: 4, alignItems: 'center' },
   popularText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   planBody: { padding: 24 },
   planHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-  planIcon: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
+  planIcon: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#C8A2C8', alignItems: 'center', justifyContent: 'center' },
   planInfo: { flex: 1, marginLeft: 12 },
   planName: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   planDur: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
   planPrice: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
   selectBtn: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  selectBtnPrimary: { backgroundColor: '#a855f7' },
+  selectBtnPrimary: { backgroundColor: '#C8A2C8' },
   selectBtnText: { color: '#fff' },
   statusCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 24 },
   statusTitle: { color: '#fff', fontWeight: '600', marginBottom: 12 },

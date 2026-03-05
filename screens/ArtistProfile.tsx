@@ -13,6 +13,7 @@ import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { useSendbirdChat } from '@sendbird/uikit-react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,6 +48,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   // Determine the ID to fetch videos for
   const targetArtistId = isOwnProfile ? appUser?.id : artist?.user_id;
 
+  const { sdk } = useSendbirdChat();
   const [videos, setVideos] = useState<Video[]>([]);
   const [viewedProfile, setViewedProfile] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
@@ -268,6 +270,32 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     }
   };
 
+  const handleMessagePress = async () => {
+    if (!appUser || !artist) return;
+    
+    try {
+      // Create a 1-on-1 distinct group channel with the artist
+      const params = {
+        invitedUserIds: [artist.user_id || artist.id],
+        isDistinct: true,
+        name: `${appUser?.email?.split('@')[0]} & ${artist.display_name || artist.name || 'Artist'}`,
+      };
+      
+      const channel = await sdk.groupChannel.createChannel(params);
+      
+      // Navigate to messaging/chat with this artist, passing the channel URL
+      navigate('messaging', {
+        channelUrl: channel.url,
+        artist: artist,
+        returnTo: 'artist-profile',
+      });
+    } catch (err) {
+      console.error('Failed to create Sendbird channel:', err);
+      // Fallback navigation
+      navigate('messaging', { selectedArtist: artist });
+    }
+  };
+
   const effectiveProfile = isOwnProfile ? profile : (viewedProfile || artist);
   const isOrganizer = userRole === 'organizer';
   const displayName = effectiveProfile?.display_name ?? effectiveProfile?.name ?? 'Artist';
@@ -296,7 +324,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
         {/* ... (keep existing cover/header code) ... */}
         <View style={styles.coverWrap}>
-          <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['#1A1A1A', '#121212']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: displayCoverUrl }} style={StyleSheet.absoluteFill} />
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(returnTo ?? (isOwnProfile ? 'public-home' : 'search-discover'))}>
             <ChevronLeft size={24} color="#fff" />
@@ -371,7 +399,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                   <Calendar size={20} color="#fff" />
                   <Text style={styles.bookBtnText}>Request Booking</Text>
                 </Button>
-                <Button variant="outline" onPress={() => navigate('messaging', { selectedArtist: artist })} style={styles.msgBtn}>
+                <Button variant="outline" onPress={handleMessagePress} style={styles.msgBtn}>
                   <MessageSquare size={20} color="#fff" />
                 </Button>
               </>
@@ -403,7 +431,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             {(tab) => tab === 'videos' ? (
               <View style={styles.videoGrid}>
                 {loadingVideos ? (
-                  <ActivityIndicator color="#a855f7" style={{ marginTop: 20 }} />
+                  <ActivityIndicator color="#C8A2C8" style={{ marginTop: 20 }} />
                 ) : videos.length > 0 ? (
                   videos.map((v) => (
                     <Pressable
@@ -437,7 +465,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             ) : tab === 'schedule' ? (
               <Card style={styles.scheduleCard}>
                 {loadingEvents ? (
-                  <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
+                  <ActivityIndicator color="#C8A2C8" style={{ marginVertical: 24 }} />
                 ) : upcomingEvents.length === 0 ? (
                   <View style={styles.emptySchedule}>
                     <Calendar size={40} color="rgba(255,255,255,0.3)" />
@@ -451,7 +479,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                 ) : (
                   upcomingEvents.map((ev) => (
                     <View key={ev.id} style={styles.scheduleRow}>
-                      <Calendar size={20} color="#a855f7" />
+                      <Calendar size={20} color="#C8A2C8" />
                       <View style={styles.scheduleInfo}>
                         <Text style={styles.scheduleTitle}>{ev.title}</Text>
                         <Text style={styles.scheduleMeta}>
@@ -549,8 +577,8 @@ const styles = StyleSheet.create({
     height: 128,
     borderRadius: 64,
     borderWidth: 4,
-    borderColor: '#030712',
-    backgroundColor: '#1f2937',
+    borderColor: '#000000',
+    backgroundColor: '#1A1A1A',
   },
   profileImg: { width: '100%', height: '100%', borderRadius: 64 },
   loadingOverlay: {
@@ -564,14 +592,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#a855f7',
+    backgroundColor: '#C8A2C8',
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#030712',
+    borderColor: '#000000',
   },
   editCoverBtn: {
     position: 'absolute',
@@ -596,14 +624,14 @@ const styles = StyleSheet.create({
   profileHeader: { marginBottom: 24 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   name: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  usernamePill: { backgroundColor: '#7e22ce', borderWidth: 0, alignSelf: 'flex-start', marginBottom: 8 },
-  boostedBadge: { backgroundColor: '#a855f7' },
+  usernamePill: { backgroundColor: '#B18CB1', borderWidth: 0, alignSelf: 'flex-start', marginBottom: 8 },
+  boostedBadge: { backgroundColor: '#C8A2C8' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
   availableBadge: { backgroundColor: 'rgba(34,197,94,0.2)', marginTop: 12, borderColor: 'rgba(34,197,94,0.3)' },
   actionRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  bookBtn: { flex: 1, minWidth: 0, backgroundColor: '#a855f7', flexDirection: 'row', gap: 8 },
-  dashboardBtn: { flex: 1, minWidth: 0, backgroundColor: '#7e22ce', flexDirection: 'row', gap: 8 },
+  bookBtn: { flex: 1, minWidth: 0, backgroundColor: '#C8A2C8', flexDirection: 'row', gap: 8 },
+  dashboardBtn: { flex: 1, minWidth: 0, backgroundColor: '#B18CB1', flexDirection: 'row', gap: 8 },
   bookBtnText: { color: '#fff' },
   msgBtn: { borderColor: 'rgba(255,255,255,0.2)' },
   bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, marginBottom: 24 },

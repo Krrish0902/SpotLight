@@ -16,7 +16,7 @@ interface Props { navigate: (screen: string) => void; }
 
 export default function SubmitToContest({ navigate }: Props) {
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('artist-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
@@ -26,7 +26,7 @@ export default function SubmitToContest({ navigate }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.infoCard}>
-          <View style={styles.infoRow}><Trophy size={24} color="#a855f7" /><View><Text style={styles.infoTitle}>Enter to Win</Text><Text style={styles.infoText}>Showcase your talent and compete for prizes.</Text></View></View>
+          <View style={styles.infoRow}><Trophy size={24} color="#C8A2C8" /><View><Text style={styles.infoTitle}>Enter to Win</Text><Text style={styles.infoText}>Showcase your talent and compete for prizes.</Text></View></View>
         </Card>
 
         {mockContests.map((c) => (
@@ -38,8 +38,8 @@ export default function SubmitToContest({ navigate }: Props) {
             </View>
             <View style={styles.contestBody}>
               <Text style={styles.contestTitle}>{c.title}</Text>
-              <View style={styles.contestMeta}><Calendar size={16} color="#a855f7" /><Text style={styles.contestMetaText}>Deadline: {c.deadline}</Text></View>
-              <View style={styles.contestMeta}><Users size={16} color="#a855f7" /><Text style={styles.contestMetaText}>{c.participants} participants</Text></View>
+              <View style={styles.contestMeta}><Calendar size={16} color="#C8A2C8" /><Text style={styles.contestMetaText}>Deadline: {c.deadline}</Text></View>
+              <View style={styles.contestMeta}><Users size={16} color="#C8A2C8" /><Text style={styles.contestMetaText}>{c.participants} participants</Text></View>
               <View style={styles.contestActions}>
                 <Button variant="outline" style={styles.contestBtn}><Text style={styles.btnText}>View Details</Text></Button>
                 <Button style={[styles.contestBtn, styles.primaryBtn]} onPress={() => navigate('artist-dashboard')}><Text style={styles.btnText}>Submit Entry</Text></Button>
@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
   contestMetaText: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
   contestActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
   contestBtn: { flex: 1 },
-  primaryBtn: { backgroundColor: '#a855f7' },
+  primaryBtn: { backgroundColor: '#C8A2C8' },
   btnText: { color: '#fff' },
 });

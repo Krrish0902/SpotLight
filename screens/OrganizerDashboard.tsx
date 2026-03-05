@@ -56,7 +56,7 @@ export default function OrganizerDashboard({ navigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#000000', '#000']} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View><Text style={styles.title}>Dashboard</Text><Text style={styles.subtitle}>Welcome back, {displayName}!</Text></View>
@@ -67,7 +67,7 @@ export default function OrganizerDashboard({ navigate }: Props) {
         </View>
 
         <Card style={styles.searchCard} onPress={() => navigate('search-discover')}>
-          <LinearGradient colors={['#9333ea', '#db2777']} style={styles.searchGradient}>
+          <LinearGradient colors={['#1A1A1A', '#121212']} style={styles.searchGradient}>
             <View style={styles.searchContent}>
               <View style={styles.searchIcon}><Search size={28} color="#fff" /></View>
               <View style={styles.searchText}><Text style={styles.searchTitle}>Find Artists</Text><Text style={styles.searchDesc}>Discover talented performers</Text></View>
@@ -76,7 +76,7 @@ export default function OrganizerDashboard({ navigate }: Props) {
         </Card>
 
         <Card style={styles.createEventCard} onPress={() => navigate('create-event', { mode: 'create', event: null })}>
-          <LinearGradient colors={['#a855f7', '#7c3aed']} style={styles.createEventGradient}>
+          <LinearGradient colors={['#C8A2C8', '#B18CB1']} style={styles.createEventGradient}>
             <View style={styles.searchContent}>
               <View style={styles.searchIcon}><Calendar size={28} color="#fff" /></View>
               <View style={styles.searchText}>
@@ -88,14 +88,14 @@ export default function OrganizerDashboard({ navigate }: Props) {
         </Card>
 
         <View style={styles.statsGrid}>
-          <Card style={styles.statCard}><TrendingUp size={24} color="#a855f7" /><Text style={styles.statNum}>{totalEvents}</Text><Text style={styles.statLabel}>Events</Text></Card>
+          <Card style={styles.statCard}><TrendingUp size={24} color="#C8A2C8" /><Text style={styles.statNum}>{totalEvents}</Text><Text style={styles.statLabel}>Events</Text></Card>
           <Card style={styles.statCard}><MessageSquare size={24} color="#60a5fa" /><Text style={styles.statNum}>—</Text><Text style={styles.statLabel}>Bookings</Text></Card>
           <Card style={styles.statCard}><Calendar size={24} color="#4ade80" /><Text style={styles.statNum}>{upcomingCount}</Text><Text style={styles.statLabel}>Upcoming</Text></Card>
         </View>
 
         <Text style={styles.sectionTitle}>My Events</Text>
         {loading ? (
-          <View style={styles.loadingRow}><ActivityIndicator size="large" color="#a855f7" /></View>
+          <View style={styles.loadingRow}><ActivityIndicator size="large" color="#C8A2C8" /></View>
         ) : events.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyText}>You haven't created any events yet.</Text>

@@ -17,7 +17,7 @@ export default function RequestBooking({ navigate, artist }: Props) {
   const handleSubmit = () => navigate('organizer-dashboard');
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('artist-profile', { selectedArtist: artist })}>
           <ChevronLeft size={24} color="#fff" />
@@ -66,6 +66,6 @@ const styles = StyleSheet.create({
   field: { marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 12 },
   btn: { flex: 1 },
-  primaryBtn: { backgroundColor: '#a855f7' },
+  primaryBtn: { backgroundColor: '#C8A2C8' },
   btnText: { color: '#fff' },
 });

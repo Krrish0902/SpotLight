@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import { Text } from '../ui/Text';
+import { View, Pressable, StyleSheet, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Search, Calendar, User } from 'lucide-react-native';
+import { Star, Heart, MessageCircle, User } from 'lucide-react-native';
 import { colors } from '../../theme';
 
 interface BottomNavProps {
@@ -13,27 +12,23 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: 'home', Icon: Home, label: 'Home' },
-  { id: 'search', Icon: Search, label: 'Discover' },
-  { id: 'events', Icon: Calendar, label: 'Events' },
-  { id: 'profile', Icon: User, label: 'Profile' },
+  { id: 'home', Icon: null, isLogo: true }, // Custom logo for home
+  { id: 'search', Icon: Star },
+  { id: 'events', Icon: Heart },
+  { id: 'messages', Icon: MessageCircle },
+  { id: 'profile', Icon: User },
 ];
 
 export default function BottomNav({ activeTab, navigate, userRole = 'public', isAuthenticated = false }: BottomNavProps) {
   const insets = useSafeAreaInsets();
 
   const handleTabPress = (tabId: string) => {
-    if (tabId === 'home') {
-      navigate('public-home');
-      return;
-    }
-    if (tabId === 'search') {
-      navigate('search-discover');
-      return;
-    }
-    if (tabId === 'events') {
-      navigate('events-grid');
-      return;
+    if (tabId === 'home') navigate('public-home');
+    if (tabId === 'search') navigate('search-discover');
+    if (tabId === 'events') navigate('events-grid');
+    if (tabId === 'messages') {
+      if (!isAuthenticated) navigate('login-signup', { returnTo: 'matches' });
+      else navigate('matches');
     }
     if (tabId === 'profile') {
       if (isAuthenticated && (userRole === 'artist' || userRole === 'organizer')) {
@@ -43,7 +38,6 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
       } else {
         navigate('login-signup', { returnTo: 'public-home' });
       }
-      return;
     }
   };
 
@@ -51,28 +45,23 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={styles.content}>
         {tabs.map((tab) => {
-          const Icon = tab.Icon;
           const isActive = activeTab === tab.id;
+          const iconColor = isActive ? colors.primary : '#666666';
+          const IconComponent = tab.Icon as any;
+
           return (
             <Pressable
               key={tab.id}
               onPress={() => handleTabPress(tab.id)}
               style={styles.tab}
             >
-              <Icon
-                size={24}
-                color={isActive ? colors.purple[400] : colors['white/60']}
-                strokeWidth={2}
-              />
-              <Text
-                style={[
-                  styles.label,
-                  { color: isActive ? colors.purple[400] : colors['white/60'] },
-                  isActive && styles.labelActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
+              {tab.isLogo ? (
+                <View style={styles.logoContainer}>
+                  <Text style={[styles.logoText, { color: iconColor }]}>H</Text>
+                </View>
+              ) : (
+                <IconComponent size={28} color={iconColor} strokeWidth={isActive ? 2.5 : 2} />
+              )}
             </Pressable>
           );
         })}
@@ -81,34 +70,41 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
   );
 }
 
+// Simple Text component for the logo if we aren't importing the main Text component
+import { Text } from 'react-native';
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: '#111111', // Very dark grey/black
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#222222',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 8,
-    paddingTop: 12,
+    paddingTop: 16,
   },
   tab: {
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    padding: 8,
   },
-  label: {
-    fontSize: 12,
+  logoContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  labelActive: {
-    fontWeight: '600',
-  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    letterSpacing: -1,
+  }
 });
