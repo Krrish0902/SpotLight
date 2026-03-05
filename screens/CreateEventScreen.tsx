@@ -207,7 +207,7 @@ export default function CreateEventScreen({ navigate, route }: Props) {
     };
 
     return (
-        <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+        <LinearGradient colors={['#000000', '#000']} style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Button variant="ghost" size="icon" onPress={() => navigate('organizer-dashboard')} disabled={loading}>
@@ -358,6 +358,6 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center' },
     datePickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     dateText: { color: '#fff' },
-    submitBtn: { backgroundColor: '#a855f7', marginTop: 16 },
+    submitBtn: { backgroundColor: '#C8A2C8', marginTop: 16 },
     submitBtnText: { color: '#fff', fontWeight: '600' },
 });

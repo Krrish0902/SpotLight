@@ -21,7 +21,7 @@ export default function ArtistDashboard({ navigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#000000', '#000']} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
@@ -35,7 +35,7 @@ export default function ArtistDashboard({ navigate }: Props) {
         </View>
 
         <Card style={styles.profileCard} onPress={() => navigate('artist-profile', { selectedArtist: { id: 'me', name: displayName, genre: genresStr } })}>
-          <LinearGradient colors={['#9333ea', '#db2777']} style={styles.profileGradient}>
+          <LinearGradient colors={['#1A1A1A', '#121212']} style={styles.profileGradient}>
             <View style={styles.profileContent}>
               <Image source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop' }} style={styles.avatar} />
               <View style={styles.profileInfo}>
@@ -69,7 +69,7 @@ export default function ArtistDashboard({ navigate }: Props) {
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
-          <Button onPress={() => navigate('upload-video')} style={[styles.actionBtn, { backgroundColor: '#7e22ce' }]}>
+          <Button onPress={() => navigate('upload-video')} style={[styles.actionBtn, { backgroundColor: '#B18CB1' }]}>
             <Video size={32} color="#fff" />
             <Text style={styles.actionText}>Upload Video</Text>
           </Button>

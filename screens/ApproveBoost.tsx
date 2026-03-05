@@ -15,7 +15,7 @@ interface Props { navigate: (screen: string) => void; }
 
 export default function ApproveBoost({ navigate }: Props) {
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('admin-dashboard')}>
           <ChevronLeft size={24} color="#fff" />

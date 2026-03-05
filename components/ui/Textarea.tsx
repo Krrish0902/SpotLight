@@ -9,7 +9,6 @@ export function Textarea(props: TextInputProps) {
       placeholderTextColor={colors['white/40']}
       multiline
       textAlignVertical="top"
-      includeFontPadding={Platform.OS === 'android' ? false : undefined}
       {...props}
     />
   );
@@ -17,12 +16,12 @@ export function Textarea(props: TextInputProps) {
 
 const styles = StyleSheet.create({
   textarea: {
-    minHeight: 96,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: colors['white/5'],
+    minHeight: 120,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors['white/20'],
+    borderColor: colors.border,
     color: '#fff',
     fontSize: 16,
   },

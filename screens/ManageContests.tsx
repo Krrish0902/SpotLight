@@ -16,7 +16,7 @@ interface Props { navigate: (screen: string) => void; }
 
 export default function ManageContests({ navigate }: Props) {
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('admin-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
@@ -35,8 +35,8 @@ export default function ManageContests({ navigate }: Props) {
             </View>
             <View style={styles.contestBody}>
               <Text style={styles.contestTitle}>{c.title}</Text>
-              <View style={styles.meta}><Calendar size={20} color="#a855f7" /><Text style={styles.metaText}>{c.deadline}</Text></View>
-              <View style={styles.meta}><Users size={20} color="#a855f7" /><Text style={styles.metaText}>{c.participants} artists</Text></View>
+              <View style={styles.meta}><Calendar size={20} color="#C8A2C8" /><Text style={styles.metaText}>{c.deadline}</Text></View>
+              <View style={styles.meta}><Users size={20} color="#C8A2C8" /><Text style={styles.metaText}>{c.participants} artists</Text></View>
               <View style={styles.actions}><Button variant="outline" size="sm" style={styles.actionBtn}><Edit size={16} color="#fff" /><Text style={styles.actionText}>Edit</Text></Button><Button variant="outline" size="sm" style={[styles.actionBtn, styles.deleteBtn]}><Trash2 size={16} color="#f87171" /><Text style={styles.deleteText}>Delete</Text></Button></View>
             </View>
           </Card>
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', flex: 1 },
-  createBtn: { backgroundColor: '#a855f7' },
+  createBtn: { backgroundColor: '#C8A2C8' },
   createText: { color: '#fff' },
   scroll: { padding: 24 },
   contestCard: { marginBottom: 24, overflow: 'hidden' },

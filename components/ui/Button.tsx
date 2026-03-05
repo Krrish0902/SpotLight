@@ -57,7 +57,7 @@ export function Button({
         {
           paddingHorizontal: sizeStyle.padding,
           minHeight: sizeStyle.minHeight,
-          borderRadius: isIcon ? 18 : 8,
+          borderRadius: isIcon ? 18 : 100, // Pill shape for premium feel
           opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
         },
         style,
@@ -70,7 +70,9 @@ export function Button({
           <Text
             style={[
               styles.text,
-              variant === 'default' || variant === 'secondary' ? styles.textWhite : styles.textForeground,
+              variant === 'default' ? styles.textPrimaryForeground : undefined,
+              variant === 'secondary' ? styles.textWhite : undefined,
+              variant !== 'default' && variant !== 'secondary' ? styles.textForeground : undefined,
               textStyle,
             ]}
           >
@@ -104,6 +106,10 @@ const styles = StyleSheet.create({
   },
   textWhite: {
     color: '#fff',
+  },
+  textPrimaryForeground: {
+    color: colors['primary-foreground'],
+    fontWeight: '600',
   },
   textForeground: {
     color: colors.foreground,

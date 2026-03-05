@@ -4,13 +4,7 @@ import { registerRootComponent } from 'expo';
 
 import App from './App';
 
-// Fix Android font clipping – disable extra padding that cuts off glyphs
-if (Platform.OS === 'android') {
-  Text.defaultProps = Text.defaultProps || {};
-  (Text.defaultProps as any).includeFontPadding = false;
-  TextInput.defaultProps = TextInput.defaultProps || {};
-  (TextInput.defaultProps as any).includeFontPadding = false;
-}
+// Android font clipping mitigation is now handled on the component level where possible.
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

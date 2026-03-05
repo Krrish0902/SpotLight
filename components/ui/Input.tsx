@@ -18,7 +18,7 @@ export function Input({
   containerStyle,
   leftIcon,
   style,
-  placeholderTextColor = colors['white/40'],
+  placeholderTextColor = colors['black/40'],
   ...props
 }: InputProps) {
   return (
@@ -32,7 +32,6 @@ export function Input({
           style,
         ]}
         placeholderTextColor={placeholderTextColor}
-        includeFontPadding={Platform.OS === 'android' ? false : undefined}
         {...props}
       />
     </View>
@@ -53,16 +52,16 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    height: 40,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors['white/5'],
+    height: 48,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors['white/20'],
-    color: '#fff',
+    borderColor: colors.border,
+    color: colors.foreground,
     fontSize: 16,
   },
   inputWithIcon: {
-    paddingLeft: 40,
+    paddingLeft: 44,
   },
 });

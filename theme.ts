@@ -1,24 +1,26 @@
 export const colors = {
-  background: '#0a0a0f',
-  foreground: '#fafafa',
-  card: '#1a1a1f',
-  muted: '#444',
-  'muted-foreground': 'rgba(255,255,255,0.6)',
-  primary: '#a855f7',
-  'primary-foreground': '#fff',
-  border: 'rgba(255,255,255,0.1)',
-  'white/5': 'rgba(255,255,255,0.05)',
-  'white/10': 'rgba(255,255,255,0.1)',
-  'white/20': 'rgba(255,255,255,0.2)',
-  'white/40': 'rgba(255,255,255,0.4)',
-  'white/60': 'rgba(255,255,255,0.6)',
-  'white/80': 'rgba(255,255,255,0.8)',
-  purple: {
-    400: '#c084fc',
-    500: '#a855f7',
-    600: '#9333ea',
-    700: '#7e22ce',
+  background: '#ffffff',
+  foreground: '#000000',
+  card: '#ffffff', // Clean white for cards
+  muted: '#f3f4f6', // Light gray
+  'muted-foreground': 'rgba(0,0,0,0.6)',
+  primary: '#5c2a55', // Hinge Purple
+  'primary-foreground': '#ffffff', // Text on primary should be white for contrast
+  border: 'rgba(0,0,0,0.1)',
+  'black/5': 'rgba(0,0,0,0.05)',
+  'black/10': 'rgba(0,0,0,0.1)',
+  'black/20': 'rgba(0,0,0,0.2)',
+  'black/40': 'rgba(0,0,0,0.4)',
+  'black/60': 'rgba(0,0,0,0.6)',
+  'black/80': 'rgba(0,0,0,0.8)',
+  hingePurple: {
+    300: '#9b6c93',
+    400: '#7e4775',
+    500: '#5c2a55',
+    600: '#481d42',
+    700: '#34112e',
   },
+  // Keep some utility colors but adjusted slightly if needed
   pink: {
     500: '#ec4899',
     600: '#db2777',
@@ -43,7 +45,8 @@ export const colors = {
     400: '#facc15',
   },
   gray: {
-    900: '#111827',
-    950: '#030712',
+    800: '#27272A',
+    900: '#18181B',
+    950: '#09090B',
   },
 };

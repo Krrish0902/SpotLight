@@ -187,7 +187,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#a855f7" />
+        <ActivityIndicator size="large" color="#C8A2C8" />
       </View>
     );
   }
@@ -249,11 +249,11 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
             </View>
 
             <View style={styles.eventMeta}>
-              <MapPin size={20} color="#a855f7" />
+              <MapPin size={20} color="#C8A2C8" />
               <Text style={styles.metaText}>{event.date}</Text>
             </View>
             <View style={styles.eventMeta}>
-              <MapPin size={20} color="#a855f7" />
+              <MapPin size={20} color="#C8A2C8" />
               <Text style={styles.metaText}>{event.venue}</Text>
             </View>
             <View style={styles.eventMeta}>
@@ -321,7 +321,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
             <Button
               onPress={handleBooking}
               disabled={bookingLoading}
-              style={{ marginTop: 24, backgroundColor: '#a855f7' }}
+              style={{ marginTop: 24, backgroundColor: '#C8A2C8' }}
             >
               {bookingLoading ? <ActivityIndicator color="#fff" /> : 'Confirm Booking'}
             </Button>
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
   eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
-  ticketBtn: { backgroundColor: '#a855f7', marginTop: 16 },
+  ticketBtn: { backgroundColor: '#C8A2C8', marginTop: 16 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 12 },
   description: { color: 'rgba(255,255,255,0.7)', lineHeight: 24, marginBottom: 24 },
   lineupCard: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
   disabledBtn: { backgroundColor: '#374151', opacity: 0.7 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#1f2937', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 },
+  modalContent: { backgroundColor: '#1A1A1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   qtyContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },

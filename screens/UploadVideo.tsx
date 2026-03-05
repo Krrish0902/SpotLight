@@ -159,7 +159,7 @@ export default function UploadVideo({ navigate }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Button variant="ghost" size="icon" onPress={() => navigate('artist-dashboard')} disabled={isUploading}>
@@ -241,6 +241,6 @@ const styles = StyleSheet.create({
   field: { marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 24 },
   actionBtn: { flex: 1 },
-  primaryBtn: { backgroundColor: '#a855f7' },
+  primaryBtn: { backgroundColor: '#C8A2C8' },
   actionText: { color: '#fff' },
 });

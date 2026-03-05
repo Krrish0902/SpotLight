@@ -13,7 +13,7 @@ interface BadgeProps {
 export function Badge({ children, variant = 'default', style, icon }: BadgeProps) {
   const bgColor =
     variant === 'secondary' ? colors['white/20'] :
-    variant === 'outline' ? 'transparent' : colors.primary;
+      variant === 'outline' ? 'transparent' : colors.primary;
 
   return (
     <View
@@ -26,7 +26,7 @@ export function Badge({ children, variant = 'default', style, icon }: BadgeProps
     >
       <View style={styles.badgeContent}>
         {icon}
-        <Text style={styles.text}>{children}</Text>
+        <Text style={[styles.text, { color: variant === 'default' ? colors['primary-foreground'] : '#fff' }]}>{children}</Text>
       </View>
     </View>
   );
@@ -34,9 +34,9 @@ export function Badge({ children, variant = 'default', style, icon }: BadgeProps
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',

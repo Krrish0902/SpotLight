@@ -17,7 +17,6 @@ export function Text({
   return (
     <RNText
       {...props}
-      includeFontPadding={Platform.OS === 'android' ? false : undefined}
       style={[Platform.OS === 'android' && { lineHeight }, style]}
     />
   );

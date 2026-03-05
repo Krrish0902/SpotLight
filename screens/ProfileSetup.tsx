@@ -108,7 +108,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         Alert.alert('Permission needed', 'Location access is required to capture your coordinates.');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLatitude(loc.coords.latitude);
       setLongitude(loc.coords.longitude);
       try {
@@ -175,7 +175,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#000']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={goBack}>
           <ChevronLeft size={24} color="#fff" />
@@ -188,7 +188,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
           ) : (
-            <LinearGradient colors={['#a855f7', '#ec4899']} style={styles.avatar}>
+            <LinearGradient colors={['#C8A2C8', '#E6CDEE']} style={styles.avatar}>
               <User size={64} color="#fff" />
             </LinearGradient>
           )}
@@ -240,14 +240,14 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
                 />
               </View>
               {userRole === 'artist' && (
-              <View style={styles.field}>
-                <Label>Bio</Label>
-                <Textarea
-                  placeholder="Tell us about yourself and your music"
-                  value={bio}
-                  onChangeText={setBio}
-                />
-              </View>
+                <View style={styles.field}>
+                  <Label>Bio</Label>
+                  <Textarea
+                    placeholder="Tell us about yourself and your music"
+                    value={bio}
+                    onChangeText={setBio}
+                  />
+                </View>
               )}
             </>
           )}
@@ -269,9 +269,9 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
                 style={styles.captureBtn}
               >
                 {capturingLocation ? (
-                  <ActivityIndicator color="#a855f7" size="small" />
+                  <ActivityIndicator color="#C8A2C8" size="small" />
                 ) : (
-                  <Crosshair size={18} color="#a855f7" />
+                  <Crosshair size={18} color="#C8A2C8" />
                 )}
               </Button>
             </View>
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   scroll: { padding: 24, paddingBottom: 48 },
   avatarWrap: { alignItems: 'center', marginBottom: 32 },
   avatar: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center' },
-  avatarImg: { width: 128, height: 128, borderRadius: 64, borderWidth: 2, borderColor: '#a855f7' },
+  avatarImg: { width: 128, height: 128, borderRadius: 64, borderWidth: 2, borderColor: '#C8A2C8' },
   cameraBtn: { position: 'absolute', bottom: 0, right: '50%', marginRight: -70, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
   field: { marginBottom: 20 },
@@ -326,6 +326,6 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24, alignItems: 'center' },
   cancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.3)' },
   cancelText: { color: '#fff', fontSize: 16 },
-  completeBtn: { flex: 1, backgroundColor: '#a855f7' },
+  completeBtn: { flex: 1, backgroundColor: '#C8A2C8' },
   completeText: { color: '#fff', fontSize: 16 },
 });

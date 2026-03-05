@@ -3,9 +3,11 @@ import { View, StyleSheet, Dimensions, FlatList, ActivityIndicator, StatusBar } 
 import { Text } from '../components/ui/Text';
 import { Button } from '../components/ui/Button';
 import BottomNav from '../components/layout/BottomNav';
-import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { HingeArtistProfile, HingeProfileData } from '../components/HingeArtistProfile';
+import { colors } from '../theme';
+import { useSendbirdChat } from '@sendbird/uikit-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -16,60 +18,76 @@ interface Props {
 export default function PublicHome({ navigate }: Props) {
   const { appUser } = useAuth();
   const isAuthenticated = !!appUser;
-  const [videos, setVideos] = useState<VideoFeedItemData[]>([]);
+  const [profiles, setProfiles] = useState<HingeProfileData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [muted, setMuted] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  
+  const { sdk } = useSendbirdChat();
 
-  const fetchVideos = async () => {
+  const fetchProfilesWithVideos = async () => {
     try {
-      // Direct join videos -> profiles (enabled by Foreign Key)
-      const { data, error } = await supabase
+      setLoading(true);
+      setErrorState(null);
+
+      // 1. Fetch random/recent profiles directly (bypassing `users` table due to RLS blocks)
+      const { data: profilesData, error: profilesErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(10);
+
+      if (profilesErr) throw profilesErr;
+      if (!profilesData || profilesData.length === 0) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+
+      const userIds = profilesData.map(p => p.user_id);
+
+      // 2. Fetch their videos
+      const { data: videosData, error: videosErr } = await supabase
         .from('videos')
-        .select(`
-          video_id,
-          video_url,
-          thumbnail_url,
-          title,
-          description,
-          likes_count,
-          views_count,
-          upload_date,
-          artist_id,
-          profiles!inner (
-            user_id,
-            display_name,
-            username,
-            avatar_url,
-            genres,
-            city,
-            is_boosted
-          )
-        `)
+        .select('*')
+        .in('artist_id', userIds)
         .order('upload_date', { ascending: false });
 
-      if (error) throw error;
+      if (videosErr) throw videosErr;
 
-      const validVideos: VideoFeedItemData[] = (data || []).map((v: any) => {
-        // Handle if profiles is returned as array or object
-        const profile = Array.isArray(v.profiles) ? v.profiles[0] : v.profiles;
+      // Combine them
+      const combinedProfiles: HingeProfileData[] = profilesData.map(p => {
+        const artistVideos = (videosData || []).filter(v => v.artist_id === p.user_id);
         return {
-          ...v,
-          profiles: profile,
+          user_id: p.user_id,
+          display_name: p.display_name,
+          username: p.username,
+          bio: p.bio,
+          city: p.city,
+          genres: p.genres,
+          avatar_url: p.avatar_url,
+          cover_url: p.cover_url,
+          videos: artistVideos.map(v => ({
+            video_id: v.video_id,
+            video_url: v.video_url,
+            thumbnail_url: v.thumbnail_url,
+            title: v.title,
+            description: v.description,
+          })),
         };
       });
 
-      setVideos(validVideos);
-    } catch (error) {
-      console.error('Error fetching videos:', error);
+      setProfiles(combinedProfiles);
+    } catch (err: any) {
+      console.error('Error fetching profiles:', err);
+      setErrorState(err.message || 'Failed to load profiles.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVideos();
+    fetchProfilesWithVideos();
   }, []);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -78,51 +96,100 @@ export default function PublicHome({ navigate }: Props) {
     }
   }).current;
 
-  const renderItem = ({ item, index }: { item: VideoFeedItemData; index: number }) => {
-    const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
+  const handleLike = async (profile: HingeProfileData) => {
+    if (!isAuthenticated) {
+      // Prompt login first
+      navigate('login-signup', { returnTo: 'public-home', defaultTab: 'signup' });
+      return;
+    }
+
+    try {
+      // Create a 1-on-1 distinct group channel with the liked artist
+      const params = {
+        invitedUserIds: [profile.user_id],
+        isDistinct: true,
+        name: `${appUser?.email?.split('@')[0]} & ${profile.display_name}`,
+      };
+      
+      const channel = await sdk.groupChannel.createChannel(params);
+      
+      // Navigate to messaging/chat with this artist, passing the channel URL
+      navigate('messaging', {
+        channelUrl: channel.url,
+        artist: profile,
+        returnTo: 'public-home',
+      });
+    } catch (err) {
+      console.error('Failed to create Sendbird channel:', err);
+    }
+  };
+
+  const handleReject = () => {
+    // Skip logic -> go next
+    if (activeIndex < profiles.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+    }
+  };
+
+  const handleOptionsPress = (profile: HingeProfileData) => {
+    navigate('artist-profile', { selectedArtist: { ...profile }, returnTo: 'public-home' });
+  };
+
+  const renderItem = ({ item, index }: { item: HingeProfileData; index: number }) => {
     return (
-      <VideoFeedItem
-        item={item}
-        isActive={index === activeIndex}
-        muted={muted}
-        onToggleMute={() => setMuted((m) => !m)}
-        showProfileOverlay
-        onProfilePress={() => navigate('artist-profile', { selectedArtist: { user_id: item.artist_id, ...profile }, returnTo: 'public-home' })}
-      />
+      <View style={{ width, height: height }}>
+        <HingeArtistProfile
+          profile={item}
+          isActive={index === activeIndex}
+          onLike={() => handleLike(item)}
+          onReject={handleReject}
+          onOptionsPress={() => handleOptionsPress(item)}
+        />
+      </View>
     );
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#a855f7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <FlatList
         ref={flatListRef}
-        data={videos}
+        data={profiles}
         renderItem={renderItem}
-        keyExtractor={(item) => item.video_id}
+        keyExtractor={(item) => item.user_id}
+        horizontal
         pagingEnabled
-        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         snapToAlignment="start"
         decelerationRate="fast"
         onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        viewabilityConfig={viewabilityConfig}
         getItemLayout={(_data, index) => ({
-          length: height,
-          offset: height * index,
+          length: width,
+          offset: width * index,
           index,
         })}
         ListEmptyComponent={
-          <View style={[styles.centerContainer, { height }]}>
-            <Text style={{ color: '#fff' }}>No videos found.</Text>
-            <Button variant="outline" onPress={fetchVideos} style={{ marginTop: 20 }}>Refresh</Button>
+          <View style={[styles.centerContainer, { width }]}>
+            {errorState ? (
+              <View style={{ paddingHorizontal: 32, alignItems: 'center' }}>
+                <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 12, fontWeight: 'bold' }}>Network Error</Text>
+                <Text style={{ color: colors.foreground, textAlign: 'center', opacity: 0.8 }}>{errorState}</Text>
+              </View>
+            ) : (
+              <Text style={{ color: colors.foreground }}>No artists found.</Text>
+            )}
+            <Button variant="outline" onPress={fetchProfilesWithVideos} style={{ marginTop: 20 }}>Refresh Feed</Button>
           </View>
         }
       />
@@ -132,10 +199,10 @@ export default function PublicHome({ navigate }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: colors.background },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

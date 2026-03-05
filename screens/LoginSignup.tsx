@@ -1,164 +1,144 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Pressable, Platform } from 'react-native';
 import { Text } from '../components/ui/Text';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Mail, Lock } from 'lucide-react-native';
-import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Card } from '../components/ui/Card';
-import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../lib/auth-context';
 import { colors } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
-  navigate: (screen: string) => void;
+  navigate: (screen: string, data?: any) => void;
   returnTo?: string;
+  defaultTab?: 'login' | 'signup';
 }
 
-export default function LoginSignup({ navigate, returnTo = 'public-home' }: Props) {
+export default function LoginSignup({ navigate, returnTo = 'onboarding-start', defaultTab = 'login' }: Props) {
+  const insets = useSafeAreaInsets();
   const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<'login' | 'signup'>(defaultTab);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
     setError(null);
     if (!email.trim() || !password) {
       setError('Please enter email and password.');
       return;
     }
-    setLoading(true);
-    const { error: err } = await signIn(email.trim(), password);
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    navigate('role-selection');
-  };
-
-  const handleSignUp = async () => {
-    setError(null);
-    if (!email.trim() || !password) {
-      setError('Please enter email and password.');
-      return;
-    }
-    if (password.length < 6) {
+    if (mode === 'signup' && password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
     setLoading(true);
-    const { error: err } = await signUp(email.trim(), password, 'public');
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
+    if (mode === 'login') {
+      const { error: err } = await signIn(email.trim(), password);
+      setLoading(false);
+      if (err) {
+        setError(err.message);
+        return;
+      }
+    } else {
+      const { error: err } = await signUp(email.trim(), password, 'public');
+      setLoading(false);
+      if (err) {
+        setError(err.message);
+        return;
+      }
     }
-    navigate('role-selection');
+    // App.tsx auth watcher will handle routing after successful auth
   };
 
+  const toggleMode = () => {
+    setError(null);
+    setMode(prev => prev === 'login' ? 'signup' : 'login');
+  };
+
+  const isLogin = mode === 'login';
+
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
-      <View style={styles.header}>
-        <Button variant="ghost" size="icon" onPress={() => navigate(returnTo)}>
-          <ChevronLeft size={24} color="#fff" />
-        </Button>
-        <Text style={styles.title}>Welcome to Spotlight</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <Pressable onPress={() => navigate(returnTo)} style={styles.backBtn}>
+          <ChevronLeft size={28} color={colors.foreground} />
+        </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Card style={styles.card}>
-          <Tabs
-            defaultValue="login"
-            tabs={[
-              { value: 'login', label: 'Login' },
-              { value: 'signup', label: 'Sign Up' },
-            ]}
-            onValueChange={() => setError(null)}
-          >
-            {(activeTab) => (
-              <View style={styles.form}>
-                {error ? (
-                  <View style={styles.errorWrap}>
-                    <Text style={styles.errorText}>{error}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.field}>
-                  <Label>Email</Label>
-                  <Input
-                    leftIcon={<Mail size={20} color="rgba(255,255,255,0.4)" />}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Label>Password</Label>
-                  <Input
-                    leftIcon={<Lock size={20} color="rgba(255,255,255,0.4)" />}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder={activeTab === 'login' ? 'Enter your password' : 'Create a password (min 6 chars)'}
-                    secureTextEntry
-                  />
-                </View>
-                {activeTab === 'login' ? (
-                  <>
-                    <Button
-                      onPress={handleLogin}
-                      style={styles.gradientBtn}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={styles.btnText}>Login</Text>
-                      )}
-                    </Button>
-                    <Button variant="ghost" onPress={() => {}}>
-                      <Text style={styles.forgotText}>Forgot Password?</Text>
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onPress={handleSignUp}
-                    style={styles.gradientBtn}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.btnText}>Create Account</Text>
-                    )}
-                  </Button>
-                )}
-              </View>
-            )}
-          </Tabs>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Title */}
+        <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create your account'}</Text>
+        <Text style={styles.subtitle}>
+          {isLogin ? 'Sign in to continue discovering artists.' : 'Join SpotLight and discover amazing artists.'}
+        </Text>
 
-          <View style={styles.socialSection}>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            <View style={styles.socialButtons}>
-              <Button variant="outline" style={styles.socialBtn} disabled>
-                <Text style={styles.socialBtnText}>Google</Text>
-              </Button>
-              <Button variant="outline" style={styles.socialBtn} disabled>
-                <Text style={styles.socialBtnText}>Apple</Text>
-              </Button>
-            </View>
+        {/* Error */}
+        {error ? (
+          <View style={styles.errorWrap}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
-        </Card>
+        ) : null}
+
+        {/* Email field */}
+        <View style={styles.field}>
+          <Label style={styles.label}>Email</Label>
+          <Input
+            leftIcon={<Mail size={20} color="rgba(0,0,0,0.4)" />}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter your email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        {/* Password field */}
+        <View style={styles.field}>
+          <Label style={styles.label}>Password</Label>
+          <Input
+            leftIcon={<Lock size={20} color="rgba(0,0,0,0.4)" />}
+            value={password}
+            onChangeText={setPassword}
+            placeholder={isLogin ? 'Enter your password' : 'Create a password (min 6 chars)'}
+            secureTextEntry
+          />
+        </View>
+
+        {/* Submit button */}
+        <Pressable
+          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitBtnText}>{isLogin ? 'Sign In' : 'Create Account'}</Text>
+          )}
+        </Pressable>
+
+        {/* Forgot Password (login only) */}
+        {isLogin && (
+          <Pressable style={styles.forgotBtn}>
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </Pressable>
+        )}
+
+        {/* Toggle mode link */}
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>
+            {isLogin ? "Don't have an account? " : 'Already have an account? '}
+          </Text>
+          <Pressable onPress={toggleMode}>
+            <Text style={styles.toggleLink}>{isLogin ? 'Sign Up' : 'Sign In'}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -169,83 +149,95 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 28,
+    paddingTop: 12,
   },
-  card: {
-    backgroundColor: 'rgba(17,24,39,0.5)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    padding: 24,
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: '#000',
+    marginBottom: 8,
   },
-  form: {
-    gap: 16,
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 32,
+    lineHeight: 22,
   },
   errorWrap: {
-    padding: 12,
+    padding: 14,
     backgroundColor: 'rgba(239,68,68,0.15)',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.red[400],
+    marginBottom: 20,
   },
   errorText: {
     color: colors.red[400],
     fontSize: 14,
   },
-  field: {
-    marginBottom: 4,
-  },
-  gradientBtn: {
-    backgroundColor: '#a855f7',
-    marginTop: 8,
-  },
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  forgotText: {
-    color: '#c084fc',
+  label: {
+    color: '#444',
+    marginBottom: 6,
     fontSize: 14,
-    textAlign: 'center',
+    fontWeight: '600',
   },
-  socialSection: {
-    marginTop: 24,
+  field: {
+    marginBottom: 20,
   },
-  divider: {
-    flexDirection: 'row',
+  submitBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  forgotBtn: {
     alignItems: 'center',
     marginBottom: 16,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  dividerText: {
-    paddingHorizontal: 8,
-    color: 'rgba(255,255,255,0.6)',
+  forgotText: {
+    color: '#C8A2C8',
     fontSize: 14,
-    backgroundColor: 'rgba(17,24,39,0.5)',
+    fontWeight: '600',
   },
-  socialButtons: {
+  toggleRow: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    paddingBottom: 40,
   },
-  socialBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.2)',
+  toggleLabel: {
+    color: '#888',
+    fontSize: 15,
   },
-  socialBtnText: {
-    color: '#fff',
+  toggleLink: {
+    color: '#C8A2C8',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
