@@ -30,6 +30,7 @@ import ManageLiveEvents from './screens/ManageLiveEvents';
 import ManageProfiles from './screens/ManageProfiles';
 import CreateEventScreen from './screens/CreateEventScreen';
 import EventsGridScreen from './screens/EventsGridScreen';
+import ChatHub from './screens/ChatHub';
 
 export type { UserRole };
 
@@ -39,6 +40,8 @@ export interface AppState {
   selectedArtist?: any;
   selectedEvent?: any;
   eventId?: string;
+  returnTo?: string;
+  chatId?: string;
 }
 
 function AppContent() {
@@ -130,7 +133,7 @@ function AppContent() {
       case 'request-booking':
         return <RequestBooking navigate={navigate} artist={appState.selectedArtist} />;
       case 'messaging':
-        return <Messaging navigate={navigate} artist={appState.selectedArtist} />;
+        return <Messaging navigate={navigate} artist={appState.selectedArtist} chatId={appState.chatId} />;
       case 'admin-dashboard':
         return <AdminDashboard navigate={navigate} />;
       case 'moderate-content':
@@ -143,6 +146,8 @@ function AppContent() {
         return <ManageLiveEvents navigate={navigate} />;
       case 'manage-profiles':
         return <ManageProfiles navigate={navigate} />;
+      case 'chat-hub':
+        return <ChatHub navigate={navigate} />;
       default:
         return <PublicHome navigate={navigate} />;
     }

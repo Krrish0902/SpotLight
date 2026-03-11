@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Pressable, StyleSheet, Dimensions, Image } from 'react-native';
 import { Text } from './ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX } from 'lucide-react-native';
+import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX, MessageSquare, Check } from 'lucide-react-native';
 import { Badge } from './ui/Badge';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth-context';
 
 const { width, height } = Dimensions.get('window');
 const BOTTOM_NAV_HEIGHT = 80;
@@ -58,6 +60,76 @@ export function VideoFeedItem({
   });
   const [pausedByHold, setPausedByHold] = useState(false);
   const profile = item.profiles;
+  const { appUser } = useAuth();
+  const [messageRequestStatus, setMessageRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+
+  useEffect(() => {
+    // Check initial request status when component mounts
+    const checkMessageRequestStatus = async () => {
+      if (!appUser || !profile) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('message_requests')
+          .select('status')
+          // Check if current user has requested this creator
+          .eq('sender_id', appUser.id)
+          .eq('receiver_id', profile.user_id)
+          .single();
+          
+        if (data && !error) {
+          setMessageRequestStatus(data.status as any);
+        }
+      } catch (err) {
+        console.log('Error checking message request status:', err);
+      }
+    };
+    
+    checkMessageRequestStatus();
+  }, [appUser?.id, profile?.user_id]);
+
+  const handleMessageRequest = async () => {
+    if (!appUser || !profile || isSendingRequest || messageRequestStatus !== 'none') return;
+    
+    // Don't allow messaging yourself
+    if (appUser.id === profile.user_id) return;
+
+    // Lock immediately to prevent double-taps
+    setIsSendingRequest(true);
+    
+    try {
+      // Double check it wasn't created in the last few ms by another device/tap
+      const { data: existing } = await supabase
+        .from('message_requests')
+        .select('id')
+        .eq('sender_id', appUser.id)
+        .eq('receiver_id', profile.user_id)
+        .maybeSingle();
+        
+      if (existing) {
+        setMessageRequestStatus('pending');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('message_requests')
+        .insert({
+          sender_id: appUser.id,
+          receiver_id: profile.user_id,
+          status: 'pending'
+        });
+        
+      if (!error) {
+        setMessageRequestStatus('pending');
+      }
+    } catch (err) {
+      console.error('Failed to send message request:', err);
+      setMessageRequestStatus('none'); // Revert on failure
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
 
   useEffect(() => {
     player.muted = muted;
@@ -129,6 +201,28 @@ export function VideoFeedItem({
       {showProfileOverlay && profile && onProfilePress ? (
         <>
           <View style={styles.rightActions}>
+            {appUser?.id !== profile.user_id && (
+              <View style={styles.actionItem}>
+                <Pressable 
+                  style={[
+                    styles.iconCircle, 
+                    messageRequestStatus !== 'none' && { backgroundColor: 'rgba(168, 85, 247, 0.4)', borderColor: '#a855f7' }
+                  ]}
+                  onPress={handleMessageRequest}
+                  disabled={isSendingRequest || messageRequestStatus !== 'none'}
+                >
+                  {messageRequestStatus !== 'none' ? (
+                    <Check size={28} color="#fff" />
+                  ) : (
+                    <MessageSquare size={26} color="#fff" />
+                  )}
+                </Pressable>
+                <Text style={styles.actionText}>
+                  {messageRequestStatus === 'none' ? 'Message' : 
+                   messageRequestStatus === 'pending' ? 'Requested' : 'Chat'}
+                </Text>
+              </View>
+            )}
             <View style={styles.actionItem}>
               <Pressable style={styles.iconCircle}>
                 <Heart size={28} color="#fff" />
