@@ -387,6 +387,11 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const coverSeparator = rawCoverUrl.includes('?') ? '&' : '?';
   const displayCoverUrl = `${rawCoverUrl}${coverSeparator}t=${timestamp}`;
 
+  const eventsCount = upcomingEvents.length;
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 ? reviews.reduce((sum, r: any) => sum + (r.rating || 0), 0) / totalReviews : 0;
+  const ratingLabel = totalReviews > 0 ? `${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'No reviews yet';
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -499,9 +504,14 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           )}
 
           <View style={styles.statsRow}>
-            <Card style={styles.statCard}><Text style={styles.statNum}>2.8K</Text><Text style={styles.statLabel}>Followers</Text></Card>
-            <Card style={styles.statCard}><Text style={styles.statNum}>142</Text><Text style={styles.statLabel}>Events</Text></Card>
-            <Card style={styles.statCard}><Text style={styles.statNum}>4.9</Text><Text style={styles.statLabel}>Rating</Text></Card>
+            <Card style={styles.statCard}>
+              <Text style={styles.statNum}>{eventsCount}</Text>
+              <Text style={styles.statLabel}>Upcoming Events</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={styles.statNum}>{averageRating > 0 ? averageRating.toFixed(1) : '—'}</Text>
+              <Text style={styles.statLabel}>{ratingLabel}</Text>
+            </Card>
           </View>
 
           <Tabs defaultValue="videos" fullWidth tabs={[{ value: 'videos', label: 'Videos' }, { value: 'schedule', label: 'Schedule' }, { value: 'reviews', label: 'Reviews' }]}>

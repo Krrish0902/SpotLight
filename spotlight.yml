@@ -57,6 +57,21 @@ database_schema:
         - { name: "is_boosted", type: "boolean", default: false, note: "Monetization feature" }
         - { name: "boost_expiry", type: "timestamp" }
 
+    artist_reviews:
+      description: "Ratings and text reviews given to artists"
+      columns:
+        - { name: "id", type: "uuid", pk: true, default: "gen_random_uuid()" }
+        - { name: "artist_id", type: "uuid", fk: "users.user_id", nullable: false, note: "Profile owner being reviewed" }
+        - { name: "user_id", type: "uuid", fk: "users.user_id", nullable: false, note: "Reviewer user id" }
+        - { name: "rating", type: "integer", nullable: false }
+        - { name: "comment", type: "text", nullable: false }
+        - { name: "reviewer_display_name", type: "text", note: "Snapshot of reviewer name at time of review" }
+        - { name: "reviewer_username", type: "text", note: "Snapshot of reviewer username" }
+        - { name: "reviewer_avatar_url", type: "text", note: "Snapshot of reviewer avatar" }
+        - { name: "created_at", type: "timestamptz", default: "now()" }
+      constraints:
+        - "UNIQUE(artist_id, user_id)"
+
     videos:
       description: "Artist portfolio content (Reels-style)"
       columns:
@@ -188,6 +203,12 @@ modules:
       - "bookings: Organizer→Artist gig requests"
       - "availability: Artist blocked/unavailable dates"
       - "artist_schedule: Artist manual work entries (time, duration, venue)"
+
+  review_module:
+    functionality: "Users rate and review artists"
+    tables:
+      - "artist_reviews: Stores star rating and review text, one per user per artist"
+    logic: "Enforced via UNIQUE(artist_id, user_id) and app-side checks; snapshots reviewer name/avatar to avoid extra joins."
 
   contest_module:
     functionality: "Admin creates contests, Artists submit existing portfolio videos."
