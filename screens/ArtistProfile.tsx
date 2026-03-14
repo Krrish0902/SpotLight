@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert } from 'react-native';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
+import { Textarea } from '../components/ui/Textarea';
 import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
@@ -59,6 +60,12 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [videoFeedVisible, setVideoFeedVisible] = useState(false);
   const [videoFeedInitialIndex, setVideoFeedInitialIndex] = useState(0);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [userReview, setUserReview] = useState<any | null>(null);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   const videoListRef = useRef<FlatList>(null);
   const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -86,6 +93,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       if (!isOwnProfile) {
         fetchViewedProfile();
       }
+      fetchReviews();
     }
   }, [targetArtistId, isOwnProfile]);
 
@@ -170,6 +178,94 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       setUpcomingEvents([]);
     } finally {
       setLoadingEvents(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    if (!targetArtistId) return;
+    setLoadingReviews(true);
+    try {
+      const { data, error } = await supabase
+        .from('artist_reviews')
+        .select('*')
+        .eq('artist_id', targetArtistId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const allReviews = data || [];
+      setReviews(allReviews);
+
+      if (appUser?.id) {
+        const existing = allReviews.find((r: any) => r.user_id === appUser.id);
+        setUserReview(existing || null);
+      } else {
+        setUserReview(null);
+      }
+    } catch (e) {
+      console.error('Error fetching reviews:', e);
+      setReviews([]);
+      setUserReview(null);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!targetArtistId || !appUser || !newComment.trim() || submittingReview) return;
+
+    try {
+      setSubmittingReview(true);
+
+      const reviewerDisplayName =
+        (profile as any)?.display_name ||
+        (profile as any)?.name ||
+        (profile as any)?.username ||
+        null;
+      const reviewerUsername = (profile as any)?.username || null;
+      const reviewerAvatarUrl = (profile as any)?.avatar_url || null;
+
+      const { data: existing, error: existingError } = await supabase
+        .from('artist_reviews')
+        .select('id')
+        .eq('artist_id', targetArtistId)
+        .eq('user_id', appUser.id)
+        .limit(1);
+
+      if (existingError) throw existingError;
+
+      if (existing && existing.length > 0) {
+        Alert.alert('Already reviewed', 'You can only leave one review for this artist.');
+        await fetchReviews();
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('artist_reviews')
+        .insert({
+          artist_id: targetArtistId,
+          user_id: appUser.id,
+          rating: newRating,
+          comment: newComment.trim(),
+          reviewer_display_name: reviewerDisplayName,
+          reviewer_username: reviewerUsername,
+          reviewer_avatar_url: reviewerAvatarUrl,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const inserted = data as any;
+      setNewComment('');
+      setNewRating(5);
+      setUserReview(inserted);
+      setReviews((prev) => [inserted, ...prev]);
+    } catch (e: any) {
+      console.error('Error submitting review:', e);
+      Alert.alert('Error', e?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -292,10 +388,19 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const displayCoverUrl = `${rawCoverUrl}${coverSeparator}t=${timestamp}`;
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
-        {/* ... (keep existing cover/header code) ... */}
-        <View style={styles.coverWrap}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 220 : 140 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* ... (keep existing cover/header code) ... */}
+          <View style={styles.coverWrap}>
           <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
           <Image source={{ uri: displayCoverUrl }} style={StyleSheet.absoluteFill} />
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(returnTo ?? (isOwnProfile ? 'public-home' : 'search-discover'))}>
@@ -473,63 +578,180 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                 )}
               </Card>
             ) : (
-              <Card style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Image source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' }} style={styles.reviewAvatar} />
-                  <View style={styles.reviewMeta}>
-                    <Text style={styles.reviewer}>John Smith</Text>
-                    <View style={styles.stars}>{[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} color="#facc15" fill="#facc15" />)}</View>
-                  </View>
-                  <Text style={styles.reviewTime}>2 days ago</Text>
-                </View>
-                <Text style={styles.reviewText}>Amazing performance! Maya brought our wedding to life with her incredible voice and stage presence.</Text>
-              </Card>
+              <View style={{ gap: 16 }}>
+                {loadingReviews ? (
+                  <ActivityIndicator color="#a855f7" style={{ marginTop: 20 }} />
+                ) : (
+                  <>
+                    {userReview && (
+                      <Card style={styles.reviewCard}>
+                        <View style={styles.reviewHeader}>
+                          <Image
+                            source={{
+                              uri:
+                                profile?.avatar_url ||
+                                'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+                            }}
+                            style={styles.reviewAvatar}
+                          />
+                          <View style={styles.reviewMeta}>
+                            <Text style={styles.reviewer}>Your review</Text>
+                            <View style={styles.stars}>
+                              {[1, 2, 3, 4, 5].map((i) => (
+                                <Star
+                                  key={i}
+                                  size={16}
+                                  color={i <= (userReview.rating || 0) ? '#facc15' : 'rgba(148,163,184,0.6)'}
+                                  fill={i <= (userReview.rating || 0) ? '#facc15' : 'transparent'}
+                                />
+                              ))}
+                            </View>
+                          </View>
+                        </View>
+                        <Text style={styles.reviewText}>{userReview.comment}</Text>
+                      </Card>
+                    )}
+
+                    {reviews.filter((r) => !userReview || r.id !== userReview.id).map((r) => {
+                      const reviewerName =
+                        r.reviewer_display_name ||
+                        (r.reviewer_username ? `@${r.reviewer_username}` : 'Reviewer');
+                      const reviewerAvatar =
+                        r.reviewer_avatar_url ||
+                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop';
+
+                      const goToReviewerProfile = () => {
+                        if (!r.user_id) return;
+                        navigate('artist-profile', {
+                          selectedArtist: {
+                            user_id: r.user_id,
+                            name: reviewerName,
+                          },
+                          returnTo: 'artist-profile',
+                        });
+                      };
+
+                      return (
+                        <Card key={r.id} style={styles.reviewCard}>
+                          <View style={styles.reviewHeader}>
+                            <Pressable onPress={goToReviewerProfile}>
+                              <Image
+                                source={{ uri: reviewerAvatar }}
+                                style={styles.reviewAvatar}
+                              />
+                            </Pressable>
+                            <View style={styles.reviewMeta}>
+                              <Text style={styles.reviewer}>{reviewerName}</Text>
+                              <View style={styles.stars}>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <Star
+                                    key={i}
+                                    size={16}
+                                    color={i <= (r.rating || 0) ? '#facc15' : 'rgba(148,163,184,0.6)'}
+                                    fill={i <= (r.rating || 0) ? '#facc15' : 'transparent'}
+                                  />
+                                ))}
+                              </View>
+                            </View>
+                          </View>
+                          <Text style={styles.reviewText}>{r.comment}</Text>
+                        </Card>
+                      );
+                    })}
+
+                    {!loadingReviews && reviews.length === 0 && (
+                      <View style={styles.emptyState}>
+                        <Text style={styles.emptyText}>No reviews yet.</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {!isOwnProfile && appUser && !userReview && (
+                  <Card style={styles.addReviewCard}>
+                    <Text style={styles.addReviewTitle}>Add a review</Text>
+                    <View style={styles.addReviewStars}>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Pressable key={i} onPress={() => setNewRating(i)} style={{ padding: 4 }}>
+                          <Star
+                            size={20}
+                            color={i <= newRating ? '#facc15' : 'rgba(148,163,184,0.6)'}
+                            fill={i <= newRating ? '#facc15' : 'transparent'}
+                          />
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Textarea
+                      placeholder="Share your experience with this artist..."
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      style={[styles.reviewInput, { color: '#fff' }]}
+                    />
+                    <Button
+                      onPress={handleSubmitReview}
+                      disabled={submittingReview || !newComment.trim()}
+                      style={styles.reviewSubmitBtn}
+                    >
+                      <Text style={styles.bookBtnText}>{submittingReview ? 'Submitting...' : 'Submit Review'}</Text>
+                    </Button>
+                  </Card>
+                )}
+
+                {!appUser && !isOwnProfile && (
+                  <Text style={styles.reviewHint}>Log in to leave a review for this artist.</Text>
+                )}
+
+                {isOwnProfile && (
+                  <Text style={styles.reviewHint}>Reviews from organizers and fans will appear here.</Text>
+                )}
+              </View>
             )}
           </Tabs>
         </View>
-      </ScrollView>
-      {isOwnProfile && (
-        <BottomNav activeTab="profile" navigate={navigate} userRole={userRole} isAuthenticated />
-      )}
+        </ScrollView>
+        {isOwnProfile && (
+          <BottomNav activeTab="profile" navigate={navigate} userRole={userRole} isAuthenticated />
+        )}
 
-      <Modal visible={videoFeedVisible} animationType="slide" statusBarTranslucent>
-        <View style={styles.videoFeedModal}>
-          <View style={styles.videoFeedHeader} pointerEvents="box-none">
-            <Button variant="ghost" size="icon" onPress={() => setVideoFeedVisible(false)} style={styles.videoFeedBackBtn}>
-              <ChevronLeft size={24} color="#fff" />
-            </Button>
+        <Modal visible={videoFeedVisible} animationType="slide" statusBarTranslucent>
+          <View style={styles.videoFeedModal}>
+            <View style={styles.videoFeedHeader} pointerEvents="box-none">
+              <Button variant="ghost" size="icon" onPress={() => setVideoFeedVisible(false)} style={styles.videoFeedBackBtn}>
+                <ChevronLeft size={24} color="#fff" />
+              </Button>
+            </View>
+            <FlatList
+              ref={videoListRef}
+              data={videos}
+              keyExtractor={(item) => item.video_id}
+              pagingEnabled
+              showsVerticalScrollIndicator={false}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              onViewableItemsChanged={onViewableVideosChanged}
+              viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+              initialScrollIndex={videoFeedInitialIndex}
+              getItemLayout={(_d, index) => ({
+                length: SCREEN_HEIGHT,
+                offset: SCREEN_HEIGHT * index,
+                index,
+              })}
+              renderItem={({ item, index }) => (
+                <VideoFeedItem
+                  item={item}
+                  isActive={index === activeVideoIndex}
+                  muted={videoMuted}
+                  onToggleMute={() => setVideoMuted((m) => !m)}
+                  showProfileOverlay={false}
+                  containerHeight={SCREEN_HEIGHT}
+                  containerWidth={SCREEN_WIDTH}
+                />
+              )}
+            />
           </View>
-          <FlatList
-            ref={videoListRef}
-            data={videos}
-            keyExtractor={(item) => item.video_id}
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            onViewableItemsChanged={onViewableVideosChanged}
-            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-            initialScrollIndex={videoFeedInitialIndex}
-            getItemLayout={(_d, index) => ({
-              length: SCREEN_HEIGHT,
-              offset: SCREEN_HEIGHT * index,
-              index,
-            })}
-            renderItem={({ item, index }) => (
-              <VideoFeedItem
-                item={item}
-                isActive={index === activeVideoIndex}
-                muted={videoMuted}
-                onToggleMute={() => setVideoMuted((m) => !m)}
-                showProfileOverlay={false}
-                containerHeight={SCREEN_HEIGHT}
-                containerWidth={SCREEN_WIDTH}
-              />
-            )}
-          />
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -650,4 +872,10 @@ const styles = StyleSheet.create({
   reviewText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 20 },
   emptyState: { width: '100%', alignItems: 'center', padding: 32 },
   emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16 },
+  addReviewCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
+  addReviewTitle: { color: '#fff', fontWeight: '600', marginBottom: 12, fontSize: 16 },
+  addReviewStars: { flexDirection: 'row', marginBottom: 12 },
+  reviewInput: { marginBottom: 12 },
+  reviewSubmitBtn: { marginTop: 4 },
+  reviewHint: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 8 },
 });
