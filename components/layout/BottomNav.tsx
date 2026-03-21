@@ -22,13 +22,16 @@ const tabs = [
   { id: 'profile', Icon: User, label: 'Profile' },
 ];
 
-export default function BottomNav({ activeTab, navigate, userRole = 'public', isAuthenticated = false }: BottomNavProps) {
+export default function BottomNav({ activeTab, navigate, userRole, isAuthenticated }: BottomNavProps) {
   const insets = useSafeAreaInsets();
-  const { appUser } = useAuth();
+  const { appUser, session, user } = useAuth();
+  const hasSession = !!(user ?? session?.user);
+  const effectiveIsAuthenticated = Boolean(isAuthenticated || hasSession || appUser);
+  const effectiveUserRole = userRole ?? appUser?.role ?? 'public';
   const [unreadCount, setUnreadCount] = React.useState(0);
 
   React.useEffect(() => {
-    if (!isAuthenticated || !appUser?.id) {
+    if (!effectiveIsAuthenticated || !appUser?.id) {
       setUnreadCount(0);
       return;
     }
@@ -61,7 +64,7 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAuthenticated, appUser?.id]);
+  }, [effectiveIsAuthenticated, appUser?.id]);
 
   const handleTabPress = (tabId: string) => {
     if (tabId === 'home') {
@@ -73,7 +76,7 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
       return;
     }
     if (tabId === 'chat') {
-      if (isAuthenticated) {
+      if (effectiveIsAuthenticated) {
         navigate('chat-hub');
       } else {
         navigate('login-signup', { returnTo: 'chat-hub' });
@@ -85,10 +88,10 @@ export default function BottomNav({ activeTab, navigate, userRole = 'public', is
       return;
     }
     if (tabId === 'profile') {
-      if (isAuthenticated && (userRole === 'artist' || userRole === 'organizer')) {
-        navigate('artist-profile', { selectedArtist: { id: 'me' } });
-      } else if (isAuthenticated && userRole === 'admin') {
+      if (effectiveIsAuthenticated && effectiveUserRole === 'admin') {
         navigate('admin-dashboard');
+      } else if (effectiveIsAuthenticated) {
+        navigate('artist-profile', { selectedArtist: { id: 'me' } });
       } else {
         navigate('login-signup', { returnTo: 'public-home' });
       }

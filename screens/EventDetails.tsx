@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, Modal, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, MapPin, Share2, X, Minus, Plus, Edit, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, MapPin, Share2, X, Minus, Plus, Edit, Trash2, TrendingUp } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { PieChart } from 'react-native-gifted-charts';
 
 const mockEvent = {
   id: 1,
@@ -45,7 +46,22 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
     } else if (initialEvent) {
       setEvent(initialEvent);
     }
-  }, [eventId, initialEvent]);
+
+    // Step 3: Silent Tracking - Event View
+    if (event?.id && appUser?.id !== event.organizer_id) {
+       (async () => {
+          try {
+            await supabase.from('analytics_events').insert({
+              event_type: 'event_view',
+              target_event_id: event.id,
+              viewer_id: appUser?.id
+            });
+          } catch (e) {
+            console.log('Silent event tracking failed', e);
+          }
+       })();
+    }
+  }, [eventId, initialEvent, event?.id, appUser?.id, event?.organizer_id]);
 
   const fetchEventDetails = async (id: string) => {
     setLoading(true);
@@ -172,6 +188,12 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
       Alert.alert('Success', 'Tickets booked successfully!', [
         {
           text: 'OK', onPress: () => {
+            const { posthog } = require('../lib/posthog');
+            posthog.capture('ticket_purchased', { 
+              event_id: event.id, 
+              quantity: quantity, 
+              total_amount: quantity * (event.price || 0) 
+            });
             setModalVisible(false);
             fetchEventDetails(event.id); // Refresh UI
           }
@@ -285,6 +307,44 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
               <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
             </Card>
           ))}
+
+          {appUser?.id === event.organizer_id && (
+            <>
+              <Text style={styles.sectionTitle}>Organizer Insights</Text>
+              <Card style={styles.insightsCard}>
+                <View style={styles.insightHeader}>
+                  <TrendingUp size={20} color="#a855f7" />
+                  <Text style={styles.insightTitle}>Sales Progress</Text>
+                </View>
+                <View style={styles.ringContainer}>
+                  <PieChart
+                    donut
+                    radius={70}
+                    innerRadius={55}
+                    data={[
+                      { value: event.total - event.available, color: '#a855f7' },
+                      { value: event.available, color: 'rgba(255,255,255,0.1)' },
+                    ]}
+                    centerLabelComponent={() => (
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+                          {Math.round(((event.total - event.available) / event.total) * 100)}%
+                        </Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Sold</Text>
+                      </View>
+                    )}
+                  />
+                  <View style={styles.ringStats}>
+                    <Text style={styles.ringStatValue}>{event.total - event.available}</Text>
+                    <Text style={styles.ringStatLabel}>Tickets Sold</Text>
+                    <View style={{ height: 12 }} />
+                    <Text style={styles.ringStatValue}>{event.available}</Text>
+                    <Text style={styles.ringStatLabel}>Remaining</Text>
+                  </View>
+                </View>
+              </Card>
+            </>
+          )}
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -383,4 +443,11 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#374151', paddingTop: 16 },
   totalLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
   totalValue: { color: '#fbbf24', fontSize: 24, fontWeight: 'bold' },
+  insightsCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 20, marginBottom: 24 },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  insightTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  ringContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  ringStats: { marginLeft: 20 },
+  ringStatValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  ringStatLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
 });

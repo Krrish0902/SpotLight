@@ -319,7 +319,7 @@ export default function ChatHub({ navigate }: Props) {
         </Tabs>
       </View>
 
-      <BottomNav activeTab="chat" navigate={navigate} isAuthenticated={true} />
+      <BottomNav activeTab="chat" navigate={navigate} userRole={appUser?.role} isAuthenticated={!!appUser?.id} />
     </View>
   );
 }

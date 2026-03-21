@@ -41,10 +41,9 @@ export default function RoleSelection({ navigate, setRole }: Props) {
     setLoading(true);
     const { error: err } = await updateRole(role);
     setLoading(false);
-    if (err) {
-      setError(err.message);
-      Alert.alert('Something went wrong', err.message);
-      return;
+    if (!err) {
+      const { posthog } = require('../lib/posthog');
+      posthog.capture('role_selected', { role });
     }
     setRole(role);
     navigate(profile ? 'public-home' : 'profile-setup');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, Image, ActivityIndicator, Dimensions, Pressable } from 'react-native';
+import { View, StyleSheet, FlatList, Image, ActivityIndicator, Dimensions, Pressable, Platform } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -151,9 +151,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
         marginBottom: 8,
-        textShadowColor: 'rgba(0,0,0,0.8)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        ...Platform.select({
+            web: { textShadow: '0px 1px 2px rgba(0,0,0,0.8)' as any },
+            default: { textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }
+        })
     },
     metaRow: {
         flexDirection: 'row',

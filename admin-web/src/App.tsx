@@ -15,12 +15,16 @@ async function fetchRole(userId: string): Promise<UserRole | null> {
   }
 }
 
+import Analytics from './pages/Analytics'
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [activeTab, setActiveTab] = useState<'moderation' | 'analytics'>('moderation')
 
   const hasSessionRef = useRef(false)
+// ... (omitted lines for brevity, but I need to replace the whole block)
 
   useEffect(() => {
     let cancelled = false
@@ -105,7 +109,46 @@ function App() {
     return <Login role={role} />
   }
 
-  return <Events onLogout={onLogout} />
+  return (
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa]">
+      <header className="border-b border-[#18181b] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-[#a855f7] to-[#ec4899] bg-clip-text text-transparent">
+              ArtistHub Admin
+            </h1>
+            <nav className="flex gap-1">
+              <button
+                onClick={() => setActiveTab('moderation')}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  activeTab === 'moderation' ? 'bg-[#18181b] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Moderation
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  activeTab === 'analytics' ? 'bg-[#18181b] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Analytics
+              </button>
+            </nav>
+          </div>
+          <button 
+            onClick={onLogout}
+            className="text-sm text-zinc-400 hover:text-white"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto p-6">
+        {activeTab === 'moderation' ? <Events onLogout={onLogout} /> : <Analytics />}
+      </main>
+    </div>
+  )
 }
 
 export default App

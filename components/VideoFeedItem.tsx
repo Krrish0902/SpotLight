@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Pressable, StyleSheet, Dimensions, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Pressable, StyleSheet, Dimensions, Image, Platform } from 'react-native';
 import { Text } from './ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX, MessageSquare, Check } from 'lucide-react-native';
@@ -7,6 +7,7 @@ import { Badge } from './ui/Badge';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
+import { track } from '../lib/analytics';
 
 const { width, height } = Dimensions.get('window');
 const BOTTOM_NAV_HEIGHT = 80;
@@ -76,7 +77,7 @@ export function VideoFeedItem({
           // Check if current user has requested this creator
           .eq('sender_id', appUser.id)
           .eq('receiver_id', profile.user_id)
-          .single();
+          .maybeSingle();
           
         if (data && !error) {
           setMessageRequestStatus(data.status as any);
@@ -131,18 +132,80 @@ export function VideoFeedItem({
     }
   };
 
+  const handleLike = async () => {
+    if (!appUser || !item.artist_id) return;
+    try {
+      track.like(
+        item.artist_id,
+        item.video_id,
+        appUser.id,
+        player ? Math.floor(player.currentTime) : 0
+      );
+    } catch (err) {
+      console.error('Failed to log like analytics', err);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!appUser || !item.artist_id) return;
+    try {
+      track.share(
+        item.artist_id,
+        item.video_id,
+        appUser.id
+      );
+    } catch (err) {
+      console.error('Failed to log share analytics', err);
+    }
+  };
+
   useEffect(() => {
     player.muted = muted;
   }, [muted, player]);
+
+  const reachedCheckpoints = useRef<Set<number>>(new Set());
+  const RETENTION_CHECKPOINTS = [10, 25, 50, 75, 90, 100];
+  const watchStartTime = useRef<number>(0);
 
   useEffect(() => {
     if (pausedByHold) return;
     if (isActive) {
       player.play();
+      watchStartTime.current = Date.now();
+      reachedCheckpoints.current = new Set();
+      
+      const interval = setInterval(() => {
+        if (!player.duration || player.duration === 0) return;
+        const pct = Math.floor((player.currentTime / player.duration) * 100);
+        RETENTION_CHECKPOINTS.forEach(cp => {
+          if (pct >= cp) reachedCheckpoints.current.add(cp);
+        });
+      }, 500);
+      
+      return () => {
+        clearInterval(interval);
+        if (item.artist_id && item.artist_id !== appUser?.id) {
+            const watchSeconds = (Date.now() - watchStartTime.current) / 1000;
+            const completionPct = player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
+            const retentionBuckets = RETENTION_CHECKPOINTS.reduce((acc, cp) => {
+              acc[String(cp)] = reachedCheckpoints.current.has(cp);
+              return acc;
+            }, {} as Record<string, boolean>);
+
+            track.videoView({
+              artistId: item.artist_id,
+              videoId: item.video_id,
+              viewerId: appUser?.id || undefined,
+              watchSeconds,
+              completionPct,
+              retentionBuckets
+            });
+        }
+      };
     } else {
       player.pause();
     }
-  }, [isActive, pausedByHold, player]);
+  }, [isActive, pausedByHold, player, item.video_id, item.artist_id, appUser?.id]);
 
   const handleTap = () => onToggleMute();
   const handleLongPress = () => {
@@ -166,26 +229,23 @@ export function VideoFeedItem({
     <View style={[styles.videoContainer, { height: containerHeight, width: containerWidth }]}>
       <VideoView
         player={player}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' as any }]}
         contentFit="cover"
         nativeControls={false}
-        pointerEvents="none"
       />
 
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
-        style={[styles.overlay, { height: containerHeight }]}
-        pointerEvents="none"
+        style={[styles.overlay, { height: containerHeight, pointerEvents: 'none' as any }]}
       />
 
       <LinearGradient
         colors={['rgba(0,0,0,0.6)', 'transparent']}
-        style={styles.topGradient}
-        pointerEvents="none"
+        style={[styles.topGradient, { pointerEvents: 'none' as any }]}
       />
 
       {muted && (
-        <View style={styles.muteBadge} pointerEvents="none">
+        <View style={[styles.muteBadge, { pointerEvents: 'none' as any }]}>
           <VolumeX size={24} color="#fff" />
         </View>
       )}
@@ -224,13 +284,13 @@ export function VideoFeedItem({
               </View>
             )}
             <View style={styles.actionItem}>
-              <Pressable style={styles.iconCircle}>
+              <Pressable style={styles.iconCircle} onPress={handleLike}>
                 <Heart size={28} color="#fff" />
               </Pressable>
               <Text style={styles.actionText}>{item.likes_count ?? 0}</Text>
             </View>
             <View style={styles.actionItem}>
-              <Pressable style={styles.iconCircle}>
+              <Pressable style={styles.iconCircle} onPress={handleShare}>
                 <Share2 size={28} color="#fff" />
               </Pressable>
               <Text style={styles.actionText}>Share</Text>
@@ -276,7 +336,7 @@ export function VideoFeedItem({
           </View>
         </>
       ) : (
-        <View style={styles.bottomInfoCompact} pointerEvents="none">
+        <View style={[styles.bottomInfoCompact, { pointerEvents: 'none' as any }]}>
           <Text style={styles.compactTitle} numberOfLines={2}>{item.title || 'Untitled'}</Text>
           <Text style={styles.compactViews}>{item.views_count?.toLocaleString() ?? 0} views</Text>
         </View>
@@ -336,9 +396,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...Platform.select({
+      web: { textShadow: '1px 1px 2px rgba(0,0,0,0.5)' as any },
+      default: { textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 }
+    })
   },
   bottomInfo: {
     position: 'absolute',
@@ -359,9 +420,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...Platform.select({
+      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
+      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
+    })
   },
   boostBadge: { backgroundColor: '#a855f7', height: 20, paddingHorizontal: 6 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
@@ -371,9 +433,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     lineHeight: 20,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...Platform.select({
+      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
+      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
+    })
   },
   bottomInfoCompact: {
     position: 'absolute',
@@ -385,9 +448,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...Platform.select({
+      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
+      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
+    })
   },
   compactViews: {
     color: 'rgba(255,255,255,0.7)',
