@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PostHogProvider } from 'posthog-react-native';
@@ -46,18 +46,26 @@ export interface AppState {
   chatId?: string;
 }
 
+type NavState = { current: AppState; history: AppState[] };
+
 function AppContent() {
   const { appUser, profile, isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
-  const [appState, setAppState] = useState<AppState>({
-    currentScreen: 'public-home',
-    userRole: appUser?.role ?? 'public',
-    selectedArtist: undefined,
-    selectedEvent: undefined,
+  const [navState, setNavState] = useState<NavState>({
+    current: {
+      currentScreen: 'public-home',
+      userRole: appUser?.role ?? 'public',
+      selectedArtist: undefined,
+      selectedEvent: undefined,
+    },
+    history: [],
   });
 
+  const appState = navState.current;
   const userRole = appUser?.role ?? appState.userRole;
   const isAuthenticated = !!appUser;
+  const historyLengthRef = useRef(0);
+  historyLengthRef.current = navState.history.length;
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -66,22 +74,44 @@ function AppContent() {
 
   useEffect(() => {
     if (appUser?.role) {
-      setAppState(prev => ({ ...prev, userRole: appUser.role }));
+      setNavState(prev => ({
+        ...prev,
+        current: { ...prev.current, userRole: appUser.role },
+      }));
     }
   }, [appUser?.role]);
 
-  // Home always shows static public-home; dashboard is only through profile
+  // Android back button: go to previous in-app screen instead of exiting
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (historyLengthRef.current > 0) {
+        setNavState(prev => {
+          if (prev.history.length === 0) return prev;
+          return {
+            history: prev.history.slice(0, -1),
+            current: prev.history[prev.history.length - 1],
+          };
+        });
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, []);
 
   const navigate = (screen: string, data?: any) => {
-    setAppState(prev => ({
-      ...prev,
-      currentScreen: screen,
-      ...(data || {}),
+    setNavState(prev => ({
+      history: [...prev.history, prev.current],
+      current: { ...prev.current, currentScreen: screen, ...(data || {}) },
     }));
   };
 
   const setRole = (role: UserRole) => {
-    setAppState(prev => ({ ...prev, userRole: role }));
+    setNavState(prev => ({
+      ...prev,
+      current: { ...prev.current, userRole: role },
+    }));
   };
 
   if (showSplash) {
