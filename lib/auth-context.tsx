@@ -40,6 +40,8 @@ export interface Profile {
   avatar_url?: string | null;
   cover_url?: string | null;
   artist_url?: string | null;
+  age_range?: string | null;
+  gender?: string | null;
 }
 
 export interface ProfileInput {
@@ -52,6 +54,8 @@ export interface ProfileInput {
   genres?: string[];
   instruments?: string[];
   artist_url?: string;
+  age_range?: string;
+  gender?: string;
 }
 
 interface AuthContextType {
@@ -185,6 +189,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       genres: data.genres ?? null,
       instruments: data.instruments ?? null,
       artist_url: data.artist_url ?? null,
+      age_range: data.age_range ?? null,
+      gender: data.gender ?? null,
     };
     // Update existing profile (edit) — never create duplicate
     if (profile) {

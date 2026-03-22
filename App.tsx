@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PostHogProvider } from 'posthog-react-native';
+import { posthog } from './lib/posthog';
 
 import { AuthProvider, useAuth, UserRole } from './lib/auth-context';
 import SplashScreen from './screens/SplashScreen';
@@ -192,10 +194,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <StatusBar style="light" />
-          <AppContent />
-        </AuthProvider>
+        <PostHogProvider client={posthog}>
+          <AuthProvider>
+            <StatusBar style="light" />
+            <AppContent />
+          </AuthProvider>
+        </PostHogProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

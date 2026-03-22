@@ -44,3 +44,7 @@ yarn-error.*
 supabase/admin-web/package-lock.json
 admin-web/package-lock.json
 supabase
+
+# schema files
+*.schema
+*.sql

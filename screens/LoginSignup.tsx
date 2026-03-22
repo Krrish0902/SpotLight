@@ -49,8 +49,12 @@ export default function LoginSignup({ navigate, returnTo = 'public-home' }: Prop
       setError('Password must be at least 6 characters.');
       return;
     }
-    setLoading(true);
     const { error: err } = await signUp(email.trim(), password, 'public');
+    setLoading(true);
+    if (!err) {
+      const { posthog } = require('../lib/posthog');
+      posthog.capture('user_signed_up');
+    }
     setLoading(false);
     if (err) {
       setError(err.message);

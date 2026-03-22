@@ -40,6 +40,11 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   const [instruments, setInstruments] = useState<string[]>([]);
   const [company, setCompany] = useState('');
   const [capturingLocation, setCapturingLocation] = useState(false);
+  const [ageRange, setAgeRange] = useState('');
+  const [gender, setGender] = useState('');
+
+  const AGE_OPTIONS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+  const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
   React.useEffect(() => {
     if (isEdit && profile) {
@@ -52,6 +57,8 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       setLongitude(profile.longitude ?? null);
       setGenres(profile.genres ?? []);
       setInstruments(profile.instruments ?? []);
+      setAgeRange(profile.age_range ?? '');
+      setGender(profile.gender ?? '');
       if (userRole === 'organizer') setCompany(profile.display_name ?? '');
     }
   }, [isEdit, profile, userRole]);
@@ -108,7 +115,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         Alert.alert('Permission needed', 'Location access is required to capture your coordinates.');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLatitude(loc.coords.latitude);
       setLongitude(loc.coords.longitude);
       try {
@@ -154,6 +161,8 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       longitude: longitude ?? undefined,
       genres: (userRole === 'artist' || userRole === 'organizer') ? (genres.length ? genres : undefined) : undefined,
       instruments: (userRole === 'artist' || userRole === 'organizer') ? (instruments.length ? instruments : undefined) : undefined,
+      age_range: ageRange || undefined,
+      gender: gender || undefined,
     });
 
     setLoading(false);
@@ -251,6 +260,29 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
               )}
             </>
           )}
+
+          {/* Demographics / Audience Analytics Info */}
+          <View style={styles.field}>
+            <Label>Your Age Range (For Audience Analytics)</Label>
+            <View style={styles.demographicRow}>
+              {AGE_OPTIONS.map((opt) => (
+                <Pressable key={opt} onPress={() => setAgeRange(opt)} style={[styles.demoPill, ageRange === opt && styles.demoPillActive]}>
+                  <Text style={[styles.demoPillText, ageRange === opt && styles.demoPillTextActive]}>{opt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Label>Your Gender (For Audience Analytics)</Label>
+            <View style={styles.demographicRow}>
+              {GENDER_OPTIONS.map((opt) => (
+                <Pressable key={opt} onPress={() => setGender(opt)} style={[styles.demoPill, gender === opt && styles.demoPillActive]}>
+                  <Text style={[styles.demoPillText, gender === opt && styles.demoPillTextActive]}>{opt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
           <View style={styles.field}>
             <Label>Location</Label>
             <View style={styles.locationRow}>
@@ -322,6 +354,11 @@ const styles = StyleSheet.create({
   locationInput: { flex: 1, minWidth: 0 },
   captureBtn: { width: 44, height: 44, padding: 0, borderColor: 'rgba(168,85,247,0.5)' },
   coordsText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 6 },
+  demographicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  demoPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  demoPillActive: { backgroundColor: 'rgba(168,85,247,0.2)', borderColor: '#a855f7' },
+  demoPillText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500' },
+  demoPillTextActive: { color: '#fff', fontWeight: 'bold' },
   errorText: { color: '#f87171', fontSize: 14, marginBottom: 12 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24, alignItems: 'center' },
   cancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.3)' },

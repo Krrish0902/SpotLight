@@ -14,6 +14,7 @@ import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { track } from '../lib/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -92,6 +93,17 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       fetchUpcomingEvents();
       if (!isOwnProfile) {
         fetchViewedProfile();
+        // Step 3: Silent Tracking - Profile View
+        (async () => {
+          try {
+            track.profileView({
+              artistId: targetArtistId,
+              viewerId: appUser?.id || 'anonymous'
+            });
+          } catch (e) {
+            console.log('Silent tracking failed', e);
+          }
+        })();
       }
       fetchReviews();
     }
@@ -477,17 +489,95 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             )}
             {isOrganizer && !isOwnProfile && (
               <>
-                <Button onPress={() => navigate('request-booking', { selectedArtist: artist })} style={styles.bookBtn}>
+                <Button onPress={() => navigate('request-booking', { artist: effectiveProfile })} style={styles.bookBtn}>
                   <Calendar size={20} color="#fff" />
                   <Text style={styles.bookBtnText}>Request Booking</Text>
                 </Button>
-                <Button variant="outline" onPress={() => navigate('messaging', { selectedArtist: artist })} style={styles.msgBtn}>
+                <Button 
+                  variant="outline" 
+                  onPress={async () => {
+                    if (!appUser) {
+                      Alert.alert('Login Required', 'Please sign in to message artists.');
+                      return;
+                    }
+                    
+                    try {
+                      // Check if a request already exists
+                      const { data: existing, error: checkError } = await supabase
+                        .from('message_requests')
+                        .select('id, status')
+                        .or(`and(sender_id.eq.${appUser.id},receiver_id.eq.${targetArtistId}),and(sender_id.eq.${targetArtistId},receiver_id.eq.${appUser.id})`)
+                        .maybeSingle();
+                        
+                      if (checkError) throw checkError;
+                      
+                      if (existing) {
+                        if (existing.status === 'accepted') {
+                          // Already accepted, go to chat
+                          navigate('messaging', { 
+                            selectedArtist: effectiveProfile,
+                            chatId: existing.id
+                          });
+                        } else if (existing.status === 'pending') {
+                          Alert.alert('Request Pending', 'Your message request is still waiting for approval.');
+                        } else {
+                          Alert.alert('Request Rejected', 'This artist has declined the message request.');
+                        }
+                      } else {
+                        // Create new request
+                        const { data: newReq, error: createError } = await supabase
+                          .from('message_requests')
+                          .insert({
+                            sender_id: appUser.id,
+                            receiver_id: targetArtistId,
+                            status: 'pending'
+                          })
+                          .select()
+                          .single();
+                          
+                        if (createError) throw createError;
+                        Alert.alert('Request Sent', 'Message request sent! You can chat once they accept.');
+                      }
+                    } catch (err: any) {
+                      console.error('Messaging logic error:', err);
+                      Alert.alert('Error', 'Failed to process message request.');
+                    }
+                  }} 
+                  style={styles.msgBtn}
+                >
                   <MessageSquare size={20} color="#fff" />
                 </Button>
               </>
             )}
             {!isOrganizer && !isOwnProfile && (
-              <Button style={styles.bookBtn}><Text style={styles.bookBtnText}>Follow</Text></Button>
+              <Button 
+                style={styles.bookBtn} 
+                onPress={async () => {
+                  if (!appUser || !targetArtistId) {
+                    Alert.alert('Login Required', 'Please sign in to follow artists.');
+                    return;
+                  }
+                  try {
+                    // Actual follow insertion into our new table (Section 2 addition)
+                    await supabase.from('user_follows').insert({
+                      follower_id: appUser.id,
+                      following_id: targetArtistId
+                    });
+                    
+                    // Analytics tracking
+                    track.follow({
+                      artistId: targetArtistId,
+                      viewerId: appUser.id,
+                    });
+                    
+                    Alert.alert('Followed', 'You are now following this artist!');
+                  } catch (e: any) {
+                    Alert.alert('Info', 'You are already following this artist.');
+                  }
+                }}
+              >
+                <Text style={styles.bookBtnText}>Follow</Text>
+              </Button>
             )}
           </View>
 

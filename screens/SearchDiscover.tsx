@@ -61,7 +61,7 @@ export default function SearchDiscover({ navigate }: Props) {
             try {
               const { status } = await Location.requestForegroundPermissionsAsync();
               if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({ enableHighAccuracy: true });
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
                 userLat = loc.coords.latitude;
                 userLon = loc.coords.longitude;
               } else {
