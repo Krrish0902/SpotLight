@@ -32,7 +32,6 @@ export function Input({
           style,
         ]}
         placeholderTextColor={placeholderTextColor}
-        includeFontPadding={Platform.OS === 'android' ? false : undefined}
         {...props}
       />
     </View>
@@ -53,7 +52,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    height: 40,
+    minHeight: 40,
     paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: colors['white/5'],

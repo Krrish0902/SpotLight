@@ -5,9 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Send, MoreVertical } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { formatMessageTime } from '../lib/timeUtils';
 
 interface Message {
   message_id: string;
@@ -153,20 +153,25 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: appUser.id,
           receiver_id: artist.id,
           content
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Failed to send message:', error);
         // Remove optimistic message if failed
         setMessages(prev => prev.filter(m => m.message_id !== tempMessage.message_id));
         setMessage(content); // Restore input
-      } else {
+      } else if (data) {
+        // Replace optimistic message with the real one from DB so real-time 'is_read' updates can hit
+        setMessages(prev => prev.map(m => m.message_id === tempMessage.message_id ? data : m));
+        
         // Update updated_at on the underlying chat request so it bubbles to top of ChatHub
         if (chatId) {
            await supabase
@@ -211,20 +216,22 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
             <Text style={styles.emptyText}>Say hi to {artist?.name || 'them'}!</Text>
           </View>
         ) : (
-          messages.map((msg, index) => {
-            const isMe = msg.sender_id === appUser?.id;
-            const time = new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            // Determine if this is the absolute last message we sent that has been read
-            const isLastReadMessage = isMe && msg.is_read && 
-              messages.slice(index + 1).filter(m => m.sender_id === appUser?.id && m.is_read).length === 0;
+          (() => {
+            // Find the ID of the absolute last message sent by 'me' that has been read
+            const lastReadMyMessage = [...messages].reverse().find(m => m.sender_id === appUser?.id && m.is_read);
+            const lastReadMessageId = lastReadMyMessage?.message_id;
+
+            return messages.map((msg) => {
+              const isMe = msg.sender_id === appUser?.id;
+              const time = new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const isLastReadMessage = msg.message_id === lastReadMessageId;
 
             return (
               <View key={msg.message_id}>
                 <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
-                  <Card style={[styles.msgBubble, isMe && styles.msgBubbleMe]}>
+                  <View style={[styles.msgBubble, isMe && styles.msgBubbleMe]}>
                     <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{msg.content}</Text>
-                  </Card>
+                  </View>
                   <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>{time}</Text>
                 </View>
                 {isLastReadMessage && (
@@ -235,6 +242,7 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
               </View>
             );
           })
+          })()
         )}
         
         {isTyping && (
@@ -252,12 +260,11 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
           value={message} 
           onChangeText={handleTyping} 
           placeholder="Type a message..." 
-          style={styles.input} 
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
+          style={[styles.input, { minHeight: 40, maxHeight: 120, paddingTop: Platform.OS === 'ios' ? 10 : 8, paddingBottom: Platform.OS === 'ios' ? 10 : 8 }]}
+          multiline
         />
         <Button size="icon" style={styles.sendBtn} onPress={handleSend} disabled={!message.trim()}>
-          <Send size={20} color="#fff" />
+          <Send size={20} color="#162447" />
         </Button>
       </View>
     </KeyboardAvoidingView>

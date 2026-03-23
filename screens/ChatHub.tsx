@@ -9,7 +9,7 @@ import { MessageCircle, Check, X, Clock } from 'lucide-react-native';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
-
+import { parseSupabaseDate, formatRelativeTime } from '../lib/timeUtils';
 interface Props {
   navigate: (screen: string, data?: any) => void;
 }
@@ -147,15 +147,7 @@ export default function ChatHub({ navigate }: Props) {
 
           if (latestMsg) {
              previewText = latestMsg.sender_id === appUser.id ? `You: ${latestMsg.content}` : latestMsg.content;
-             const diffMs = Date.now() - new Date(latestMsg.sent_at).getTime();
-             const diffMins = Math.floor(diffMs / 60000);
-             const diffHours = Math.floor(diffMins / 60);
-             const diffDays = Math.floor(diffHours / 24);
-             
-             if (diffMins < 1) timeDisplay = 'now';
-             else if (diffMins < 60) timeDisplay = `${diffMins}m`;
-             else if (diffHours < 24) timeDisplay = `${diffHours}h`;
-             else timeDisplay = `${diffDays}d`;
+             timeDisplay = formatRelativeTime(latestMsg.sent_at);
           }
 
           return {
@@ -164,7 +156,7 @@ export default function ChatHub({ navigate }: Props) {
             preview: previewText,
             timeDisplay,
             unreadCount: unreadCounts[otherId] || 0,
-            sortTime: latestMsg ? new Date(latestMsg.sent_at).getTime() : new Date(chat.updated_at).getTime()
+            sortTime: latestMsg ? parseSupabaseDate(latestMsg.sent_at).getTime() : parseSupabaseDate(chat.updated_at).getTime()
           };
         });
         
@@ -235,7 +227,7 @@ export default function ChatHub({ navigate }: Props) {
                           <View style={styles.timeRow}>
                             <Clock size={12} color="rgba(255,255,255,0.4)" />
                             <Text style={styles.time}>
-                              {new Date(req.created_at).toLocaleDateString()}
+                              {parseSupabaseDate(req.created_at).toLocaleDateString()}
                             </Text>
                           </View>
                         </View>
@@ -292,8 +284,16 @@ export default function ChatHub({ navigate }: Props) {
                       />
                       <View style={styles.chatInfo}>
                         <View style={styles.chatHeader}>
-                          <Text style={styles.chatName}>
+                          <Text style={styles.chatName} numberOfLines={1}>
                             {chat.otherProfile?.display_name || chat.otherProfile?.username || 'Unknown User'}
+                          </Text>
+                          {chat.timeDisplay ? (
+                            <Text style={styles.chatTime}>{chat.timeDisplay}</Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.chatPreviewRow}>
+                          <Text style={[styles.chatPreview, chat.unreadCount > 0 && styles.chatPreviewUnread]} numberOfLines={1}>
+                            {chat.preview}
                           </Text>
                           {chat.unreadCount > 0 && (
                             <View style={styles.unreadBadge}>
@@ -301,9 +301,6 @@ export default function ChatHub({ navigate }: Props) {
                             </View>
                           )}
                         </View>
-                        <Text style={[styles.chatPreview, chat.unreadCount > 0 && styles.chatPreviewUnread]} numberOfLines={1}>
-                          {chat.preview}{chat.timeDisplay ? ` • ${chat.timeDisplay}` : ''}
-                        </Text>
                       </View>
                     </Pressable>
                   ))
@@ -445,11 +442,25 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: -0.5,
+    flex: 1,
+    marginRight: 8,
+  },
+  chatTime: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  chatPreviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   chatPreview: {
     color: '#8E8E93',
     fontSize: 14,
-    fontWeight: '500'
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 12,
   },
   chatPreviewUnread: {
     color: '#ffffff',
