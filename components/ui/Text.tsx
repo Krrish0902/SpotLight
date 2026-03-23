@@ -1,10 +1,6 @@
 import React from 'react';
 import { Text as RNText, Platform, StyleSheet, TextStyle } from 'react-native';
 
-/**
- * Text component with Android fixes for font clipping (includeFontPadding + lineHeight).
- * Use this instead of react-native's Text for consistent rendering.
- */
 export function Text({
   style,
   ...props
@@ -18,7 +14,10 @@ export function Text({
     <RNText
       {...props}
       includeFontPadding={Platform.OS === 'android' ? false : undefined}
-      style={[Platform.OS === 'android' && { lineHeight }, style]}
+      style={[
+        Platform.OS === 'android' && { lineHeight }, 
+        style
+      ]}
     />
   );
 }

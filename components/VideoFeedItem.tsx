@@ -266,73 +266,75 @@ export function VideoFeedItem({
                 <Pressable 
                   style={[
                     styles.iconCircle, 
-                    messageRequestStatus !== 'none' && { backgroundColor: 'rgba(168, 85, 247, 0.4)', borderColor: '#a855f7' }
+                    messageRequestStatus !== 'none' && { backgroundColor: 'rgba(253, 242, 255, 0.15)', borderColor: '#FDF2FF' }
                   ]}
                   onPress={handleMessageRequest}
                   disabled={isSendingRequest || messageRequestStatus !== 'none'}
                 >
                   {messageRequestStatus !== 'none' ? (
-                    <Check size={28} color="#fff" />
+                    <Check size={24} color="#FDF2FF" />
                   ) : (
-                    <MessageSquare size={26} color="#fff" />
+                    <MessageSquare size={24} color="#fff" />
                   )}
                 </Pressable>
                 <Text style={styles.actionText}>
-                  {messageRequestStatus === 'none' ? 'Message' : 
-                   messageRequestStatus === 'pending' ? 'Requested' : 'Chat'}
+                  {messageRequestStatus === 'none' ? 'Chat' : 
+                   messageRequestStatus === 'pending' ? 'Sent' : 'Chat'}
                 </Text>
               </View>
             )}
             <View style={styles.actionItem}>
               <Pressable style={styles.iconCircle} onPress={handleLike}>
-                <Heart size={28} color="#fff" />
+                <Heart size={24} color="#fff" />
               </Pressable>
               <Text style={styles.actionText}>{item.likes_count ?? 0}</Text>
             </View>
             <View style={styles.actionItem}>
               <Pressable style={styles.iconCircle} onPress={handleShare}>
-                <Share2 size={28} color="#fff" />
+                <Share2 size={24} color="#fff" />
               </Pressable>
               <Text style={styles.actionText}>Share</Text>
             </View>
             <View style={styles.actionItem}>
               <Pressable style={styles.iconCircle}>
-                <MoreVertical size={28} color="#fff" />
+                <MoreVertical size={24} color="#fff" />
               </Pressable>
             </View>
           </View>
 
-          <View style={styles.bottomInfo}>
-            <View style={styles.userInfoRow}>
-              <Pressable onPress={onProfilePress} style={styles.profileBtn}>
-                {profile?.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.avatar, { backgroundColor: '#555', alignItems: 'center', justifyContent: 'center' }]}>
-                    <User size={20} color="#fff" />
+          <View style={styles.bottomInfoWrapper}>
+            <View style={styles.glassPlate}>
+              <View style={styles.userInfoRow}>
+                <Pressable onPress={onProfilePress} style={styles.profileBtn}>
+                  {profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatar} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.avatar, { backgroundColor: '#333', alignItems: 'center', justifyContent: 'center' }]}>
+                      <User size={18} color="#fff" />
+                    </View>
+                  )}
+                  <Text style={styles.username}>@{profile?.username ?? 'artist'}</Text>
+                </Pressable>
+                {profile?.is_boosted && <Badge style={styles.boostBadge}>Pro</Badge>}
+              </View>
+              {item.title ? (
+                <Text style={styles.description} numberOfLines={2}>{item.title}</Text>
+              ) : null}
+              <View style={styles.metaRow}>
+                {genresStr ? (
+                  <View style={styles.metaItem}>
+                    <Music size={12} color="#8E8E93" />
+                    <Text style={styles.metaText}>{genresStr}</Text>
                   </View>
-                )}
-                <Text style={styles.username}>@{profile?.username ?? 'artist'}</Text>
-              </Pressable>
-              {profile?.is_boosted && <Badge style={styles.boostBadge}>Boosted</Badge>}
+                ) : null}
+                {profile?.city ? (
+                  <View style={styles.metaItem}>
+                    <MapPin size={12} color="#8E8E93" />
+                    <Text style={styles.metaText}>{profile.city}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
-            <View style={styles.metaRow}>
-              {genresStr ? (
-                <View style={styles.metaItem}>
-                  <Music size={14} color="#ddd" />
-                  <Text style={styles.metaText}>{genresStr}</Text>
-                </View>
-              ) : null}
-              {profile?.city ? (
-                <View style={styles.metaItem}>
-                  <MapPin size={14} color="#ddd" />
-                  <Text style={styles.metaText}>{profile.city}</Text>
-                </View>
-              ) : null}
-            </View>
-            {item.title ? (
-              <Text style={styles.description} numberOfLines={2}>{item.title}</Text>
-            ) : null}
           </View>
         </>
       ) : (
@@ -374,71 +376,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  
   rightActions: {
     position: 'absolute',
-    right: 16,
-    bottom: BOTTOM_NAV_HEIGHT + 100,
+    right: 12,
+    bottom: BOTTOM_NAV_HEIGHT + 110,
     alignItems: 'center',
     gap: 20,
   },
-  actionItem: { alignItems: 'center', gap: 4 },
+  actionItem: { alignItems: 'center', gap: 6 },
   iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   actionText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    ...Platform.select({
-      web: { textShadow: '1px 1px 2px rgba(0,0,0,0.5)' as any },
-      default: { textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 }
-    })
+    textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4
   },
-  bottomInfo: {
+  bottomInfoWrapper: {
     position: 'absolute',
-    bottom: BOTTOM_NAV_HEIGHT + 24,
-    left: 16,
-    right: 80,
+    bottom: BOTTOM_NAV_HEIGHT + 16,
+    left: 12,
+    right: 76,
   },
-  userInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  profileBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  glassPlate: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  userInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  profileBtn: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   username: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
-    ...Platform.select({
-      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
-      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
-    })
+    letterSpacing: -0.5,
   },
-  boostBadge: { backgroundColor: '#a855f7', height: 20, paddingHorizontal: 6 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
+  boostBadge: { backgroundColor: '#FDF2FF', paddingHorizontal: 8, height: 22 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  metaText: { color: '#8E8E93', fontSize: 13, fontWeight: '500' },
   description: {
-    color: '#fff',
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
     lineHeight: 20,
-    ...Platform.select({
-      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
-      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
-    })
-  },
-  bottomInfoCompact: {
+    fontWeight: '400',
+  },bottomInfoCompact: {
     position: 'absolute',
     bottom: 24,
     left: 16,
@@ -448,10 +448,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
-    ...Platform.select({
-      web: { textShadow: '1px 1px 3px rgba(0,0,0,0.7)' as any },
-      default: { textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
-    })
+    
   },
   compactViews: {
     color: 'rgba(255,255,255,0.7)',

@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert } from 'react-native';
+import Animated, { FadeIn, FadeInDown, SlideInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { View, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert } from 'react-native';
+
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut, Camera } from 'lucide-react-native';
+
+import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut, Camera, Video } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
 import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
@@ -89,12 +92,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
         // Step 3: Silent Tracking - Profile View
         (async () => {
           try {
-            track.profileView({
-              artistId: targetArtistId,
-              viewerId: appUser?.id || 'anonymous'
-            });
-          } catch (e) {
-            console.log('Silent tracking failed', e);
+        track.profileView(targetArtistId, appUser?.id || 'anonymous');
+      } catch (err) {
+            console.log('Silent tracking failed', err);
           }
         })();
       }
@@ -307,28 +307,37 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
         {/* ... (keep existing cover/header code) ... */}
-        <View style={styles.coverWrap}>
-          <LinearGradient colors={['#9333ea', '#db2777', '#f97316']} style={StyleSheet.absoluteFill} />
-          <Image source={{ uri: displayCoverUrl }} style={StyleSheet.absoluteFill} />
+        <Animated.View entering={FadeIn.duration(800)} style={styles.coverWrap}>
+          
+          <Image source={{ uri: displayCoverUrl }} style={styles.coverImg} resizeMode="cover" />
+          
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate(returnTo ?? (isOwnProfile ? 'public-home' : 'search-discover'))}>
-            <ChevronLeft size={24} color="#fff" />
+            <ChevronLeft size={24} color="#ffffff" />
           </Button>
           {isOwnProfile && (
             <Pressable style={styles.editCoverBtn} onPress={handleUploadCover} disabled={uploading}>
               <Camera size={14} color="#fff" />
-              <Text style={styles.editCoverText}>Change Cover</Text>
+              <Text style={styles.editCoverText}>Edit Cover</Text>
             </Pressable>
           )}
           <View style={styles.headerRight}>
             {isOwnProfile && (
-              <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => navigate('edit-profile', { selectedArtist: artist ?? { id: 'me' } })}>
-                <Pencil size={24} color="#fff" />
-              </Button>
+              <>
+                <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => navigate('edit-profile', { selectedArtist: artist ?? { id: 'me' } })}>
+                  <Pencil size={20} color="#ffffff" />
+                </Button>
+                <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={async () => { await signOut(); navigate('public-home'); }}>
+                  <LogOut size={20} color="#FF3B30" />
+                </Button>
+              </>
             )}
             <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => { }}>
-              <Share2 size={24} color="#fff" />
+              <Share2 size={24} color="#ffffff" />
             </Button>
           </View>
+        </Animated.View>
+
+        <Animated.View entering={SlideInDown.duration(600).springify()} style={styles.profileContainer}>
           <Pressable
             style={styles.profileImgContainer}
             onPress={handleUploadAvatar}
@@ -337,51 +346,49 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             <Image source={{ uri: displayAvatarUrl }} style={styles.profileImg} />
             {uploading && (
               <View style={styles.loadingOverlay}>
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#ffffff" />
               </View>
             )}
             {isOwnProfile && !uploading && (
               <View style={styles.editBadge}>
-                <Camera size={14} color="#fff" />
+                <Camera size={16} color="#000" />
               </View>
             )}
           </Pressable>
-        </View>
 
-        <View style={styles.content}>
           <View style={styles.profileHeader}>
-            <View style={styles.nameRow}>
+            <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.nameRow}>
               <Text style={styles.name}>{displayName}</Text>
               {isBoosted && <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>}
-            </View>
+            </Animated.View>
             {usernameStr ? (
               <Badge style={styles.usernamePill}>@{usernameStr}</Badge>
             ) : null}
             <View style={styles.meta}>
-              <Music size={20} color="#fff" />
+              <Music size={20} color="#ffffff" />
               <Text style={styles.metaText}>{genresStr || 'Gen Z Artist'}</Text>
             </View>
             {cityStr ? (
               <View style={styles.meta}>
-                <MapPin size={16} color="#fff" />
+                <MapPin size={16} color="#ffffff" />
                 <Text style={styles.metaText}>{cityStr}</Text>
               </View>
             ) : null}
             <Badge style={styles.availableBadge}>Available for Booking</Badge>
           </View>
 
-          <View style={styles.actionRow}>
+          <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.actionRow}>
             {isOwnProfile && (
               <Button onPress={() => navigate(userRole === 'organizer' ? 'organizer-dashboard' : 'artist-dashboard')} style={styles.dashboardBtn}>
                 <LayoutDashboard size={20} color="#fff" />
-                <Text style={styles.bookBtnText}>My Dashboard</Text>
+                <Text style={styles.bookBtnText} numberOfLines={1} adjustsFontSizeToFit>My Dashboard</Text>
               </Button>
             )}
             {isOrganizer && !isOwnProfile && (
               <>
                 <Button onPress={() => navigate('request-booking', { artist: effectiveProfile })} style={styles.bookBtn}>
                   <Calendar size={20} color="#fff" />
-                  <Text style={styles.bookBtnText}>Request Booking</Text>
+                  <Text style={styles.bookBtnText} numberOfLines={1} adjustsFontSizeToFit>Request Booking</Text>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -455,10 +462,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                     });
                     
                     // Analytics tracking
-                    track.follow({
-                      artistId: targetArtistId,
-                      viewerId: appUser.id,
-                    });
+                    track.follow(targetArtistId, appUser.id);
                     
                     Alert.alert('Followed', 'You are now following this artist!');
                   } catch (e: any) {
@@ -466,27 +470,20 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                   }
                 }}
               >
-                <Text style={styles.bookBtnText}>Follow</Text>
+                <Text style={styles.bookBtnText} numberOfLines={1} adjustsFontSizeToFit>Follow</Text>
               </Button>
             )}
-          </View>
+          </Animated.View>
 
-          <Card style={styles.bioCard}>
+          <View style={styles.bioCard}>
             <Text style={styles.bioTitle}>About</Text>
             <Text style={styles.bioText}>{bioStr || (isOwnProfile ? 'Add your bio in profile setup.' : 'Artist profile.')}</Text>
-          </Card>
-
-          {isOwnProfile && (
-            <Button variant="outline" onPress={async () => { await signOut(); navigate('public-home'); }} style={[styles.signOutBtn, { alignSelf: 'stretch', width: '100%' }]}>
-              <LogOut size={20} color="#fff" />
-              <Text style={styles.signOutText}>Sign Out</Text>
-            </Button>
-          )}
+          </View>
 
           <View style={styles.statsRow}>
-            <Card style={styles.statCard}><Text style={styles.statNum}>2.8K</Text><Text style={styles.statLabel}>Followers</Text></Card>
-            <Card style={styles.statCard}><Text style={styles.statNum}>142</Text><Text style={styles.statLabel}>Events</Text></Card>
-            <Card style={styles.statCard}><Text style={styles.statNum}>4.9</Text><Text style={styles.statLabel}>Rating</Text></Card>
+            <View style={styles.statCard}><Text style={styles.statNum}>2.8K</Text><Text style={styles.statLabel}>Followers</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNum}>142</Text><Text style={styles.statLabel}>Events</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNum}>4.9</Text><Text style={styles.statLabel}>Rating</Text></View>
           </View>
 
           <Tabs defaultValue="videos" fullWidth tabs={[{ value: 'videos', label: 'Videos' }, { value: 'schedule', label: 'Schedule' }, { value: 'reviews', label: 'Reviews' }]}>
@@ -504,9 +501,11 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                       <Image
                         source={{ uri: v.thumbnail_url || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=400&h=600&fit=crop' }}
                         style={styles.videoThumb}
-                        resizeMode="cover"
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="memory-disk"
                       />
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={[StyleSheet.absoluteFill, styles.videoOverlay]} />
+                      
                       <View style={styles.videoInfo}>
                         <Text style={styles.videoTitle} numberOfLines={1}>{v.title || 'Untitled'}</Text>
                         <Text style={styles.videoViews}>{v.views_count?.toLocaleString() ?? 0} views</Text>
@@ -514,18 +513,23 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                     </Pressable>
                   ))
                 ) : (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>No videos uploaded yet.</Text>
+                  <View style={styles.emptyBento}>
+                    <View style={styles.emptyIconCircle}>
+                      <Video size={40} color="#FDF2FF" />
+                    </View>
+                    <Text style={styles.emptyTitle}>Share Your Art</Text>
+                    <Text style={styles.emptyDesc}>Upload your first performance to build your audience and get discovered.</Text>
                     {isOwnProfile && (
-                      <Button variant="outline" onPress={() => navigate('upload-video')} style={{ marginTop: 12 }}>
-                        <Text style={{ color: '#fff' }}>Upload Video</Text>
+                      <Button onPress={() => navigate('upload-video')} style={styles.emptyPrimaryBtn}>
+                        <Video size={20} color="#162447" />
+                        <Text style={styles.emptyPrimaryBtnText}>Upload Video</Text>
                       </Button>
                     )}
                   </View>
                 )}
               </View>
             ) : tab === 'schedule' ? (
-              <Card style={styles.scheduleCard}>
+              <View style={styles.scheduleCard}>
                 {loadingEvents ? (
                   <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
                 ) : upcomingEvents.length === 0 ? (
@@ -561,9 +565,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                     </View>
                   ))
                 )}
-              </Card>
+              </View>
             ) : (
-              <Card style={styles.reviewCard}>
+              <View style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
                   <Image source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' }} style={styles.reviewAvatar} />
                   <View style={styles.reviewMeta}>
@@ -573,10 +577,10 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                   <Text style={styles.reviewTime}>2 days ago</Text>
                 </View>
                 <Text style={styles.reviewText}>Amazing performance! Maya brought our wedding to life with her incredible voice and stage presence.</Text>
-              </Card>
+              </View>
             )}
           </Tabs>
-        </View>
+        </Animated.View>
       </ScrollView>
       {isOwnProfile && (
         <BottomNav activeTab="profile" navigate={navigate} userRole={userRole} isAuthenticated />
@@ -624,120 +628,128 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  scroll: {},
-  coverWrap: { height: 192, position: 'relative' },
-  backBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
-  headerRight: { position: 'absolute', top: 48, right: 16, flexDirection: 'row', gap: 4 },
-  iconBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
-  shareBtn: {},
-  profileImgContainer: {
-    position: 'absolute',
-    bottom: -64,
-    left: 24,
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    borderWidth: 4,
-    borderColor: '#030712',
-    backgroundColor: '#1f2937',
-  },
-  profileImg: { width: '100%', height: '100%', borderRadius: 64 },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 64,
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: '#050A18' },
+  scroll: { backgroundColor: '#050A18' },
+  coverWrap: { height: 320, backgroundColor: '#0d141d', borderRadius: 40, marginHorizontal: 16, marginTop: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' }, 
+  coverImg: { width: '100%', height: '100%' },
+  backBtn: { position: 'absolute', top: 32, left: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, padding: 8, zIndex: 50, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
+  headerRight: { position: 'absolute', top: 32, right: 16, flexDirection: 'row', gap: 12, zIndex: 50 },
+  iconBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, padding: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
+  profileContainer: { paddingHorizontal: 16, marginTop: -40, zIndex: 10 },
+  profileImgContainer: { alignSelf: 'center', width: 120, height: 120, borderRadius: 60, borderWidth: 6, borderColor: '#050A18', backgroundColor: '#0d141d', zIndex: 10 },
+  profileImg: { width: '100%', height: '100%', borderRadius: 60 },
+  profileHeader: { alignItems: 'center', marginTop: 16, marginBottom: 16, paddingHorizontal: 16 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  name: { fontSize: 44, fontWeight: '800', color: '#ffffff', letterSpacing: -1.5 },
+  usernamePill: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  boostedBadge: { backgroundColor: '#FDF2FF', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  metaText: { color: '#8E8E93', fontSize: 16, fontWeight: '600' },
+  availableBadge: { backgroundColor: 'rgba(253,242,255,0.15)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(253,242,255,0.3)' },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24, paddingHorizontal: 16 },
+  bookBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
+  dashboardBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
+  bookBtnText: { color: '#162447', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
+  msgBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 100, width: 64, height: 64, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
+  bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, marginBottom: 16, borderRadius: 40, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  bioTitle: { color: '#8E8E93', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 },
+  bioText: { color: '#dce3f0', lineHeight: 28, fontSize: 18, fontWeight: '500' },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 24 },
+
+  toggleContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 100, padding: 4, marginHorizontal: 16, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  togglePill: { flex: 1, paddingVertical: 12, borderRadius: 100, alignItems: 'center' },
+  togglePillActive: { backgroundColor: '#FDF2FF', shadowColor: '#FDF2FF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  toggleText: { color: '#8E8E93', fontWeight: '600', fontSize: 15 },
+  toggleTextActive: { color: '#162447', fontWeight: '800' },
+  
+  statCard: { flex: 1, minWidth: 100, paddingVertical: 32, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 40, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  statNum: { fontSize: 32, fontWeight: '800', color: '#ffffff', letterSpacing: -1 },
+  statLabel: { color: '#8E8E93', fontSize: 12, marginTop: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  scheduleCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 40, marginTop: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  scheduleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16, paddingVertical: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  scheduleInfo: { flex: 1 },
+  scheduleTitle: { color: '#ffffff', fontWeight: '700', fontSize: 18 },
+  scheduleMeta: { color: '#8E8E93', fontSize: 15, marginTop: 6, fontWeight: '500' },
+  scheduleBadge: { marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  emptySchedule: { alignItems: 'center', padding: 48 },
+  emptyScheduleText: { color: '#8E8E93', fontSize: 16, marginTop: 16, fontWeight: '600' },
+  reviewCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 40, marginTop: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 },
+  reviewAvatar: { width: 44, height: 44, borderRadius: 22 },
+  reviewMeta: { flex: 1 },
+  reviewer: { color: '#ffffff', fontWeight: '700', fontSize: 17 },
+  stars: { flexDirection: 'row', gap: 4, marginTop: 4 },
+  reviewTime: { color: '#8E8E93', fontSize: 14, fontWeight: '600' },
+  reviewText: { color: '#dce3f0', fontSize: 17, lineHeight: 26, fontWeight: '500' },
+  videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 16 },
+  videoItem: { width: '47%', aspectRatio: 9 / 16, borderRadius: 24, overflow: 'hidden', position: 'relative', backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  videoThumb: { width: '100%', height: '100%', opacity: 0.9 },
+  videoInfo: { position: 'absolute', bottom: 16, left: 16, right: 16 },
+  videoTitle: { color: '#ffffff', fontWeight: '700', fontSize: 14, marginBottom: 6 },
+  videoViews: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' },
+  videoFeedModal: { flex: 1, backgroundColor: '#050A18' },
+  videoFeedHeader: { position: 'absolute', top: 56, left: 16, zIndex: 10 },
+  videoFeedBackBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, padding: 8 },
+  signOutBtn: { flexDirection: 'row', gap: 8, marginTop: 16, backgroundColor: 'rgba(255,59,48,0.1)', borderRadius: 100, paddingVertical: 20, justifyContent: 'center' },
+  signOutText: { color: '#FF3B30', fontSize: 16, fontWeight: '700' },
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5,10,24,0.8)', justifyContent: 'center', alignItems: 'center', borderRadius: 40 },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#FDF2FF', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: '#050A18' },
+  editCoverBtn: { position: 'absolute', bottom: 16, right: 16, backgroundColor: 'rgba(5,10,24,0.8)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 100, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
+  editCoverText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { color: '#8E8E93', fontSize: 15 },
+  emptyBento: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 40,
+    padding: 32,
     alignItems: 'center',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#a855f7',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#030712',
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginTop: 16,
+    width: '100%',
   },
-  editCoverBtn: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  emptyIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(253, 242, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(253, 242, 255, 0.15)',
+  },
+  emptyTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -1,
+    marginBottom: 12,
+  },
+  emptyDesc: {
+    color: '#8E8E93',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: 32,
+    paddingHorizontal: 8,
+  },
+  emptyPrimaryBtn: {
+    backgroundColor: '#FDF2FF',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    borderRadius: 100,
+    width: '100%',
   },
-  editCoverText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
+  emptyPrimaryBtnText: {
+    color: '#162447',
+    fontSize: 17,
+    fontWeight: '800',
   },
-  content: { padding: 24, paddingTop: 80 },
-  profileHeader: { marginBottom: 24 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  name: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  usernamePill: { backgroundColor: '#7e22ce', borderWidth: 0, alignSelf: 'flex-start', marginBottom: 8 },
-  boostedBadge: { backgroundColor: '#a855f7' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
-  availableBadge: { backgroundColor: 'rgba(34,197,94,0.2)', marginTop: 12, borderColor: 'rgba(34,197,94,0.3)' },
-  actionRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  bookBtn: { flex: 1, minWidth: 0, backgroundColor: '#a855f7', flexDirection: 'row', gap: 8 },
-  dashboardBtn: { flex: 1, minWidth: 0, backgroundColor: '#7e22ce', flexDirection: 'row', gap: 8 },
-  bookBtnText: { color: '#fff' },
-  msgBtn: { borderColor: 'rgba(255,255,255,0.2)' },
-  bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, marginBottom: 24 },
-  signOutBtn: { flexDirection: 'row', gap: 8, marginBottom: 24, borderColor: 'rgba(255,255,255,0.3)' },
-  signOutText: { color: '#fff', fontSize: 16 },
-  bioTitle: { color: '#fff', fontWeight: '600', marginBottom: 8 },
-  bioText: { color: 'rgba(255,255,255,0.7)', lineHeight: 22 },
-  statsRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  statCard: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, alignItems: 'center', overflow: 'visible' },
-  statNum: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  statLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
-  videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  videoItem: { width: '47%', aspectRatio: 9 / 16, borderRadius: 8, overflow: 'hidden', position: 'relative' },
-  videoThumb: { width: '100%', height: '100%' },
-  videoOverlay: { bottom: 0 },
-  videoInfo: { position: 'absolute', bottom: 8, left: 8, right: 8 },
-  videoTitle: { color: '#fff', fontWeight: '500', fontSize: 14 },
-  videoViews: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  videoFeedModal: { flex: 1, backgroundColor: '#000' },
-  videoFeedHeader: {
-    position: 'absolute',
-    top: 48,
-    left: 16,
-    zIndex: 10,
-  },
-  videoFeedBackBtn: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  scheduleCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
-  scheduleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  scheduleInfo: { flex: 1, minWidth: 0 },
-  scheduleTitle: { color: '#fff', fontWeight: '600', fontSize: 15 },
-  scheduleMeta: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 4 },
-  scheduleBadge: { marginTop: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(168,85,247,0.2)', borderWidth: 0 },
-  emptySchedule: { alignItems: 'center', padding: 32 },
-  emptyScheduleText: { color: 'rgba(255,255,255,0.5)', fontSize: 15, marginTop: 12 },
-  reviewCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16 },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  reviewAvatar: { width: 40, height: 40, borderRadius: 20 },
-  reviewMeta: { flex: 1 },
-  reviewer: { color: '#fff', fontWeight: '500' },
-  stars: { flexDirection: 'row', gap: 2 },
-  reviewTime: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
-  reviewText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 20 },
-  emptyState: { width: '100%', alignItems: 'center', padding: 32 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16 },
 });
