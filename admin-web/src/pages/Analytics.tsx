@@ -12,15 +12,15 @@ const PERIOD_OPTIONS = [
   { label: '90d', value: 90 },
 ];
 
-const ROLE_COLORS = ['#818CF8', '#34D399', '#60A5FA', '#FBBF24'];
+const ROLE_COLORS = ['#22D3EE', '#34D399', '#A78BFA', '#FBBF24'];
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#0D1117',
-  borderColor: 'rgba(255,255,255,0.08)',
+  backgroundColor: '#0B1220',
+  borderColor: 'rgba(255,255,255,0.12)',
   color: '#fff',
-  borderRadius: 10,
+  borderRadius: 12,
   fontSize: 12,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  boxShadow: '0 16px 44px rgba(0,0,0,0.45)',
 };
 
 export default function Analytics() {
@@ -101,8 +101,8 @@ export default function Analytics() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <div className="relative w-14 h-14">
-          <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-indigo-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+          <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20" />
+          <div className="absolute inset-0 rounded-full border-2 border-t-cyan-400 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
         </div>
         <p className="text-white/40 text-sm tracking-wide">Loading platform analytics…</p>
       </div>
@@ -119,7 +119,7 @@ export default function Analytics() {
         <p className="text-white/40 text-sm text-center max-w-sm">{error}</p>
         <button
           onClick={fetchAnalytics}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-[#05303a] rounded-xl text-sm font-bold transition-all"
         >
           <RefreshCw size={14} /> Retry
         </button>
@@ -149,7 +149,7 @@ export default function Analytics() {
                 onClick={() => setPeriod(opt.value)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   period === opt.value
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
+                    ? 'bg-cyan-500 text-[#05303a] shadow-lg shadow-cyan-900/40'
                     : 'text-white/40 hover:text-white/70'
                 }`}
               >
@@ -203,28 +203,28 @@ export default function Analytics() {
 
       {/* Activity + Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 hover:border-white/[0.12] transition-colors">
+        <div className="lg:col-span-2 bg-white/[0.04] border border-white/[0.1] rounded-3xl p-6 hover:border-white/[0.16] transition-colors">
           <SectionHeader title="Platform Activity" sub="Daily video views across the platform" />
           <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={activityData}>
                 <defs>
                   <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#818CF8" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#818CF8" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#22D3EE" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#22D3EE" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="2 6" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} width={36} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: '#818CF8' }} cursor={{ stroke: 'rgba(255,255,255,0.08)' }} />
-                <Area type="monotone" dataKey="views" stroke="#818CF8" fill="url(#areaGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#818CF8', strokeWidth: 0 }} />
+                <RechartsTooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: '#22D3EE' }} cursor={{ stroke: 'rgba(255,255,255,0.08)' }} />
+                <Area type="monotone" dataKey="views" stroke="#22D3EE" fill="url(#areaGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#22D3EE', strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 hover:border-white/[0.12] transition-colors">
+        <div className="bg-white/[0.04] border border-white/[0.1] rounded-3xl p-6 hover:border-white/[0.16] transition-colors">
           <SectionHeader title="User Distribution" sub="Breakdown by role" />
           <div className="h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -254,7 +254,7 @@ export default function Analytics() {
 
       {/* Weekly Signups */}
       {weeklySignupsData.length > 0 && (
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 hover:border-white/[0.12] transition-colors">
+        <div className="bg-white/[0.04] border border-white/[0.1] rounded-3xl p-6 hover:border-white/[0.16] transition-colors">
           <SectionHeader title="Weekly User Growth" sub="New signups per week by role" />
           <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -277,7 +277,7 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Cohort Retention */}
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 overflow-x-auto hover:border-white/[0.12] transition-colors">
+        <div className="bg-white/[0.04] border border-white/[0.1] rounded-3xl p-6 overflow-x-auto hover:border-white/[0.16] transition-colors">
           <SectionHeader title="Cohort Retention" sub="% of users active N weeks after signup" />
           <div className="min-w-[500px]">
             <div className="flex mb-3 text-[10px] font-bold tracking-wide text-white/25 uppercase">
@@ -325,7 +325,7 @@ export default function Analytics() {
         </div>
 
         {/* Revenue Waterfall */}
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 hover:border-white/[0.12] transition-colors">
+        <div className="bg-white/[0.04] border border-white/[0.1] rounded-3xl p-6 hover:border-white/[0.16] transition-colors">
           <SectionHeader title="Revenue Breakdown" sub={`Last ${period} days`} />
           {waterfallData.length === 0 ? (
             <p className="text-white/20 text-sm py-6 text-center">No revenue data yet.</p>
@@ -356,7 +356,7 @@ export default function Analytics() {
                             width: `${barPct}%`,
                             background: isNeg
                               ? 'linear-gradient(90deg,#f43f5e,#fb7185)'
-                              : 'linear-gradient(90deg,#6366f1,#818cf8)',
+                              : 'linear-gradient(90deg,#0891b2,#22d3ee)',
                           }}
                         />
                       </div>
@@ -394,7 +394,7 @@ function KpiCard({ title, value, sub, trend, icon, accent }: {
 
   return (
     <div
-      className="relative bg-white/[0.03] border rounded-2xl p-5 hover:bg-white/[0.05] transition-all overflow-hidden group"
+      className="relative bg-white/[0.04] border rounded-3xl p-5 hover:bg-white/[0.06] transition-all overflow-hidden group"
       style={{ borderColor: `${accent}22` }}
     >
       {/* Colored top accent strip */}

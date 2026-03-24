@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { View, ScrollView, Alert, StyleSheet, ActivityIndicator, Pressable, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { SlideInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text } from '../components/ui/Text';
-import { ChevronLeft, Camera, User, MapPin, Music2, Guitar, Crosshair } from 'lucide-react-native';
+import { ChevronLeft, Camera, User, MapPin, Music2, Guitar, Crosshair, CalendarDays } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
@@ -41,10 +42,10 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   const [instruments, setInstruments] = useState<string[]>([]);
   const [company, setCompany] = useState('');
   const [capturingLocation, setCapturingLocation] = useState(false);
-  const [ageRange, setAgeRange] = useState('');
+  const [dob, setDob] = useState('');
+  const [showDobPicker, setShowDobPicker] = useState(false);
   const [gender, setGender] = useState('');
 
-  const AGE_OPTIONS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
   const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
   React.useEffect(() => {
@@ -58,7 +59,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       setLongitude(profile.longitude ?? null);
       setGenres(profile.genres ?? []);
       setInstruments(profile.instruments ?? []);
-      setAgeRange(profile.age_range ?? '');
+      setDob(profile.dob ?? '');
       setGender(profile.gender ?? '');
       if (userRole === 'organizer') setCompany(profile.display_name ?? '');
     }
@@ -139,6 +140,21 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parseDob = (value: string): Date | null => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const formatDob = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const enteringCard = (delay: number) =>
+    Platform.OS === 'android' ? undefined : SlideInUp.duration(600).springify().delay(delay);
+
   const handleComplete = async () => {
     const name = (userRole === 'organizer' ? company.trim() || displayName.trim() : displayName.trim());
     if (!name) {
@@ -149,6 +165,14 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
     if (u && !USERNAME_REGEX.test(u)) {
       setError('Username: 3-30 chars, only letters, numbers, underscores. Use lowercase.');
       return;
+    }
+    const dobValue = dob.trim();
+    if (dobValue) {
+      const isDobFormatValid = /^\d{4}-\d{2}-\d{2}$/.test(dobValue);
+      if (!isDobFormatValid || Number.isNaN(new Date(`${dobValue}T00:00:00`).getTime())) {
+        setError('DOB must be in YYYY-MM-DD format.');
+        return;
+      }
     }
     setError(null);
     setLoading(true);
@@ -162,7 +186,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       longitude: longitude ?? undefined,
       genres: (userRole === 'artist' || userRole === 'organizer') ? (genres.length ? genres : undefined) : undefined,
       instruments: (userRole === 'artist' || userRole === 'organizer') ? (instruments.length ? instruments : undefined) : undefined,
-      age_range: ageRange || undefined,
+      dob: dobValue || undefined,
       gender: gender || undefined,
     });
 
@@ -190,11 +214,11 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         <Button variant="ghost" size="icon" onPress={goBack}>
           <ChevronLeft size={24} color="#fff" />
         </Button>
-        <Text style={styles.title}>{isEdit ? 'Edit Profile' : 'Setup Your Profile'}</Text>
+        <Text style={styles.title} numberOfLines={1}>{isEdit ? 'Edit Profile' : 'Setup Your Profile'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={SlideInUp.duration(600).springify().delay(100)} style={styles.avatarSection}>
+        <Animated.View entering={enteringCard(100)} style={styles.avatarSection}>
           <Pressable style={styles.avatarWrap} onPress={handlePickImage} disabled={uploadingAvatar || loading}>
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
@@ -211,7 +235,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Animated.View entering={SlideInUp.duration(600).springify().delay(200)}>
+        <Animated.View entering={enteringCard(200)}>
           <View style={styles.bentoCard}>
             <Text style={styles.bentoTitle}>IDENTITY</Text>
             <View style={styles.field}>
@@ -236,7 +260,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         </Animated.View>
 
         {(userRole === 'artist' || userRole === 'organizer') && (
-          <Animated.View entering={SlideInUp.duration(600).springify().delay(300)}>
+          <Animated.View entering={enteringCard(300)}>
             <View style={styles.bentoCard}>
               <Text style={styles.bentoTitle}>ARTISTRY</Text>
               <View style={styles.field}>
@@ -273,18 +297,38 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
           </Animated.View>
         )}
 
-        <Animated.View entering={SlideInUp.duration(600).springify().delay(400)}>
+        <Animated.View entering={enteringCard(400)}>
           <View style={styles.bentoCard}>
             <Text style={styles.bentoTitle}>AUDIENCE & LOCATION</Text>
             <View style={styles.field}>
-              <Label>Age Range</Label>
-              <View style={styles.demographicRow}>
-                {AGE_OPTIONS.map((opt) => (
-                  <Pressable key={opt} onPress={() => setAgeRange(opt)} style={[styles.demoPill, ageRange === opt && styles.demoPillActive]}>
-                    <Text style={[styles.demoPillText, ageRange === opt && styles.demoPillTextActive]}>{opt}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              <Label>Date of Birth</Label>
+              <Pressable
+                onPress={() => setShowDobPicker(true)}
+                style={styles.dobPickerBtn}
+              >
+                <CalendarDays size={18} color="rgba(255,255,255,0.72)" />
+                <Text style={[styles.dobPickerText, !dob && styles.dobPickerPlaceholder]}>
+                  {dob || 'Select date of birth'}
+                </Text>
+              </Pressable>
+              {showDobPicker && (
+                <DateTimePicker
+                  value={parseDob(dob) || new Date(2000, 0, 1)}
+                  mode="date"
+                  display="default"
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    if (event.type === 'dismissed') {
+                      setShowDobPicker(false);
+                      return;
+                    }
+                    if (selectedDate) {
+                      setDob(formatDob(selectedDate));
+                    }
+                    setShowDobPicker(false);
+                  }}
+                />
+              )}
             </View>
             <View style={styles.field}>
               <Label>Gender</Label>
@@ -308,7 +352,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
                 />
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onPress={captureLocation}
                   disabled={capturingLocation}
                   style={styles.captureBtn}
@@ -330,7 +374,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         </Animated.View>
 
         {userRole === 'organizer' && (
-          <Animated.View entering={SlideInUp.duration(600).springify().delay(500)}>
+          <Animated.View entering={enteringCard(500)}>
             <View style={styles.bentoCard}>
               <Text style={styles.bentoTitle}>ORGANIZATION</Text>
               <View style={styles.field}>
@@ -345,7 +389,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
           </Animated.View>
         )}
 
-        <Animated.View entering={SlideInUp.duration(600).springify().delay(600)}>
+        <Animated.View entering={enteringCard(600)}>
           <View style={styles.buttonRow}>
             {isEdit && (
               <Button variant="outline" onPress={goBack} style={styles.cancelBtn} disabled={loading}>
@@ -364,8 +408,8 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#050A18' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 64, paddingBottom: 16 },
-  title: { fontSize: 34, fontWeight: '800', color: '#ffffff', letterSpacing: -1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingTop: 64, paddingBottom: 16 },
+  title: { flex: 1, fontSize: 30, fontWeight: '800', color: '#ffffff', letterSpacing: -0.8 },
   scroll: { padding: 16, paddingBottom: 100 },
   avatarSection: { alignItems: 'center', marginBottom: 40 },
   avatarWrap: { alignSelf: 'center', position: 'relative' },
@@ -373,21 +417,34 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   cameraBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#FDF2FF', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: '#050A18' },
   errorText: { color: '#FF3B30', fontSize: 15, fontWeight: '600', backgroundColor: 'rgba(255,59,48,0.15)', padding: 16, borderRadius: 16, marginBottom: 24 },
-  bentoCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 40, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  bentoCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 28, borderRadius: 36, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 18, elevation: Platform.OS === 'android' ? 0 : 10 },
   bentoTitle: { color: '#8E8E93', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 24 },
   field: { gap: 12, marginBottom: 24 },
+  dobPickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    minHeight: 52,
+    paddingHorizontal: 14,
+  },
+  dobPickerText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  dobPickerPlaceholder: { color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
   demographicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   demoPill: { backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 100, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   demoPillActive: { backgroundColor: '#FDF2FF' },
   demoPillText: { color: '#ffffff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
   demoPillTextActive: { color: '#162447', fontWeight: '800' },
-  locationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  locationInput: { flex: 1, minWidth: 200, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 20, color: '#ffffff', fontSize: 18, fontWeight: '600' },
-  captureBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 20, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  locationInput: { flex: 1, minWidth: 0 },
+  captureBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, width: 52, height: 52, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
   coordsText: { color: '#8E8E93', fontSize: 13, marginTop: 12, fontWeight: '500' },
-  buttonRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
-  cancelBtn: { flex: 1, minWidth: 100, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 100, paddingVertical: 20, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  cancelBtn: { flex: 1, minWidth: 120, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 100, paddingVertical: 18, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   cancelText: { color: '#ffffff', fontSize: 17, fontWeight: '700' },
-  completeBtn: { flex: 2, minWidth: 200, backgroundColor: '#FDF2FF', borderRadius: 100, paddingVertical: 20, alignItems: 'center' },
+  completeBtn: { flex: 2, minWidth: 190, backgroundColor: '#FDF2FF', borderRadius: 100, paddingVertical: 18, alignItems: 'center' },
   completeText: { color: '#162447', fontSize: 17, fontWeight: '700' },
 });

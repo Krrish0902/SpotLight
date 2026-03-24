@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, CalendarDays, MapPin, Ticket } from 'lucide-react'
 import { supabase } from '../supabase'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
@@ -75,47 +75,37 @@ export default function Events({ onLogout }: Props) {
   const filtered = events.filter((e) => filter === 'all' || e.approval_status === filter)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#09090b' }}>
-      <header style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '14px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
-          Event Moderation
-        </h1>
-        <button
-          onClick={onLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 6,
-            color: '#71717a',
-            cursor: 'pointer',
-            fontSize: 13,
-            transition: 'color 0.15s, border-color 0.15s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#fafafa'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#71717a'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-          }}
-        >
-          <LogOut size={16} />
-          Log out
-        </button>
-      </header>
+    <div style={{ minHeight: '100vh', background: 'transparent' }}>
+      <div style={{ padding: 24, maxWidth: 1020, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              Moderation
+            </p>
+            <h2 style={{ margin: '4px 0 0', color: '#fff', fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>
+              Event Approval Queue
+            </h2>
+          </div>
+          <button
+            onClick={onLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '10px 14px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              color: '#c4c4c8',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
+            <LogOut size={16} />
+            Log out
+          </button>
+        </div>
 
-      <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
         <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
           {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
             <button
@@ -123,10 +113,10 @@ export default function Events({ onLogout }: Props) {
               onClick={() => setFilter(f)}
               style={{
                 padding: '6px 14px',
-                borderRadius: 6,
-                border: 'none',
-                background: filter === f ? 'rgba(255,255,255,0.1)' : 'transparent',
-                color: filter === f ? '#fafafa' : '#71717a',
+                borderRadius: 10,
+                border: filter === f ? '1px solid rgba(34,211,238,0.35)' : '1px solid transparent',
+                background: filter === f ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.03)',
+                color: filter === f ? '#E6FBFF' : '#8d8d95',
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: filter === f ? 500 : 400,
@@ -148,9 +138,9 @@ export default function Events({ onLogout }: Props) {
               <div
                 key={ev.event_id}
                 style={{
-                  background: '#18181b',
-                  borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgba(255,255,255,0.04)',
+                  borderRadius: 18,
+                  border: '1px solid rgba(255,255,255,0.1)',
                   overflow: 'hidden',
                   display: 'grid',
                   gridTemplateColumns: '100px 1fr auto',
@@ -164,15 +154,15 @@ export default function Events({ onLogout }: Props) {
                   style={{ width: 100, height: 140, objectFit: 'cover' }}
                 />
                 <div style={{ padding: '16px 0' }}>
-                  <h3 style={{ margin: '0 0 6px', color: '#fafafa', fontSize: 15, fontWeight: 600 }}>{ev.title}</h3>
+                  <h3 style={{ margin: '0 0 6px', color: '#fafafa', fontSize: 17, fontWeight: 700 }}>{ev.title}</h3>
                   <p style={{ margin: '0 0 10px', color: '#71717a', fontSize: 13, lineHeight: 1.5 }}>
                     {ev.description || '—'}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#71717a' }}>
-                    <span>{new Date(ev.event_date).toLocaleString()}</span>
-                    {ev.location_name && <span>{ev.location_name}</span>}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CalendarDays size={12} color="#22D3EE" />{new Date(ev.event_date).toLocaleString()}</span>
+                    {ev.location_name && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={12} color="#22D3EE" />{ev.location_name}</span>}
                     {ev.city && <span>{ev.city}</span>}
-                    {ev.ticket_price != null && <span>${ev.ticket_price}</span>}
+                    {ev.ticket_price != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Ticket size={12} color="#22D3EE" />${ev.ticket_price}</span>}
                     {ev.total_tickets != null && <span>{ev.total_tickets} cap</span>}
                     <span
                       style={{
@@ -190,7 +180,7 @@ export default function Events({ onLogout }: Props) {
                             : ev.approval_status === 'rejected'
                             ? '#ef4444'
                             : '#eab308',
-                        fontWeight: 500,
+                        fontWeight: 700,
                         fontSize: 11,
                       }}
                     >
@@ -199,7 +189,7 @@ export default function Events({ onLogout }: Props) {
                   </div>
                 </div>
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontSize: 11, color: '#52525b' }}>Change status</span>
+                  <span style={{ fontSize: 11, color: '#8f8f98' }}>Change status</span>
                   {(['approved', 'rejected', 'pending'] as const).map((st) => (
                     <button
                       key={st}
@@ -207,19 +197,19 @@ export default function Events({ onLogout }: Props) {
                       disabled={updating === ev.event_id || ev.approval_status === st}
                       style={{
                         padding: '6px 10px',
-                        borderRadius: 6,
+                        borderRadius: 10,
                         border: 'none',
                         background:
                           st === 'approved'
                             ? 'rgba(34,197,94,0.15)'
                             : st === 'rejected'
                             ? 'rgba(239,68,68,0.15)'
-                            : 'rgba(255,255,255,0.06)',
-                        color: '#fafafa',
+                            : 'rgba(34,211,238,0.15)',
+                        color: st === 'pending' ? '#A5F3FC' : '#fafafa',
                         cursor: updating === ev.event_id || ev.approval_status === st ? 'not-allowed' : 'pointer',
                         opacity: ev.approval_status === st ? 0.5 : 1,
                         fontSize: 12,
-                        fontWeight: 500,
+                        fontWeight: 700,
                         transition: 'opacity 0.15s',
                       }}
                     >

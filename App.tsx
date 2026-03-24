@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, ActivityIndicator, BackHandler, Platform } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, BackHandler, Platform, PanResponder } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PostHogProvider } from 'posthog-react-native';
@@ -67,6 +67,17 @@ function AppContent() {
   const historyLengthRef = useRef(0);
   historyLengthRef.current = navState.history.length;
 
+  const popHistory = () => {
+    if (historyLengthRef.current === 0) return;
+    setNavState(prev => {
+      if (prev.history.length === 0) return prev;
+      return {
+        history: prev.history.slice(0, -1),
+        current: prev.history[prev.history.length - 1],
+      };
+    });
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
     return () => clearTimeout(timer);
@@ -86,19 +97,38 @@ function AppContent() {
     if (Platform.OS !== 'android') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (historyLengthRef.current > 0) {
-        setNavState(prev => {
-          if (prev.history.length === 0) return prev;
-          return {
-            history: prev.history.slice(0, -1),
-            current: prev.history[prev.history.length - 1],
-          };
-        });
+        popHistory();
         return true;
       }
       return false;
     });
     return () => sub.remove();
   }, []);
+
+  const iosEdgeSwipeResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (_evt, gestureState) =>
+        Platform.OS === 'ios' && historyLengthRef.current > 0 && gestureState.x0 <= 24,
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Platform.OS === 'ios' &&
+        historyLengthRef.current > 0 &&
+        gestureState.x0 <= 24 &&
+        gestureState.dx > 8 &&
+        Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (
+          Platform.OS === 'ios' &&
+          historyLengthRef.current > 0 &&
+          gestureState.x0 <= 24 &&
+          gestureState.dx > 90 &&
+          gestureState.vx > 0.2
+        ) {
+          popHistory();
+        }
+      },
+    })
+  ).current;
 
   const navigate = (screen: string, data?: any) => {
     setNavState(prev => ({
@@ -186,7 +216,9 @@ function AppContent() {
   };
 
   return (
-    <View style={styles.screen}>{renderScreen()}</View>
+    <View style={styles.screen} {...(Platform.OS === 'ios' ? iosEdgeSwipeResponder.panHandlers : {})}>
+      {renderScreen()}
+    </View>
   );
 }
 

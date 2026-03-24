@@ -98,9 +98,9 @@ function App() {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        background: '#09090b',
+        background: 'radial-gradient(circle at top, #101a34 0%, #09090b 50%)',
       }}>
-        <span style={{ color: '#71717a', fontSize: 14 }}>Loading…</span>
+        <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>Loading admin workspace…</span>
       </div>
     )
   }
@@ -110,27 +110,37 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa]">
-      <header className="border-b border-[#18181b] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa]" style={{ background: 'radial-gradient(circle at top, #101a34 0%, #09090b 48%)' }}>
+      <header
+        className="border-b border-[#18181b] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-50"
+        style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+      >
+        <div className="max-w-7xl mx-auto px-6 h-[74px] flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-[#a855f7] to-[#ec4899] bg-clip-text text-transparent">
-              ArtistHub Admin
-            </h1>
-            <nav className="flex gap-1">
+            <div>
+              <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>
+                SpotLight
+              </p>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-[#22D3EE] to-[#A78BFA] bg-clip-text text-transparent" style={{ margin: 0 }}>
+                Admin Console
+              </h1>
+            </div>
+            <nav className="flex gap-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 4 }}>
               <button
                 onClick={() => setActiveTab('moderation')}
                 className={`px-4 py-2 rounded-md transition-colors ${
-                  activeTab === 'moderation' ? 'bg-[#18181b] text-white' : 'text-zinc-400 hover:text-white'
+                  activeTab === 'moderation' ? 'text-white' : 'text-zinc-400 hover:text-white'
                 }`}
+                style={activeTab === 'moderation' ? { background: 'rgba(34,211,238,0.2)' } : undefined}
               >
                 Moderation
               </button>
               <button
                 onClick={() => setActiveTab('analytics')}
                 className={`px-4 py-2 rounded-md transition-colors ${
-                  activeTab === 'analytics' ? 'bg-[#18181b] text-white' : 'text-zinc-400 hover:text-white'
+                  activeTab === 'analytics' ? 'text-white' : 'text-zinc-400 hover:text-white'
                 }`}
+                style={activeTab === 'analytics' ? { background: 'rgba(167,139,250,0.2)' } : undefined}
               >
                 Analytics
               </button>
@@ -139,6 +149,7 @@ function App() {
           <button 
             onClick={onLogout}
             className="text-sm text-zinc-400 hover:text-white"
+            style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.02)' }}
           >
             Logout
           </button>
