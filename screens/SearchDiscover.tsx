@@ -160,9 +160,10 @@ export default function SearchDiscover({ navigate }: Props) {
         data={showRecent ? recentSearches : artists}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         ListHeaderComponent={
@@ -251,18 +252,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+  
 
-  searchRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
+  
 
   searchInput: { flex: 1 },
 
@@ -310,18 +302,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     width: '100%',
   },
-
   pressedItem: {
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-
   avatar: {
     width: 54,
     height: 54,
@@ -329,18 +320,24 @@ const styles = StyleSheet.create({
     marginRight: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-
   textContainer: { flex: 1, justifyContent: 'center' },
-  name: { color: '#fff', fontWeight: '600', fontSize: 16, marginBottom: 1 },
-  username: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  name: { color: '#ffffff', fontWeight: '600', fontSize: 16, marginBottom: 2 },
+  username: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '500' },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: 84 },
 
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginLeft: 84, // Inset separator (Avatar width + margins)
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+    paddingHorizontal: 16,
   },
-
-  // Recent Search Styles
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -1,
+  },// Recent Search Styles
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

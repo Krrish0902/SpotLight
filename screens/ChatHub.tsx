@@ -9,7 +9,7 @@ import { MessageCircle, Check, X, Clock } from 'lucide-react-native';
 import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
-
+import { parseSupabaseDate, formatRelativeTime } from '../lib/timeUtils';
 interface Props {
   navigate: (screen: string, data?: any) => void;
 }
@@ -147,15 +147,7 @@ export default function ChatHub({ navigate }: Props) {
 
           if (latestMsg) {
              previewText = latestMsg.sender_id === appUser.id ? `You: ${latestMsg.content}` : latestMsg.content;
-             const diffMs = Date.now() - new Date(latestMsg.sent_at).getTime();
-             const diffMins = Math.floor(diffMs / 60000);
-             const diffHours = Math.floor(diffMins / 60);
-             const diffDays = Math.floor(diffHours / 24);
-             
-             if (diffMins < 1) timeDisplay = 'now';
-             else if (diffMins < 60) timeDisplay = `${diffMins}m`;
-             else if (diffHours < 24) timeDisplay = `${diffHours}h`;
-             else timeDisplay = `${diffDays}d`;
+             timeDisplay = formatRelativeTime(latestMsg.sent_at);
           }
 
           return {
@@ -164,7 +156,7 @@ export default function ChatHub({ navigate }: Props) {
             preview: previewText,
             timeDisplay,
             unreadCount: unreadCounts[otherId] || 0,
-            sortTime: latestMsg ? new Date(latestMsg.sent_at).getTime() : new Date(chat.updated_at).getTime()
+            sortTime: latestMsg ? parseSupabaseDate(latestMsg.sent_at).getTime() : parseSupabaseDate(chat.updated_at).getTime()
           };
         });
         
@@ -235,7 +227,7 @@ export default function ChatHub({ navigate }: Props) {
                           <View style={styles.timeRow}>
                             <Clock size={12} color="rgba(255,255,255,0.4)" />
                             <Text style={styles.time}>
-                              {new Date(req.created_at).toLocaleDateString()}
+                              {parseSupabaseDate(req.created_at).toLocaleDateString()}
                             </Text>
                           </View>
                         </View>
@@ -292,8 +284,16 @@ export default function ChatHub({ navigate }: Props) {
                       />
                       <View style={styles.chatInfo}>
                         <View style={styles.chatHeader}>
-                          <Text style={styles.chatName}>
+                          <Text style={styles.chatName} numberOfLines={1}>
                             {chat.otherProfile?.display_name || chat.otherProfile?.username || 'Unknown User'}
+                          </Text>
+                          {chat.timeDisplay ? (
+                            <Text style={styles.chatTime}>{chat.timeDisplay}</Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.chatPreviewRow}>
+                          <Text style={[styles.chatPreview, chat.unreadCount > 0 && styles.chatPreviewUnread]} numberOfLines={1}>
+                            {chat.preview}
                           </Text>
                           {chat.unreadCount > 0 && (
                             <View style={styles.unreadBadge}>
@@ -301,9 +301,6 @@ export default function ChatHub({ navigate }: Props) {
                             </View>
                           )}
                         </View>
-                        <Text style={[styles.chatPreview, chat.unreadCount > 0 && styles.chatPreviewUnread]} numberOfLines={1}>
-                          {chat.preview}{chat.timeDisplay ? ` • ${chat.timeDisplay}` : ''}
-                        </Text>
                       </View>
                     </Pressable>
                   ))
@@ -350,38 +347,46 @@ const styles = StyleSheet.create({
   },
   requestCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
+    padding: 24,
+    marginHorizontal: 16,
     marginBottom: 16,
+    borderRadius: 32,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   requestRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     gap: 12,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   requestInfo: {
     flex: 1,
   },
   name: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.6)',
+    color: '#8E8E93',
     fontSize: 14,
     marginTop: 2,
+    fontWeight: '500',
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
+    marginTop: 6,
   },
   time: {
     color: 'rgba(255,255,255,0.4)',
@@ -396,25 +401,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    height: 40,
+    height: 48,
+    borderRadius: 100,
   },
   btnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#162447',
+    fontSize: 15,
+    fontWeight: '700',
   },
   chatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 24,
     gap: 16,
   },
   chatAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.2)'
   },
   chatInfo: {
     flex: 1,
@@ -426,20 +438,36 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chatName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    flex: 1,
+    marginRight: 8,
+  },
+  chatTime: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  chatPreviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   chatPreview: {
-    color: 'rgba(255,255,255,0.6)',
+    color: '#8E8E93',
     fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 12,
   },
   chatPreviewUnread: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '600',
   },
   unreadBadge: {
-    backgroundColor: '#a855f7',
+    backgroundColor: '#FDF2FF',
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -448,9 +476,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: '#162447',
+    fontSize: 13,
+    fontWeight: '800',
   },
   emptyState: {
     alignItems: 'center',

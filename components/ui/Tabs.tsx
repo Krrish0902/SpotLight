@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent } from 'react-native';
 import { Text } from './Text';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors } from '../../theme';
 
 interface TabItem {
@@ -18,6 +19,22 @@ interface TabsProps {
 
 export function Tabs({ defaultValue, tabs, onValueChange, fullWidth, children }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultValue);
+  const activeIndex = Math.max(0, tabs.findIndex(t => t.value === activeTab));
+  const tabWidthPct = 100 / tabs.length;
+
+  // Reanimated values for sliding pill
+  const activeIndexAnim = useSharedValue(activeIndex);
+
+  useEffect(() => {
+    activeIndexAnim.value = withSpring(activeIndex, { damping: 20, stiffness: 200, mass: 0.5 });
+  }, [activeIndex]);
+
+  const animatedIndicatorStyle = useAnimatedStyle(() => {
+    return {
+      left: `${activeIndexAnim.value * tabWidthPct}%`,
+      width: `${tabWidthPct}%`,
+    };
+  });
 
   const setTab = (value: string) => {
     setActiveTab(value);
@@ -26,26 +43,21 @@ export function Tabs({ defaultValue, tabs, onValueChange, fullWidth, children }:
 
   const TabBar = fullWidth ? (
     <View style={[styles.tabList, styles.tabListFullWidth]}>
-      {tabs.map((tab) => (
-        <Pressable
-          key={tab.value}
-          style={[
-            styles.tabTrigger,
-            fullWidth && styles.tabTriggerFullWidth,
-            activeTab === tab.value && styles.tabTriggerActive,
-          ]}
-          onPress={() => setTab(tab.value)}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === tab.value && styles.tabTextActive,
-            ]}
+      <Animated.View style={[styles.activeIndicator, animatedIndicatorStyle]} />
+      {tabs.map((tab, idx) => {
+        const isActive = activeTab === tab.value;
+        return (
+          <Pressable
+            key={tab.value}
+            style={[styles.tabTrigger, styles.tabTriggerFullWidth]}
+            onPress={() => setTab(tab.value)}
           >
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   ) : (
     <ScrollView
@@ -54,25 +66,23 @@ export function Tabs({ defaultValue, tabs, onValueChange, fullWidth, children }:
       contentContainerStyle={styles.tabList}
       style={styles.tabListScroll}
     >
-      {tabs.map((tab) => (
-        <Pressable
-          key={tab.value}
-          style={[
-            styles.tabTrigger,
-            activeTab === tab.value && styles.tabTriggerActive,
-          ]}
-          onPress={() => setTab(tab.value)}
-        >
-          <Text
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.value;
+        return (
+          <Pressable
+            key={tab.value}
             style={[
-              styles.tabText,
-              activeTab === tab.value && styles.tabTextActive,
+              styles.tabTrigger,
+              isActive && { backgroundColor: '#FDF2FF' },
             ]}
+            onPress={() => setTab(tab.value)}
           >
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </ScrollView>
   );
 
@@ -93,35 +103,50 @@ const styles = StyleSheet.create({
   },
   tabList: {
     flexDirection: 'row',
-    backgroundColor: colors['white/5'],
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 24,
     padding: 4,
-    gap: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    position: 'relative',
   },
   tabListFullWidth: {
     width: '100%',
     marginBottom: 24,
   },
+  activeIndicator: {
+    position: 'absolute',
+    height: '100%',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    backgroundColor: '#FDF2FF',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   tabTrigger: {
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 20,
+    zIndex: 1,
   },
   tabTriggerFullWidth: {
     flex: 1,
   },
-  tabTriggerActive: {
-    backgroundColor: colors.primary,
-  },
   tabText: {
-    color: colors['white/60'],
-    fontSize: 14,
-    fontWeight: '500',
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 15,
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: '#fff',
+    color: '#162447',
+    fontWeight: '700',
   },
   content: {
     flex: 1,
