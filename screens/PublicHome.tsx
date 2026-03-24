@@ -6,6 +6,7 @@ import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { getSuspendedUserIds } from '../lib/suspension';
 
 const { width, height } = Dimensions.get('window');
 
@@ -60,7 +61,18 @@ export default function PublicHome({ navigate }: Props) {
         };
       });
 
-      setVideos(validVideos);
+      const artistIds = Array.from(
+        new Set(validVideos.map((v) => v.artist_id).filter((id): id is string => Boolean(id)))
+      );
+      if (artistIds.length === 0) {
+        setVideos(validVideos);
+        return;
+      }
+
+      const suspendedIds = await getSuspendedUserIds(artistIds);
+
+      const filteredVideos = validVideos.filter((v) => !suspendedIds.has(v.artist_id || ''));
+      setVideos(filteredVideos);
     } catch (error) {
       console.error('Error fetching videos:', error);
     } finally {

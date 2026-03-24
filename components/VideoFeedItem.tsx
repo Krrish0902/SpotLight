@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Pressable, StyleSheet, Dimensions, Image, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Dimensions, Image, Platform, Alert, Modal } from 'react-native';
 import { Text } from './ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, Share2, User, Music, MapPin, MoreVertical, VolumeX, MessageSquare, Check } from 'lucide-react-native';
@@ -8,6 +8,8 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 import { track } from '../lib/analytics';
+import { Textarea } from './ui/Textarea';
+import { Button } from './ui/Button';
 
 const { width, height } = Dimensions.get('window');
 const BOTTOM_NAV_HEIGHT = 80;
@@ -40,6 +42,18 @@ interface VideoFeedItemProps {
   navigate?: (screen: string, data?: any) => void;
   /** If true, show full overlay with profile link. If false, compact view for profile page */
   showProfileOverlay?: boolean;
+  /**
+   * When true, show the right rail (like / share / report, and message when enabled).
+   * If omitted, defaults to the legacy behavior: same as `showProfileOverlay && profile && onProfilePress`.
+   */
+  showFeedActions?: boolean;
+  /**
+   * Message button on the rail. Defaults to `showProfileOverlay` when `showFeedActions` is on
+   * (feed shows message; profile video modal typically omits it).
+   */
+  showMessageAction?: boolean;
+  /** Bottom offset for the action rail (e.g. lower value when there is no tab bar). */
+  feedActionsBottomOffset?: number;
   /** Override container dimensions (for embedded mode) */
   containerHeight?: number;
   containerWidth?: number;
@@ -74,6 +88,9 @@ export function VideoFeedItem({
   onProfilePress,
   navigate,
   showProfileOverlay = true,
+  showFeedActions: showFeedActionsProp,
+  showMessageAction: showMessageActionProp,
+  feedActionsBottomOffset,
   containerHeight = height,
   containerWidth = width,
 }: VideoFeedItemProps) {
@@ -88,6 +105,10 @@ export function VideoFeedItem({
   const { appUser } = useAuth();
   const [messageRequestStatus, setMessageRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('spam');
+  const [reportNote, setReportNote] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     // Check initial request status when component mounts
@@ -179,6 +200,39 @@ export function VideoFeedItem({
     }
   };
 
+  const createVideoReport = async () => {
+    if (!appUser?.id) {
+      Alert.alert('Login required', 'Please sign in to report this video.');
+      return;
+    }
+    if (!reportReason) {
+      Alert.alert('Reason required', 'Please select a reason for the report.');
+      return;
+    }
+    try {
+      setReportSubmitting(true);
+      const { error } = await supabase.from('reports').insert({
+        report_type: 'video',
+        target_id: item.video_id,
+        reported_by: appUser.id,
+        reason: reportNote.trim() ? `${reportReason}: ${reportNote.trim()}` : reportReason,
+        status: 'pending',
+      });
+      if (error) throw error;
+      setShowReportModal(false);
+      setReportNote('');
+      setReportReason('spam');
+      Alert.alert('Report submitted', 'Thanks. Our admins will review this video.');
+    } catch (e: any) {
+      console.error('Failed to report video:', e);
+      Alert.alert('Error', e?.message || 'Unable to submit report right now.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const handleReportVideo = () => setShowReportModal(true);
+
   useEffect(() => {
     safePlayerCall(() => {
       playerRef.current.muted = muted;
@@ -264,6 +318,22 @@ export function VideoFeedItem({
       : String(profile.genres)
     : '';
 
+  const feedActionsEnabled =
+    showFeedActionsProp !== undefined
+      ? showFeedActionsProp
+      : !!(showProfileOverlay && profile && onProfilePress);
+
+  const showMessageOnRail =
+    feedActionsEnabled &&
+    profile &&
+    appUser?.id !== profile.user_id &&
+    (showMessageActionProp !== undefined ? showMessageActionProp : showProfileOverlay);
+
+  const actionsBottom =
+    feedActionsBottomOffset !== undefined
+      ? feedActionsBottomOffset
+      : BOTTOM_NAV_HEIGHT + 100;
+
   return (
     <View style={[styles.videoContainer, { height: containerHeight, width: containerWidth }]}>
       <VideoView
@@ -298,50 +368,37 @@ export function VideoFeedItem({
         delayLongPress={250}
       />
 
-      {showProfileOverlay && profile && onProfilePress ? (
+      {feedActionsEnabled ? (
         <>
-          <View style={styles.rightActions}>
-            {appUser?.id !== profile.user_id && (
-              <View style={styles.actionItem}>
-                <Pressable 
-                  style={[
-                    styles.iconCircle, 
-                    messageRequestStatus !== 'none' && { backgroundColor: 'rgba(168, 85, 247, 0.4)', borderColor: '#a855f7' }
-                  ]}
-                  onPress={handleMessageRequest}
-                  disabled={isSendingRequest || messageRequestStatus !== 'none'}
-                >
-                  {messageRequestStatus !== 'none' ? (
-                    <Check size={28} color="#fff" />
-                  ) : (
-                    <MessageSquare size={26} color="#fff" />
-                  )}
-                </Pressable>
-                <Text style={styles.actionText}>
-                  {messageRequestStatus === 'none' ? 'Message' : 
-                   messageRequestStatus === 'pending' ? 'Requested' : 'Chat'}
-                </Text>
-              </View>
-            )}
-            <View style={styles.actionItem}>
-              <Pressable style={styles.iconCircle} onPress={handleLike}>
-                <Heart size={28} color="#fff" />
+          <View style={[styles.rightActions, { bottom: actionsBottom }]}>
+            {showMessageOnRail ? (
+              <Pressable
+                style={[
+                  styles.iconCircle,
+                  messageRequestStatus !== 'none' && { backgroundColor: 'rgba(168, 85, 247, 0.4)', borderColor: '#a855f7' },
+                ]}
+                onPress={handleMessageRequest}
+                disabled={isSendingRequest || messageRequestStatus !== 'none'}
+              >
+                {messageRequestStatus !== 'none' ? (
+                  <Check size={28} color="#fff" />
+                ) : (
+                  <MessageSquare size={26} color="#fff" />
+                )}
               </Pressable>
-              <Text style={styles.actionText}>{item.likes_count ?? 0}</Text>
-            </View>
-            <View style={styles.actionItem}>
-              <Pressable style={styles.iconCircle} onPress={handleShare}>
-                <Share2 size={28} color="#fff" />
-              </Pressable>
-              <Text style={styles.actionText}>Share</Text>
-            </View>
-            <View style={styles.actionItem}>
-              <Pressable style={styles.iconCircle}>
-                <MoreVertical size={28} color="#fff" />
-              </Pressable>
-            </View>
+            ) : null}
+            <Pressable style={styles.iconCircle} onPress={handleLike}>
+              <Heart size={28} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.iconCircle} onPress={handleShare}>
+              <Share2 size={28} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.iconCircle} onPress={handleReportVideo}>
+              <MoreVertical size={28} color="#fff" />
+            </Pressable>
           </View>
 
+          {showProfileOverlay && profile && onProfilePress ? (
           <View style={styles.bottomInfo}>
             <View style={styles.userInfoRow}>
               <Pressable onPress={onProfilePress} style={styles.profileBtn}>
@@ -374,6 +431,12 @@ export function VideoFeedItem({
               <Text style={styles.description} numberOfLines={2}>{item.title}</Text>
             ) : null}
           </View>
+          ) : (
+            <View style={[styles.bottomInfoCompact, { pointerEvents: 'none' as any }]}>
+              <Text style={styles.compactTitle} numberOfLines={2}>{item.title || 'Untitled'}</Text>
+              <Text style={styles.compactViews}>{item.views_count?.toLocaleString() ?? 0} views</Text>
+            </View>
+          )}
         </>
       ) : (
         <View style={[styles.bottomInfoCompact, { pointerEvents: 'none' as any }]}>
@@ -381,6 +444,45 @@ export function VideoFeedItem({
           <Text style={styles.compactViews}>{item.views_count?.toLocaleString() ?? 0} views</Text>
         </View>
       )}
+
+      <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.reportModal}>
+            <Text style={styles.reportTitle}>Report Video</Text>
+            <Text style={styles.reportSubtitle}>Tell us what is wrong with this content.</Text>
+            <View style={styles.reasonWrap}>
+              {[
+                { id: 'spam', label: 'Spam' },
+                { id: 'harassment', label: 'Harassment' },
+                { id: 'inappropriate_content', label: 'Inappropriate' },
+                { id: 'copyright', label: 'Copyright' },
+              ].map((r) => (
+                <Pressable
+                  key={r.id}
+                  style={[styles.reasonChip, reportReason === r.id && styles.reasonChipActive]}
+                  onPress={() => setReportReason(r.id)}
+                >
+                  <Text style={[styles.reasonChipText, reportReason === r.id && styles.reasonChipTextActive]}>{r.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Textarea
+              placeholder="Add note (optional)"
+              value={reportNote}
+              onChangeText={setReportNote}
+              style={styles.noteInput}
+            />
+            <View style={styles.modalActions}>
+              <Button variant="outline" style={styles.modalCancelBtn} onPress={() => setShowReportModal(false)} disabled={reportSubmitting}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Button>
+              <Button style={styles.modalSubmitBtn} onPress={createVideoReport} disabled={reportSubmitting}>
+                <Text style={styles.modalSubmitText}>{reportSubmitting ? 'Submitting...' : 'Submit Report'}</Text>
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -417,11 +519,9 @@ const styles = StyleSheet.create({
   rightActions: {
     position: 'absolute',
     right: 16,
-    bottom: BOTTOM_NAV_HEIGHT + 100,
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
-  actionItem: { alignItems: 'center', gap: 4 },
   iconCircle: {
     width: 48,
     height: 48,
@@ -431,15 +531,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-  },
-  actionText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    ...Platform.select({
-      web: { textShadow: '1px 1px 2px rgba(0,0,0,0.5)' as any },
-      default: { textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 }
-    })
   },
   bottomInfo: {
     position: 'absolute',
@@ -498,4 +589,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  reportModal: {
+    backgroundColor: '#0B1220',
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    padding: 16,
+  },
+  reportTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  reportSubtitle: { color: 'rgba(255,255,255,0.6)', marginTop: 4, marginBottom: 12 },
+  reasonWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  reasonChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  reasonChipActive: {
+    backgroundColor: 'rgba(34,211,238,0.18)',
+    borderColor: 'rgba(34,211,238,0.45)',
+  },
+  reasonChipText: { color: 'rgba(255,255,255,0.76)', fontSize: 13, fontWeight: '600' },
+  reasonChipTextActive: { color: '#CFFAFE' },
+  noteInput: { marginBottom: 12 },
+  modalActions: { flexDirection: 'row', gap: 8 },
+  modalCancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  modalSubmitBtn: { flex: 1, backgroundColor: '#FDF2FF' },
+  modalCancelText: { color: '#fff', fontWeight: '700' },
+  modalSubmitText: { color: '#162447', fontWeight: '800' },
 });

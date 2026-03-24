@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Artist } from '../screens/searchService';
 import { supabase } from './supabase';
+import { getSuspendedUserIds } from './suspension';
 
 const MAX_HISTORY_ITEMS = 8;
 
@@ -41,17 +42,30 @@ const hydrateRecentSearchImages = async (items: Artist[]): Promise<Artist[]> => 
   });
 };
 
+const filterSuspendedArtists = async (items: Artist[]): Promise<Artist[]> => {
+  const userIds = Array.from(new Set(items.map((item) => item.user_id).filter(Boolean)));
+  if (userIds.length === 0) return items;
+
+  const suspended = await getSuspendedUserIds(userIds);
+  if (suspended.size === 0) return items;
+  return items.filter((item) => !suspended.has(item.user_id));
+};
+
 export const getRecentSearches = async (userId: string): Promise<Artist[]> => {
   if (!userId) return [];
   try {
     const jsonValue = await AsyncStorage.getItem(getStorageKey(userId));
     const parsed: Artist[] = jsonValue != null ? JSON.parse(jsonValue) : [];
     const hydrated = await hydrateRecentSearchImages(parsed);
+    const activeOnly = await filterSuspendedArtists(hydrated);
     // Persist upgraded history to avoid repeated lookups
-    if (hydrated.some((item, idx) => item.profile_image !== parsed[idx]?.profile_image)) {
-      await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(hydrated));
+    const shouldPersist =
+      activeOnly.length !== parsed.length ||
+      activeOnly.some((item, idx) => item.profile_image !== parsed[idx]?.profile_image || item.id !== parsed[idx]?.id);
+    if (shouldPersist) {
+      await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(activeOnly));
     }
-    return hydrated;
+    return activeOnly;
   } catch (e) {
     console.error('Failed to load search history', e);
     return [];

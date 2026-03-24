@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getSuspendedUserIds } from '../lib/suspension';
 
 // Define the shape of the data returned to the UI
 export interface Artist {
@@ -86,8 +87,14 @@ export const searchArtists = async (
     const rows: ProfileRow[] = data || [];
     if (rows.length === 0) return [];
 
+    const statusUserIds = Array.from(new Set(rows.map((p) => p.user_id).filter(Boolean)));
+    const suspendedUserIds =
+      statusUserIds.length > 0 ? await getSuspendedUserIds(statusUserIds) : new Set<string>();
+    const activeRows = rows.filter((r) => !suspendedUserIds.has(r.user_id));
+    if (activeRows.length === 0) return [];
+
     // Backfill avatar URLs in case RPC does not include image fields.
-    const userIds = rows.map((p) => p.user_id).filter(Boolean);
+    const userIds = activeRows.map((p) => p.user_id).filter(Boolean);
     let profileImageByUserId: Record<string, string | null> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
@@ -101,7 +108,7 @@ export const searchArtists = async (
       }, {});
     }
 
-    return rows.map((profile: ProfileRow) => ({
+    return activeRows.map((profile: ProfileRow) => ({
       id: profile.profile_id || profile.user_id || 'unknown',
       user_id: profile.user_id,
       name: profile.display_name || profile.username || 'Unknown Artist',

@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
 
-import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut, Camera, Video } from 'lucide-react-native';
+import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Pencil, LayoutDashboard, LogOut, Camera, Video, Flag } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Tabs } from '../components/ui/Tabs';
@@ -17,7 +17,9 @@ import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { isUserEffectivelySuspended } from '../lib/suspension';
 import { track } from '../lib/analytics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,6 +49,7 @@ interface Props {
 }
 
 export default function ArtistProfile({ navigate, artist, userRole = 'public', returnTo }: Props) {
+  const insets = useSafeAreaInsets();
   const { profile, appUser, fetchProfile, signOut } = useAuth();
   const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
 
@@ -72,6 +75,10 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [connectRequestStatus, setConnectRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('impersonation');
+  const [reportNote, setReportNote] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const videoListRef = useRef<FlatList>(null);
   const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -131,12 +138,20 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const fetchViewedProfile = async () => {
     if (!targetArtistId) return;
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', targetArtistId)
-        .single();
+      const [{ data, error }, blocked] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', targetArtistId)
+          .single(),
+        isUserEffectivelySuspended(targetArtistId),
+      ]);
       if (!error && data) {
+        if (blocked && userRole !== 'admin') {
+          Alert.alert('Profile unavailable', 'This account is currently suspended.');
+          navigate(returnTo ?? 'public-home');
+          return;
+        }
         setViewedProfile(data);
         setFetchedAt(Date.now());
       }
@@ -424,6 +439,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const effectiveProfile = isOwnProfile ? profile : (viewedProfile || artist);
   const isOrganizer = userRole === 'organizer';
   const isArtistViewer = userRole === 'artist';
+  const isAdminViewer = userRole === 'admin';
   const displayName = effectiveProfile?.display_name ?? effectiveProfile?.name ?? 'Artist';
   const usernameStr = effectiveProfile?.username ?? '';
   const genresStr = Array.isArray(effectiveProfile?.genres) ? effectiveProfile.genres.join(' • ') : (effectiveProfile?.genres ?? effectiveProfile?.genre ?? '');
@@ -507,6 +523,43 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     }
   };
 
+  const createProfileReport = async () => {
+    if (!appUser?.id || !targetArtistId) {
+      Alert.alert('Login required', 'Please sign in to report this profile.');
+      return;
+    }
+    if (appUser.id === targetArtistId) {
+      Alert.alert('Invalid action', 'You cannot report your own profile.');
+      return;
+    }
+    if (!reportReason) {
+      Alert.alert('Reason required', 'Please select a reason for the report.');
+      return;
+    }
+    try {
+      setReportSubmitting(true);
+      const { error } = await supabase.from('reports').insert({
+        report_type: 'profile',
+        target_id: targetArtistId,
+        reported_by: appUser.id,
+        reason: reportNote.trim() ? `${reportReason}: ${reportNote.trim()}` : reportReason,
+        status: 'pending',
+      });
+      if (error) throw error;
+      setShowReportModal(false);
+      setReportNote('');
+      setReportReason('impersonation');
+      Alert.alert('Report submitted', 'Thanks. Our admins will review this profile.');
+    } catch (e: any) {
+      console.error('Failed to report profile:', e);
+      Alert.alert('Error', e?.message || 'Unable to submit report right now.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const handleReportProfile = () => setShowReportModal(true);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -547,6 +600,17 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => { }}>
               <Share2 size={24} color="#ffffff" />
             </Button>
+            {!isOwnProfile && !isAdminViewer && (
+              <Pressable
+                onPress={handleReportProfile}
+                hitSlop={14}
+                accessibilityLabel="Report profile"
+                accessibilityRole="button"
+                style={styles.reportSubtleBtn}
+              >
+                <Flag size={14} color="#EF4444" />
+              </Pressable>
+            )}
           </View>
         </Animated.View>
 
@@ -847,18 +911,75 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               offset: SCREEN_HEIGHT * index,
               index,
             })}
-            renderItem={({ item, index }) => (
-              <VideoFeedItem
-                item={item}
-                isActive={index === activeVideoIndex}
-                muted={videoMuted}
-                onToggleMute={() => setVideoMuted((m) => !m)}
-                showProfileOverlay={false}
-                containerHeight={SCREEN_HEIGHT}
-                containerWidth={SCREEN_WIDTH}
-              />
-            )}
+            renderItem={({ item, index }) => {
+              const profileForFeed =
+                effectiveProfile && targetArtistId
+                  ? {
+                      user_id: targetArtistId,
+                      display_name: effectiveProfile.display_name,
+                      username: effectiveProfile.username,
+                      avatar_url: effectiveProfile.avatar_url,
+                      genres: effectiveProfile.genres,
+                      city: effectiveProfile.city,
+                      is_boosted: effectiveProfile.is_boosted,
+                    }
+                  : undefined;
+              const feedItem = profileForFeed ? { ...item, profiles: profileForFeed } : item;
+              return (
+                <VideoFeedItem
+                  item={feedItem}
+                  isActive={index === activeVideoIndex}
+                  muted={videoMuted}
+                  onToggleMute={() => setVideoMuted((m) => !m)}
+                  showProfileOverlay={false}
+                  showFeedActions
+                  showMessageAction={false}
+                  feedActionsBottomOffset={insets.bottom + 96}
+                  containerHeight={SCREEN_HEIGHT}
+                  containerWidth={SCREEN_WIDTH}
+                />
+              );
+            }}
           />
+        </View>
+      </Modal>
+
+      <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
+        <View style={styles.reportModalBackdrop}>
+          <View style={styles.reportModalCard}>
+            <Text style={styles.reportModalTitle}>Report Profile</Text>
+            <Text style={styles.reportModalSubtitle}>Help us understand what is wrong with this account.</Text>
+            <View style={styles.reportReasonWrap}>
+              {[
+                { id: 'impersonation', label: 'Impersonation' },
+                { id: 'harassment', label: 'Harassment' },
+                { id: 'spam', label: 'Spam' },
+                { id: 'inappropriate_profile', label: 'Inappropriate' },
+              ].map((r) => (
+                <Pressable
+                  key={r.id}
+                  style={[styles.reportReasonChip, reportReason === r.id && styles.reportReasonChipActive]}
+                  onPress={() => setReportReason(r.id)}
+                >
+                  <Text style={[styles.reportReasonText, reportReason === r.id && styles.reportReasonTextActive]}>{r.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Textarea
+              placeholder="Add note (optional)"
+              value={reportNote}
+              onChangeText={setReportNote}
+              style={styles.reportModalNoteInput}
+            />
+            <View style={styles.reportModalActions}>
+              <Button variant="outline" style={styles.reportModalCancelBtn} onPress={() => setShowReportModal(false)} disabled={reportSubmitting}>
+                <Text style={styles.reportModalCancelText}>Cancel</Text>
+              </Button>
+              <Button style={styles.reportModalSubmitBtn} onPress={createProfileReport} disabled={reportSubmitting}>
+                <Text style={styles.reportModalSubmitText}>{reportSubmitting ? 'Submitting...' : 'Submit Report'}</Text>
+              </Button>
+            </View>
+          </View>
         </View>
       </Modal>
     </KeyboardAvoidingView>
@@ -890,6 +1011,12 @@ const styles = StyleSheet.create({
   dashboardBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
   bookBtnText: { color: '#162447', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
   msgBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 100, width: 64, height: 64, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
+  reportSubtleBtn: {
+    padding: 6,
+    marginLeft: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   centeredActionWrap: { width: '100%', alignItems: 'center' },
   bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, marginBottom: 16, borderRadius: 40, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   bioTitle: { color: '#8E8E93', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 },
@@ -992,4 +1119,40 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
+  reportModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  reportModalCard: {
+    backgroundColor: '#0B1220',
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    padding: 16,
+  },
+  reportModalTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  reportModalSubtitle: { color: 'rgba(255,255,255,0.62)', marginTop: 4, marginBottom: 12 },
+  reportReasonWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  reportReasonChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  reportReasonChipActive: {
+    backgroundColor: 'rgba(34,211,238,0.18)',
+    borderColor: 'rgba(34,211,238,0.45)',
+  },
+  reportReasonText: { color: 'rgba(255,255,255,0.78)', fontSize: 13, fontWeight: '600' },
+  reportReasonTextActive: { color: '#CFFAFE' },
+  reportModalNoteInput: { marginBottom: 12 },
+  reportModalActions: { flexDirection: 'row', gap: 8 },
+  reportModalCancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  reportModalSubmitBtn: { flex: 1, backgroundColor: '#FDF2FF' },
+  reportModalCancelText: { color: '#fff', fontWeight: '700' },
+  reportModalSubmitText: { color: '#162447', fontWeight: '800' },
 });

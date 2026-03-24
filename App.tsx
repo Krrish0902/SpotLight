@@ -47,6 +47,18 @@ export interface AppState {
 }
 
 type NavState = { current: AppState; history: AppState[] };
+const ADMIN_ALLOWED_SCREENS = new Set([
+  'admin-dashboard',
+  'manage-live-events',
+  'manage-profiles',
+  'manage-contests',
+  'approve-boost',
+  'moderate-content',
+  'event-details',
+  'artist-profile',
+  'login-signup',
+  'role-selection',
+]);
 
 function AppContent() {
   const { appUser, profile, isLoading } = useAuth();
@@ -92,6 +104,26 @@ function AppContent() {
     }
   }, [appUser?.role]);
 
+  // Guard admin users from non-admin sections.
+  useEffect(() => {
+    if (!isAuthenticated || userRole !== 'admin') return;
+    if (!ADMIN_ALLOWED_SCREENS.has(appState.currentScreen)) {
+      setNavState(prev => ({
+        history: [],
+        current: {
+          ...prev.current,
+          currentScreen: 'admin-dashboard',
+          userRole: 'admin',
+          selectedArtist: undefined,
+          selectedEvent: undefined,
+          eventId: undefined,
+          returnTo: undefined,
+          chatId: undefined,
+        },
+      }));
+    }
+  }, [isAuthenticated, userRole, appState.currentScreen]);
+
   // Android back button: go to previous in-app screen instead of exiting
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -131,9 +163,12 @@ function AppContent() {
   ).current;
 
   const navigate = (screen: string, data?: any) => {
+    const targetScreen = isAuthenticated && userRole === 'admin' && !ADMIN_ALLOWED_SCREENS.has(screen)
+      ? 'admin-dashboard'
+      : screen;
     setNavState(prev => ({
       history: [...prev.history, prev.current],
-      current: { ...prev.current, currentScreen: screen, ...(data || {}) },
+      current: { ...prev.current, currentScreen: targetScreen, ...(data || {}) },
     }));
   };
 
@@ -157,6 +192,10 @@ function AppContent() {
   }
 
   const renderScreen = () => {
+    if (isAuthenticated && userRole === 'admin' && !ADMIN_ALLOWED_SCREENS.has(appState.currentScreen)) {
+      return <AdminDashboard navigate={navigate} />;
+    }
+
     switch (appState.currentScreen) {
       case 'public-home':
         return <PublicHome navigate={navigate} />;
