@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, Image, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Image,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Keyboard,
+} from 'react-native';
 import * as Location from 'expo-location';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, X, MapPin, SlidersHorizontal } from 'lucide-react-native';
+import { Search, X, MapPin, SlidersHorizontal, Music2, Guitar, Star } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -11,17 +21,66 @@ import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../lib/auth-context';
 import { searchArtists, Artist } from './searchService';
 import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from '../lib/searchHistory';
+import { POPULAR_GENRES, POPULAR_INSTRUMENTS } from '../components/MultiSelectWithCustom';
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
+  /** Incremented by App when returning to this screen via pop (edge swipe / Android back). */
+  blurOnPopNonce?: number;
 }
 
 const ACCENT = '#22D3EE';
 const ACCENT_SOFT = 'rgba(34,211,238,0.35)';
 const ACCENT_TEXT_DARK = '#0A2A33';
+const GENRE_GRADIENTS: Array<[string, string]> = [
+  ['#B9EFD3', '#6BC3A8'],
+  ['#5127F5', '#3613D1'],
+  ['#FF1744', '#E3002B'],
+  ['#F03CB2', '#CB1993'],
+  ['#3B82F6', '#1D4ED8'],
+  ['#14B8A6', '#0F766E'],
+];
+const INSTRUMENT_GRADIENTS: Array<[string, string]> = [
+  ['#F59E0B', '#D97706'],
+  ['#22D3EE', '#0891B2'],
+  ['#A78BFA', '#7C3AED'],
+  ['#FB7185', '#E11D48'],
+  ['#34D399', '#059669'],
+  ['#F472B6', '#DB2777'],
+];
 
-export default function SearchDiscover({ navigate }: Props) {
+const buildCards = (
+  options: string[],
+  type: 'genre' | 'instrument',
+  gradients: Array<[string, string]>
+): Array<{
+  label: string;
+  value: string;
+  type: 'genre' | 'instrument';
+  colors: [string, string];
+}> =>
+  options.map((value, index) => ({
+    label: value,
+    value,
+    type,
+    colors: gradients[index % gradients.length],
+  }));
+
+const DISCOVER_CARDS = [
+  ...buildCards(POPULAR_GENRES, 'genre', GENRE_GRADIENTS),
+  ...buildCards(POPULAR_INSTRUMENTS, 'instrument', INSTRUMENT_GRADIENTS),
+];
+
+export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) {
   const { appUser, profile } = useAuth();
+  const searchInputRef = useRef<TextInput>(null);
+
+  const renderDiscoverCardIcon = (type: 'genre' | 'instrument', value: string) => {
+    if (value === 'Other') return <Star size={18} color="#FFFFFF" />;
+    return type === 'genre'
+      ? <Music2 size={18} color="#FFFFFF" />
+      : <Guitar size={18} color="#FFFFFF" />;
+  };
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -29,6 +88,7 @@ export default function SearchDiscover({ navigate }: Props) {
   const [loading, setLoading] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [distanceInput, setDistanceInput] = useState<string>('');
+  const [searchFocused, setSearchFocused] = useState<boolean>(false);
 
   useEffect(() => {
     if (appUser?.id) {
@@ -42,7 +102,8 @@ export default function SearchDiscover({ navigate }: Props) {
     distanceInput.trim() &&
     !isNaN(parseFloat(distanceInput.trim())) &&
     parseFloat(distanceInput.trim()) > 0;
-  const showRecent = searchQuery.length < 3 && !hasDistanceFilter;
+  const showRecent = searchFocused && searchQuery.length < 3 && !hasDistanceFilter;
+  const hasActiveSearch = searchQuery.length >= 3 || hasDistanceFilter;
 
   useEffect(() => {
     let isActive = true;
@@ -105,6 +166,13 @@ export default function SearchDiscover({ navigate }: Props) {
       clearTimeout(delayDebounce);
     };
   }, [searchQuery, distanceInput, profile?.latitude, profile?.longitude]);
+
+  useEffect(() => {
+    if (blurOnPopNonce === 0) return;
+    setSearchFocused(false);
+    searchInputRef.current?.blur();
+    Keyboard.dismiss();
+  }, [blurOnPopNonce]);
 
   const handleArtistSelect = async (artist: Artist) => {
     // Save full artist object to history
@@ -181,12 +249,15 @@ export default function SearchDiscover({ navigate }: Props) {
 
             <View style={styles.searchRow}>
               <Input
+                ref={searchInputRef}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search artists, genres..."
                 leftIcon={<Search size={20} color="rgba(255,255,255,0.45)" />}
                 containerStyle={styles.searchInput}
                 style={styles.searchInputField}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
                 onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
               />
@@ -198,6 +269,35 @@ export default function SearchDiscover({ navigate }: Props) {
                 <SlidersHorizontal size={19} color="#fff" />
               </Button>
             </View>
+
+            {!hasActiveSearch && !showRecent && (
+              <View style={styles.discoverSection}>
+                <Text style={styles.discoverSectionTitle}>Browse by genre & instrument</Text>
+                <View style={styles.discoverGrid}>
+                  {DISCOVER_CARDS.map((card) => (
+                    <Pressable
+                      key={`${card.type}-${card.value}`}
+                      style={styles.discoverCardWrap}
+                      onPress={() =>
+                        navigate('discover-videos', {
+                          discoverFilter: { type: card.type, value: card.value },
+                        })
+                      }
+                    >
+                      <LinearGradient colors={card.colors} style={styles.discoverCard}>
+                        <View style={styles.discoverCardTop}>
+                          <View style={styles.discoverIconWrap}>
+                            {renderDiscoverCardIcon(card.type, card.value)}
+                          </View>
+                        </View>
+                        <Text style={styles.discoverCardText}>{card.label}</Text>
+                        <Text style={styles.discoverCardSub}>{card.type === 'genre' ? 'Genre' : 'Instrument'}</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {showFilters && (
               <Card style={styles.filterCard}>
@@ -244,7 +344,7 @@ export default function SearchDiscover({ navigate }: Props) {
           </>
         }
         ListEmptyComponent={
-          !loading && !showRecent ? (
+          !loading && !showRecent && hasActiveSearch && artists.length === 0 ? (
             <Text style={styles.emptyText}>No artists found.</Text>
           ) : null
         }
@@ -393,7 +493,58 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
-  },// Recent Search Styles
+  },
+  discoverSection: {
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  discoverSectionTitle: {
+    color: 'rgba(255,255,255,0.82)',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  discoverGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  discoverCardWrap: {
+    width: '48%',
+  },
+  discoverCard: {
+    borderRadius: 14,
+    height: 116,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'flex-end',
+  },
+  discoverCardTop: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  discoverIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discoverCardText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  discoverCardSub: {
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Recent Search Styles
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

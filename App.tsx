@@ -10,6 +10,7 @@ import { AuthProvider, useAuth, UserRole } from './lib/auth-context';
 import SplashScreen from './screens/SplashScreen';
 import PublicHome from './screens/PublicHome';
 import SearchDiscover from './screens/SearchDiscover';
+import DiscoverCategoryVideos from './screens/DiscoverCategoryVideos';
 import EventDetails from './screens/EventDetails';
 import LoginSignup from './screens/LoginSignup';
 import RoleSelection from './screens/RoleSelection';
@@ -44,6 +45,7 @@ export interface AppState {
   eventId?: string;
   returnTo?: string;
   chatId?: string;
+  discoverFilter?: { type: 'genre' | 'instrument'; value: string };
 }
 
 type NavState = { current: AppState; history: AppState[] };
@@ -78,9 +80,12 @@ function AppContent() {
   const isAuthenticated = !!appUser;
   const historyLengthRef = useRef(0);
   historyLengthRef.current = navState.history.length;
+  const lastNavWasPopRef = useRef(false);
+  const [searchDiscoverPopBlurNonce, setSearchDiscoverPopBlurNonce] = useState(0);
 
   const popHistory = () => {
     if (historyLengthRef.current === 0) return;
+    lastNavWasPopRef.current = true;
     setNavState(prev => {
       if (prev.history.length === 0) return prev;
       return {
@@ -89,6 +94,15 @@ function AppContent() {
       };
     });
   };
+
+  // After iOS edge-swipe / Android back pop, blur Discover search when landing on that screen.
+  useEffect(() => {
+    if (!lastNavWasPopRef.current) return;
+    lastNavWasPopRef.current = false;
+    if (appState.currentScreen === 'search-discover') {
+      setSearchDiscoverPopBlurNonce((n) => n + 1);
+    }
+  }, [appState.currentScreen]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -163,6 +177,7 @@ function AppContent() {
   ).current;
 
   const navigate = (screen: string, data?: any) => {
+    lastNavWasPopRef.current = false;
     const targetScreen = isAuthenticated && userRole === 'admin' && !ADMIN_ALLOWED_SCREENS.has(screen)
       ? 'admin-dashboard'
       : screen;
@@ -200,7 +215,16 @@ function AppContent() {
       case 'public-home':
         return <PublicHome navigate={navigate} />;
       case 'search-discover':
-        return <SearchDiscover navigate={navigate} />;
+        return (
+          <SearchDiscover navigate={navigate} blurOnPopNonce={searchDiscoverPopBlurNonce} />
+        );
+      case 'discover-videos':
+        return (
+          <DiscoverCategoryVideos
+            navigate={navigate}
+            filter={appState.discoverFilter}
+          />
+        );
       case 'event-details':
         return <EventDetails navigate={navigate} event={appState.selectedEvent} eventId={appState.eventId} />;
       case 'login-signup':

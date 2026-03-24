@@ -9,22 +9,20 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 
-interface InputProps extends TextInputProps {
+export interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
   leftIcon?: React.ReactNode;
 }
 
-export function Input({
-  containerStyle,
-  leftIcon,
-  style,
-  placeholderTextColor = colors['white/40'],
-  ...props
-}: InputProps) {
+export const Input = React.forwardRef<TextInput, InputProps>(function Input(
+  { containerStyle, leftIcon, style, placeholderTextColor = colors['white/40'], ...props },
+  ref
+) {
   return (
     <View style={[styles.container, containerStyle]}>
       {leftIcon && <View style={styles.icon}>{leftIcon}</View>}
       <TextInput
+        ref={ref}
         style={[
           styles.input,
           leftIcon ? styles.inputWithIcon : undefined,
@@ -36,7 +34,7 @@ export function Input({
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

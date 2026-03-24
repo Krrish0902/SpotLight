@@ -3,15 +3,15 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Ac
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Upload, Play, X, Image as ImageIcon } from 'lucide-react-native';
+import { ChevronLeft, Upload, Play, X, Image as ImageIcon, Music2, Guitar } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Label } from '../components/ui/Label';
 import { Textarea } from '../components/ui/Textarea';
 import { Card } from '../components/ui/Card';
+import { MultiSelectWithCustom, POPULAR_GENRES, POPULAR_INSTRUMENTS } from '../components/MultiSelectWithCustom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 
@@ -24,7 +24,8 @@ export default function UploadVideo({ navigate }: Props) {
   const [thumbnailUri, setThumbnailUri] = useState('');
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
-  const [tags, setTags] = useState('');
+  const [genres, setGenres] = useState<string[]>([]);
+  const [instruments, setInstruments] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const generateThumbnail = async (videoUri: string) => {
@@ -133,7 +134,8 @@ export default function UploadVideo({ navigate }: Props) {
       }
 
       // Insert into Database
-      const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+      const genresArray = genres.map((g) => g.trim()).filter((g) => g !== '');
+      const instrumentsArray = instruments.map((i) => i.trim()).filter((i) => i !== '');
 
       const { error: dbError } = await supabase
         .from('videos')
@@ -142,7 +144,11 @@ export default function UploadVideo({ navigate }: Props) {
           video_url: videoPublicUrl,
           thumbnail_url: thumbnailPublicUrl,
           title: title,
-          tags: tagArray,
+          description: caption.trim() || null,
+          genres: genresArray,
+          instruments: instrumentsArray,
+          // Keep tags for existing feed/admin flows until those are migrated.
+          tags: [...genresArray, ...instrumentsArray],
           upload_date: new Date().toISOString(),
         });
 
@@ -202,9 +208,28 @@ export default function UploadVideo({ navigate }: Props) {
               </Card>
 
               <Card style={styles.formCard}>
-                <View style={styles.field}><Label>Video Title</Label><Input placeholder="Enter video title" value={title} onChangeText={setTitle} editable={!isUploading} /></View>
-                <View style={styles.field}><Label>Caption</Label><Textarea value={caption} onChangeText={setCaption} placeholder="Describe your performance..." editable={!isUploading} /></View>
-                <View style={styles.field}><Label>Tags</Label><Input placeholder="e.g., Jazz, Live Performance" value={tags} onChangeText={setTags} editable={!isUploading} /></View>
+                <View style={styles.field}><Text style={styles.label}>Video Title</Text><Input placeholder="Enter video title" value={title} onChangeText={setTitle} editable={!isUploading} /></View>
+                <View style={styles.field}><Text style={styles.label}>Caption</Text><Textarea value={caption} onChangeText={setCaption} placeholder="Describe your performance..." editable={!isUploading} /></View>
+                <View style={styles.field}>
+                  <MultiSelectWithCustom
+                    label="Genres"
+                    options={POPULAR_GENRES}
+                    value={genres}
+                    onChange={setGenres}
+                    placeholder="Select genres or add custom"
+                    leftIcon={<Music2 size={20} color="rgba(255,255,255,0.4)" />}
+                  />
+                </View>
+                <View style={styles.field}>
+                  <MultiSelectWithCustom
+                    label="Instruments"
+                    options={POPULAR_INSTRUMENTS}
+                    value={instruments}
+                    onChange={setInstruments}
+                    placeholder="Select instruments or add custom"
+                    leftIcon={<Guitar size={20} color="rgba(255,255,255,0.4)" />}
+                  />
+                </View>
                 <View style={styles.actions}>
                   <Button variant="outline" style={styles.actionBtn} onPress={() => navigate('artist-dashboard')} disabled={isUploading}><Text style={styles.actionText}>Cancel</Text></Button>
                   <Button style={[styles.actionBtn, styles.primaryBtn]} onPress={handleUpload} disabled={isUploading}>
@@ -239,6 +264,7 @@ const styles = StyleSheet.create({
   uploadText: { color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 16 },
   formCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 24 },
   field: { marginBottom: 16 },
+  label: { color: '#cbd5e1', fontSize: 14, fontWeight: '500', marginBottom: 8 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 24 },
   actionBtn: { flex: 1 },
   primaryBtn: { backgroundColor: '#a855f7' },

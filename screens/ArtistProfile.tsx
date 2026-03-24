@@ -715,6 +715,16 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           <Tabs defaultValue="videos" fullWidth tabs={[{ value: 'videos', label: 'Videos' }, { value: 'schedule', label: 'Schedule' }, { value: 'reviews', label: 'Reviews' }]}>
             {(tab) => tab === 'videos' ? (
               <View style={styles.videoGrid}>
+                {isOwnProfile && (
+                  <Button
+                    onPress={() => navigate('upload-video')}
+                    style={[styles.emptyPrimaryBtn, { marginBottom: 16 }]}
+                    disabled={loadingVideos}
+                  >
+                    <Video size={20} color="#162447" />
+                    <Text style={styles.emptyPrimaryBtnText}>Upload Video</Text>
+                  </Button>
+                )}
                 {loadingVideos ? (
                   <ActivityIndicator color="#a855f7" style={{ marginTop: 20 }} />
                 ) : videos.length > 0 ? (
@@ -745,12 +755,6 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                     </View>
                     <Text style={styles.emptyTitle}>Share Your Art</Text>
                     <Text style={styles.emptyDesc}>Upload your first performance to build your audience and get discovered.</Text>
-                    {isOwnProfile && (
-                      <Button onPress={() => navigate('upload-video')} style={styles.emptyPrimaryBtn}>
-                        <Video size={20} color="#162447" />
-                        <Text style={styles.emptyPrimaryBtnText}>Upload Video</Text>
-                      </Button>
-                    )}
                   </View>
                 )}
               </View>
