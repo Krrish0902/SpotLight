@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, ActivityIndicator, Alert, Image, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, Alert, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { Image } from 'expo-image';
+import Animated, { SlideInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Text } from '../components/ui/Text';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Camera, User, MapPin, Music2, Guitar, Crosshair } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -184,7 +185,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+        <View style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={goBack}>
           <ChevronLeft size={24} color="#fff" />
@@ -193,41 +194,51 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Pressable style={styles.avatarWrap} onPress={handlePickImage} disabled={uploadingAvatar || loading}>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
-          ) : (
-            <LinearGradient colors={['#a855f7', '#ec4899']} style={styles.avatar}>
-              <User size={64} color="#fff" />
-            </LinearGradient>
-          )}
-          <View style={styles.cameraBtn}>
-            {uploadingAvatar ? <ActivityIndicator size="small" color="#000" /> : <Camera size={20} color="#111" />}
-          </View>
-        </Pressable>
+        <Animated.View entering={SlideInUp.duration(600).springify().delay(100)} style={styles.avatarSection}>
+          <Pressable style={styles.avatarWrap} onPress={handlePickImage} disabled={uploadingAvatar || loading}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <User size={64} color="#8E8E93" />
+              </View>
+            )}
+            <View style={styles.cameraBtn}>
+              {uploadingAvatar ? <ActivityIndicator size="small" color="#162447" /> : <Camera size={20} color="#162447" />}
+            </View>
+          </Pressable>
+        </Animated.View>
 
-        <Card style={styles.card}>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <View style={styles.field}>
-            <Label>Username</Label>
-            <Input
-              placeholder="e.g. maya_rivers (unique, 3-30 chars)"
-              value={username}
-              onChangeText={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <Animated.View entering={SlideInUp.duration(600).springify().delay(200)}>
+          <View style={styles.bentoCard}>
+            <Text style={styles.bentoTitle}>IDENTITY</Text>
+            <View style={styles.field}>
+              <Label>Username</Label>
+              <Input
+                placeholder="e.g. maya_rivers (unique, 3-30 chars)"
+                value={username}
+                onChangeText={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.field}>
+              <Label>Full Name</Label>
+              <Input
+                placeholder="Enter your name"
+                value={displayName}
+                onChangeText={setDisplayName}
+              />
+            </View>
           </View>
-          <View style={styles.field}>
-            <Label>Full Name</Label>
-            <Input
-              placeholder="Enter your name"
-              value={displayName}
-              onChangeText={setDisplayName}
-            />
-          </View>
-          {(userRole === 'artist' || userRole === 'organizer') && (
-            <>
+        </Animated.View>
+
+        {(userRole === 'artist' || userRole === 'organizer') && (
+          <Animated.View entering={SlideInUp.duration(600).springify().delay(300)}>
+            <View style={styles.bentoCard}>
+              <Text style={styles.bentoTitle}>ARTISTRY</Text>
               <View style={styles.field}>
                 <MultiSelectWithCustom
                   label="Genres"
@@ -249,80 +260,92 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
                 />
               </View>
               {userRole === 'artist' && (
+                <View style={styles.field}>
+                  <Label>Bio</Label>
+                  <Textarea
+                    placeholder="Tell us about yourself and your music"
+                    value={bio}
+                    onChangeText={setBio}
+                  />
+                </View>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
+        <Animated.View entering={SlideInUp.duration(600).springify().delay(400)}>
+          <View style={styles.bentoCard}>
+            <Text style={styles.bentoTitle}>AUDIENCE & LOCATION</Text>
+            <View style={styles.field}>
+              <Label>Age Range</Label>
+              <View style={styles.demographicRow}>
+                {AGE_OPTIONS.map((opt) => (
+                  <Pressable key={opt} onPress={() => setAgeRange(opt)} style={[styles.demoPill, ageRange === opt && styles.demoPillActive]}>
+                    <Text style={[styles.demoPillText, ageRange === opt && styles.demoPillTextActive]}>{opt}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Label>Gender</Label>
+              <View style={styles.demographicRow}>
+                {GENDER_OPTIONS.map((opt) => (
+                  <Pressable key={opt} onPress={() => setGender(opt)} style={[styles.demoPill, gender === opt && styles.demoPillActive]}>
+                    <Text style={[styles.demoPillText, gender === opt && styles.demoPillTextActive]}>{opt}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Label>Location</Label>
+              <View style={styles.locationRow}>
+                <Input
+                  leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />}
+                  placeholder="City, State"
+                  value={city}
+                  onChangeText={setCity}
+                  containerStyle={styles.locationInput}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={captureLocation}
+                  disabled={capturingLocation}
+                  style={styles.captureBtn}
+                >
+                  {capturingLocation ? (
+                    <ActivityIndicator color="#FDF2FF" size="small" />
+                  ) : (
+                    <Crosshair size={18} color="#FDF2FF" />
+                  )}
+                </Button>
+              </View>
+              {(latitude != null && longitude != null) && (
+                <Text style={styles.coordsText}>
+                  lat: {latitude.toFixed(4)}, long: {longitude.toFixed(4)}
+                </Text>
+              )}
+            </View>
+          </View>
+        </Animated.View>
+
+        {userRole === 'organizer' && (
+          <Animated.View entering={SlideInUp.duration(600).springify().delay(500)}>
+            <View style={styles.bentoCard}>
+              <Text style={styles.bentoTitle}>ORGANIZATION</Text>
               <View style={styles.field}>
-                <Label>Bio</Label>
-                <Textarea
-                  placeholder="Tell us about yourself and your music"
-                  value={bio}
-                  onChangeText={setBio}
+                <Label>Company/Organization</Label>
+                <Input
+                  placeholder="Enter company name"
+                  value={company}
+                  onChangeText={setCompany}
                 />
               </View>
-              )}
-            </>
-          )}
+            </View>
+          </Animated.View>
+        )}
 
-          {/* Demographics / Audience Analytics Info */}
-          <View style={styles.field}>
-            <Label>Your Age Range (For Audience Analytics)</Label>
-            <View style={styles.demographicRow}>
-              {AGE_OPTIONS.map((opt) => (
-                <Pressable key={opt} onPress={() => setAgeRange(opt)} style={[styles.demoPill, ageRange === opt && styles.demoPillActive]}>
-                  <Text style={[styles.demoPillText, ageRange === opt && styles.demoPillTextActive]}>{opt}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Label>Your Gender (For Audience Analytics)</Label>
-            <View style={styles.demographicRow}>
-              {GENDER_OPTIONS.map((opt) => (
-                <Pressable key={opt} onPress={() => setGender(opt)} style={[styles.demoPill, gender === opt && styles.demoPillActive]}>
-                  <Text style={[styles.demoPillText, gender === opt && styles.demoPillTextActive]}>{opt}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-          <View style={styles.field}>
-            <Label>Location</Label>
-            <View style={styles.locationRow}>
-              <Input
-                leftIcon={<MapPin size={20} color="rgba(255,255,255,0.4)" />}
-                placeholder="City, State"
-                value={city}
-                onChangeText={setCity}
-                containerStyle={styles.locationInput}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={captureLocation}
-                disabled={capturingLocation}
-                style={styles.captureBtn}
-              >
-                {capturingLocation ? (
-                  <ActivityIndicator color="#a855f7" size="small" />
-                ) : (
-                  <Crosshair size={18} color="#a855f7" />
-                )}
-              </Button>
-            </View>
-            {(latitude != null && longitude != null) && (
-              <Text style={styles.coordsText}>
-                lat: {latitude.toFixed(4)}, long: {longitude.toFixed(4)}
-              </Text>
-            )}
-          </View>
-          {userRole === 'organizer' && (
-            <View style={styles.field}>
-              <Label>Company/Organization</Label>
-              <Input
-                placeholder="Enter company name"
-                value={company}
-                onChangeText={setCompany}
-              />
-            </View>
-          )}
+        <Animated.View entering={SlideInUp.duration(600).springify().delay(600)}>
           <View style={styles.buttonRow}>
             {isEdit && (
               <Button variant="outline" onPress={goBack} style={styles.cancelBtn} disabled={loading}>
@@ -330,39 +353,41 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
               </Button>
             )}
             <Button onPress={handleComplete} style={styles.completeBtn} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.completeText}>{isEdit ? 'Save Changes' : 'Complete Setup'}</Text>}
+              {loading ? <ActivityIndicator color="#162447" /> : <Text style={styles.completeText}>{isEdit ? 'Save Changes' : 'Complete Setup'}</Text>}
             </Button>
           </View>
-        </Card>
+        </Animated.View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  scroll: { padding: 24, paddingBottom: 48 },
-  avatarWrap: { alignItems: 'center', marginBottom: 32 },
-  avatar: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center' },
-  avatarImg: { width: 128, height: 128, borderRadius: 64, borderWidth: 2, borderColor: '#a855f7' },
-  cameraBtn: { position: 'absolute', bottom: 0, right: '50%', marginRight: -70, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  card: { backgroundColor: 'rgba(17,24,39,0.5)', padding: 24 },
-  field: { marginBottom: 20 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  locationInput: { flex: 1, minWidth: 0 },
-  captureBtn: { width: 44, height: 44, padding: 0, borderColor: 'rgba(168,85,247,0.5)' },
-  coordsText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 6 },
-  demographicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  demoPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  demoPillActive: { backgroundColor: 'rgba(168,85,247,0.2)', borderColor: '#a855f7' },
-  demoPillText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500' },
-  demoPillTextActive: { color: '#fff', fontWeight: 'bold' },
-  errorText: { color: '#f87171', fontSize: 14, marginBottom: 12 },
-  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24, alignItems: 'center' },
-  cancelBtn: { flex: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  cancelText: { color: '#fff', fontSize: 16 },
-  completeBtn: { flex: 1, backgroundColor: '#a855f7' },
-  completeText: { color: '#fff', fontSize: 16 },
+  container: { flex: 1, backgroundColor: '#050A18' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 64, paddingBottom: 16 },
+  title: { fontSize: 34, fontWeight: '800', color: '#ffffff', letterSpacing: -1 },
+  scroll: { padding: 16, paddingBottom: 100 },
+  avatarSection: { alignItems: 'center', marginBottom: 40 },
+  avatarWrap: { alignSelf: 'center', position: 'relative' },
+  avatarImg: { width: 120, height: 120, borderRadius: 60, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  avatarPlaceholder: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  cameraBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#FDF2FF', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: '#050A18' },
+  errorText: { color: '#FF3B30', fontSize: 15, fontWeight: '600', backgroundColor: 'rgba(255,59,48,0.15)', padding: 16, borderRadius: 16, marginBottom: 24 },
+  bentoCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 40, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  bentoTitle: { color: '#8E8E93', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 24 },
+  field: { gap: 12, marginBottom: 24 },
+  demographicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  demoPill: { backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 100, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  demoPillActive: { backgroundColor: '#FDF2FF' },
+  demoPillText: { color: '#ffffff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  demoPillTextActive: { color: '#162447', fontWeight: '800' },
+  locationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  locationInput: { flex: 1, minWidth: 200, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 20, color: '#ffffff', fontSize: 18, fontWeight: '600' },
+  captureBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 20, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
+  coordsText: { color: '#8E8E93', fontSize: 13, marginTop: 12, fontWeight: '500' },
+  buttonRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
+  cancelBtn: { flex: 1, minWidth: 100, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 100, paddingVertical: 20, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  cancelText: { color: '#ffffff', fontSize: 17, fontWeight: '700' },
+  completeBtn: { flex: 2, minWidth: 200, backgroundColor: '#FDF2FF', borderRadius: 100, paddingVertical: 20, alignItems: 'center' },
+  completeText: { color: '#162447', fontSize: 17, fontWeight: '700' },
 });

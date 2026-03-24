@@ -5,9 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Send, MoreVertical } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { formatMessageTime } from '../lib/timeUtils';
 
 interface Message {
   message_id: string;
@@ -153,20 +153,25 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: appUser.id,
           receiver_id: artist.id,
           content
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Failed to send message:', error);
         // Remove optimistic message if failed
         setMessages(prev => prev.filter(m => m.message_id !== tempMessage.message_id));
         setMessage(content); // Restore input
-      } else {
+      } else if (data) {
+        // Replace optimistic message with the real one from DB so real-time 'is_read' updates can hit
+        setMessages(prev => prev.map(m => m.message_id === tempMessage.message_id ? data : m));
+        
         // Update updated_at on the underlying chat request so it bubbles to top of ChatHub
         if (chatId) {
            await supabase
@@ -211,20 +216,22 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
             <Text style={styles.emptyText}>Say hi to {artist?.name || 'them'}!</Text>
           </View>
         ) : (
-          messages.map((msg, index) => {
-            const isMe = msg.sender_id === appUser?.id;
-            const time = new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            // Determine if this is the absolute last message we sent that has been read
-            const isLastReadMessage = isMe && msg.is_read && 
-              messages.slice(index + 1).filter(m => m.sender_id === appUser?.id && m.is_read).length === 0;
+          (() => {
+            // Find the ID of the absolute last message sent by 'me' that has been read
+            const lastReadMyMessage = [...messages].reverse().find(m => m.sender_id === appUser?.id && m.is_read);
+            const lastReadMessageId = lastReadMyMessage?.message_id;
+
+            return messages.map((msg) => {
+              const isMe = msg.sender_id === appUser?.id;
+              const time = new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const isLastReadMessage = msg.message_id === lastReadMessageId;
 
             return (
               <View key={msg.message_id}>
                 <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
-                  <Card style={[styles.msgBubble, isMe && styles.msgBubbleMe]}>
-                    <Text style={styles.msgText}>{msg.content}</Text>
-                  </Card>
+                  <View style={[styles.msgBubble, isMe && styles.msgBubbleMe]}>
+                    <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{msg.content}</Text>
+                  </View>
                   <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>{time}</Text>
                 </View>
                 {isLastReadMessage && (
@@ -235,6 +242,7 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
               </View>
             );
           })
+          })()
         )}
         
         {isTyping && (
@@ -252,12 +260,11 @@ export default function Messaging({ navigate, artist, chatId }: Props) {
           value={message} 
           onChangeText={handleTyping} 
           placeholder="Type a message..." 
-          style={styles.input} 
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
+          style={[styles.input, { minHeight: 40, maxHeight: 120, paddingTop: Platform.OS === 'ios' ? 10 : 8, paddingBottom: Platform.OS === 'ios' ? 10 : 8 }]}
+          multiline
         />
         <Button size="icon" style={styles.sendBtn} onPress={handleSend} disabled={!message.trim()}>
-          <Send size={20} color="#fff" />
+          <Send size={20} color="#162447" />
         </Button>
       </View>
     </KeyboardAvoidingView>
@@ -271,23 +278,45 @@ const styles = StyleSheet.create({
   headerAvatar: { width: 40, height: 40, borderRadius: 20 },
   headerName: { color: '#fff', fontWeight: '600' },
   headerStatus: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  messages: { padding: 16, flexGrow: 1 },
-  msgRow: { alignItems: 'flex-start', marginBottom: 8 },
+  messages: { padding: 16, flexGrow: 1, paddingBottom: 40 },
+  msgRow: { alignItems: 'flex-start', marginBottom: 12 },
   msgRowMe: { alignItems: 'flex-end' },
-  msgBubble: { maxWidth: '75%', backgroundColor: 'rgba(255,255,255,0.05)', padding: 12 },
-  msgBubbleMe: { backgroundColor: '#a855f7' },
-  msgText: { color: '#fff', fontSize: 14 },
-  msgTime: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 },
+  msgBubble: { 
+    maxWidth: '75%', 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    padding: 16,
+    borderRadius: 24,
+    borderBottomLeftRadius: 4, 
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  msgBubbleMe: { 
+    backgroundColor: '#FDF2FF', 
+    borderBottomLeftRadius: 24, 
+    borderBottomRightRadius: 4 
+  },
+  msgText: { color: '#ffffff', fontSize: 16, fontWeight: '500', lineHeight: 22 },
+  msgTextMe: { color: '#162447', fontWeight: '500' },
+  msgTime: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 6, fontWeight: '500' },
   msgTimeMe: { textAlign: 'right' },
-  seenRow: { alignItems: 'flex-end', marginBottom: 8 },
-  seenText: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '500' },
-  typingRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 16 },
-  typingAvatar: { width: 24, height: 24, borderRadius: 12, opacity: 0.8 },
-  typingBubble: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, borderBottomLeftRadius: 4 },
-  typingText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontStyle: 'italic' },
-  inputRow: { flexDirection: 'row', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
-  input: { flex: 1 },
-  sendBtn: { backgroundColor: '#a855f7' },
+  seenRow: { alignItems: 'flex-end', marginBottom: 16 },
+  seenText: { color: '#FDF2FF', fontSize: 12, fontWeight: '600' },
+  typingRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, marginBottom: 16 },
+  typingAvatar: { width: 32, height: 32, borderRadius: 16, opacity: 0.8 },
+  typingBubble: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 24, borderBottomLeftRadius: 4 },
+  typingText: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontStyle: 'italic', fontWeight: '500' },
+  inputRow: { 
+    flexDirection: 'row', 
+    gap: 12, 
+    paddingHorizontal: 16, 
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24, // Safe area
+    borderTopWidth: StyleSheet.hairlineWidth, 
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(5,10,24,0.85)', // Blur fallback
+  },
+  input: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 24, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)' },
+  sendBtn: { backgroundColor: '#FDF2FF', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16 },
+  emptyText: { color: '#8E8E93', fontSize: 18, fontWeight: '600' },
 });
