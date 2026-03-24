@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Mail, Lock } from 'lucide-react-native';
@@ -49,8 +49,8 @@ export default function LoginSignup({ navigate, returnTo = 'public-home' }: Prop
       setError('Password must be at least 6 characters.');
       return;
     }
-    const { error: err } = await signUp(email.trim(), password, 'public');
     setLoading(true);
+    const { error: err } = await signUp(email.trim(), password, 'public');
     if (!err) {
       const { posthog } = require('../lib/posthog');
       posthog.capture('user_signed_up');
@@ -64,18 +64,23 @@ export default function LoginSignup({ navigate, returnTo = 'public-home' }: Prop
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate(returnTo)}>
           <ChevronLeft size={24} color="#fff" />
         </Button>
-        <Text style={styles.title}>Welcome to Spotlight</Text>
+        <Text style={styles.title}>SpotLight</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card style={styles.card}>
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>Welcome Back</Text>
+            <Text style={styles.heroSubtitle}>Sign in or create an account to continue.</Text>
+          </View>
           <Tabs
             defaultValue="login"
+            fullWidth
             tabs={[
               { value: 'login', label: 'Login' },
               { value: 'signup', label: 'Sign Up' },
@@ -145,21 +150,6 @@ export default function LoginSignup({ navigate, returnTo = 'public-home' }: Prop
             )}
           </Tabs>
 
-          <View style={styles.socialSection}>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            <View style={styles.socialButtons}>
-              <Button variant="outline" style={styles.socialBtn} disabled>
-                <Text style={styles.socialBtnText}>Google</Text>
-              </Button>
-              <Button variant="outline" style={styles.socialBtn} disabled>
-                <Text style={styles.socialBtnText}>Apple</Text>
-              </Button>
-            </View>
-          </View>
         </Card>
       </ScrollView>
     </LinearGradient>
@@ -174,22 +164,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#fff',
+    letterSpacing: -0.5,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
   },
   card: {
-    backgroundColor: 'rgba(17,24,39,0.5)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 32,
     padding: 24,
+    ...(Platform.OS === 'web'
+      ? ({
+          maxWidth: 460,
+          width: '100%',
+          alignSelf: 'center',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
+        } as any)
+      : {}),
+  },
+  hero: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 14,
+    marginTop: 6,
+    textAlign: 'center',
   },
   form: {
     gap: 16,
@@ -209,47 +229,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   gradientBtn: {
-    backgroundColor: '#a855f7',
-    marginTop: 8,
+    backgroundColor: '#FDF2FF',
+    marginTop: 10,
+    borderRadius: 100,
+    minHeight: 52,
   },
   btnText: {
-    color: '#fff',
+    color: '#162447',
     fontSize: 16,
+    fontWeight: '800',
   },
   forgotText: {
-    color: '#c084fc',
+    color: 'rgba(255,255,255,0.72)',
     fontSize: 14,
     textAlign: 'center',
-  },
-  socialSection: {
-    marginTop: 24,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  dividerText: {
-    paddingHorizontal: 8,
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    backgroundColor: 'rgba(17,24,39,0.5)',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  socialBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  socialBtnText: {
-    color: '#fff',
   },
 });

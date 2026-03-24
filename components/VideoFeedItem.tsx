@@ -45,6 +45,27 @@ interface VideoFeedItemProps {
   containerWidth?: number;
 }
 
+function safePlayerCall<T>(fn: () => T, fallback?: T): T | undefined {
+  try {
+    return fn();
+  } catch {
+    return fallback;
+  }
+}
+
+function safePlay(player: any) {
+  try {
+    const result = player?.play?.();
+    if (result && typeof result.then === 'function') {
+      result.catch(() => {
+        // Web autoplay may fail without user interaction; ignore.
+      });
+    }
+  } catch {
+    // Ignore released/invalid shared object errors.
+  }
+}
+
 export function VideoFeedItem({
   item,
   isActive,
@@ -56,9 +77,12 @@ export function VideoFeedItem({
   containerHeight = height,
   containerWidth = width,
 }: VideoFeedItemProps) {
-  const player = useVideoPlayer(item.video_url, (p) => {
+  const videoSource = item.video_url ?? '';
+  const player = useVideoPlayer(videoSource, (p) => {
     p.loop = true;
   });
+  const playerRef = useRef(player);
+  playerRef.current = player;
   const [pausedByHold, setPausedByHold] = useState(false);
   const profile = item.profiles;
   const { appUser } = useAuth();
@@ -135,12 +159,8 @@ export function VideoFeedItem({
   const handleLike = async () => {
     if (!appUser || !item.artist_id) return;
     try {
-      track.like(
-        item.artist_id,
-        item.video_id,
-        appUser.id,
-        player ? Math.floor(player.currentTime) : 0
-      );
+      const t = safePlayerCall(() => Math.floor(playerRef.current.currentTime), 0) ?? 0;
+      track.like(item.artist_id, item.video_id, appUser.id, t);
     } catch (err) {
       console.error('Failed to log like analytics', err);
     }
@@ -160,25 +180,36 @@ export function VideoFeedItem({
   };
 
   useEffect(() => {
-    player.muted = muted;
-  }, [muted, player]);
+    safePlayerCall(() => {
+      playerRef.current.muted = muted;
+    });
+  }, [muted, videoSource]);
 
   const reachedCheckpoints = useRef<Set<number>>(new Set());
   const RETENTION_CHECKPOINTS = [10, 25, 50, 75, 90, 100];
   const watchStartTime = useRef<number>(0);
+  const lastDurationRef = useRef(0);
+  const lastCurrentTimeRef = useRef(0);
 
   useEffect(() => {
     if (pausedByHold) return;
     if (isActive) {
-      player.play();
+      safePlay(playerRef.current);
       watchStartTime.current = Date.now();
       reachedCheckpoints.current = new Set();
       
       const interval = setInterval(() => {
-        if (!player.duration || player.duration === 0) return;
-        const pct = Math.floor((player.currentTime / player.duration) * 100);
-        RETENTION_CHECKPOINTS.forEach(cp => {
-          if (pct >= cp) reachedCheckpoints.current.add(cp);
+        safePlayerCall(() => {
+          const p = playerRef.current;
+          const dur = p.duration;
+          const cur = p.currentTime;
+          lastDurationRef.current = dur;
+          lastCurrentTimeRef.current = cur;
+          if (!dur || dur === 0) return;
+          const pct = Math.floor((cur / dur) * 100);
+          RETENTION_CHECKPOINTS.forEach(cp => {
+            if (pct >= cp) reachedCheckpoints.current.add(cp);
+          });
         });
       }, 500);
       
@@ -186,7 +217,9 @@ export function VideoFeedItem({
         clearInterval(interval);
         if (item.artist_id && item.artist_id !== appUser?.id) {
             const watchSeconds = (Date.now() - watchStartTime.current) / 1000;
-            const completionPct = player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
+            const dur = lastDurationRef.current;
+            const cur = lastCurrentTimeRef.current;
+            const completionPct = dur > 0 ? (cur / dur) * 100 : 0;
             const retentionBuckets = RETENTION_CHECKPOINTS.reduce((acc, cp) => {
               acc[String(cp)] = reachedCheckpoints.current.has(cp);
               return acc;
@@ -203,19 +236,25 @@ export function VideoFeedItem({
         }
       };
     } else {
-      player.pause();
+      safePlayerCall(() => {
+        playerRef.current.pause();
+      });
     }
-  }, [isActive, pausedByHold, player, item.video_id, item.artist_id, appUser?.id]);
+  }, [isActive, pausedByHold, videoSource, item.video_id, item.artist_id, appUser?.id]);
 
   const handleTap = () => onToggleMute();
   const handleLongPress = () => {
     setPausedByHold(true);
-    player.pause();
+    safePlayerCall(() => {
+      playerRef.current.pause();
+    });
   };
   const handlePressOut = () => {
     if (pausedByHold) {
       setPausedByHold(false);
-      if (isActive) player.play();
+      if (isActive) {
+        safePlay(playerRef.current);
+      }
     }
   };
 
@@ -228,6 +267,7 @@ export function VideoFeedItem({
   return (
     <View style={[styles.videoContainer, { height: containerHeight, width: containerWidth }]}>
       <VideoView
+        key={item.video_id}
         player={player}
         style={[StyleSheet.absoluteFill, { pointerEvents: 'none' as any }]}
         contentFit="cover"

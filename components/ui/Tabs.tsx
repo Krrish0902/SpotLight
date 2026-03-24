@@ -149,6 +149,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
-    flex: 1,
+    width: '100%',
+    // Keep content visible when parent height is implicit on native/web screens.
   },
 });

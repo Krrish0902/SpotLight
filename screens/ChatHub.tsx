@@ -15,44 +15,50 @@ interface Props {
 }
 
 export default function ChatHub({ navigate }: Props) {
-  const { appUser } = useAuth();
+  const { appUser, user, session } = useAuth();
+  const currentUserId = appUser?.id ?? user?.id ?? session?.user?.id ?? null;
   const [activeTab, setActiveTab] = useState('active');
   const [requests, setRequests] = useState<any[]>([]);
   const [activeChats, setActiveChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (appUser?.id) {
-      fetchData();
-      
-      const channel = supabase
-        .channel('public:message_requests')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'message_requests',
-          filter: `receiver_id=eq.${appUser.id}`,
-        }, () => {
-          fetchData(); // Refetch on any change to our received requests
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'message_requests',
-          filter: `sender_id=eq.${appUser.id}`,
-        }, () => {
-          fetchData(); // Refetch on any change to our sent requests
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    if (!currentUserId) {
+      setRequests([]);
+      setActiveChats([]);
+      setLoading(false);
+      return;
     }
-  }, [appUser?.id]);
+
+    fetchData();
+    
+    const channel = supabase
+      .channel('public:message_requests')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'message_requests',
+        filter: `receiver_id=eq.${currentUserId}`,
+      }, () => {
+        fetchData(); // Refetch on any change to our received requests
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'message_requests',
+        filter: `sender_id=eq.${currentUserId}`,
+      }, () => {
+        fetchData(); // Refetch on any change to our sent requests
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
 
   const fetchData = async () => {
-    if (!appUser) return;
+    if (!currentUserId) return;
     setLoading(true);
 
     try {
@@ -65,9 +71,13 @@ export default function ChatHub({ navigate }: Props) {
           created_at,
           sender_id
         `)
-        .eq('receiver_id', appUser.id)
+        .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
+
+      if (pendingError) {
+        console.error('Failed to fetch pending message requests:', pendingError);
+      }
 
       // Fetch Active Chats (where user is either sender or receiver and status is accepted)
       const { data: activeData, error: activeError } = await supabase
@@ -81,90 +91,107 @@ export default function ChatHub({ navigate }: Props) {
           receiver_id
         `)
         .eq('status', 'accepted')
-        .or(`sender_id.eq.${appUser.id},receiver_id.eq.${appUser.id}`)
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
         .order('updated_at', { ascending: false });
 
-      if (!activeError && activeData) {
-        // Collect all unique user IDs to fetch profiles safely without FK constraints (PGRST205 fix)
-        const userIds = new Set<string>();
-        (pendingData || []).forEach((req: any) => userIds.add(req.sender_id));
-        activeData.forEach((chat: any) => {
-          if (chat.sender_id !== appUser.id) userIds.add(chat.sender_id);
-          if (chat.receiver_id !== appUser.id) userIds.add(chat.receiver_id);
-        });
+      if (activeError) {
+        console.error('Failed to fetch active chats:', activeError);
+      }
 
-        const { data: profiles } = await supabase
+      const safePendingData = pendingData || [];
+      const safeActiveData = activeData || [];
+
+      // Collect all unique user IDs we need for rendering
+      const userIds = new Set<string>();
+      safePendingData.forEach((req: any) => userIds.add(req.sender_id));
+      safeActiveData.forEach((chat: any) => {
+        if (chat.sender_id !== currentUserId) userIds.add(chat.sender_id);
+        if (chat.receiver_id !== currentUserId) userIds.add(chat.receiver_id);
+      });
+
+      let profilesMap: Record<string, any> = {};
+      if (userIds.size > 0) {
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, display_name, username, avatar_url')
           .in('user_id', Array.from(userIds));
-          
-        const profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+
+        if (profilesError) {
+          console.error('Failed to fetch chat participant profiles:', profilesError);
+        }
+
+        profilesMap = (profiles || []).reduce((acc: any, p: any) => {
           acc[p.user_id] = p;
           return acc;
         }, {});
-
-        setRequests((pendingData || []).map((req: any) => ({
-          ...req,
-          sender: profilesMap[req.sender_id]
-        })));
-
-        // Fetch unreads across all active chats
-        const { data: unreadData } = await supabase
-          .from('messages')
-          .select('sender_id, receiver_id')
-          .eq('receiver_id', appUser.id)
-          .eq('is_read', false);
-
-        const unreadCounts = (unreadData || []).reduce((acc: any, msg: any) => {
-          acc[msg.sender_id] = (acc[msg.sender_id] || 0) + 1;
-          return acc;
-        }, {});
-        
-        // Fetch the absolute latest message for each chat
-        const { data: latestMessages } = await supabase
-          .from('messages')
-          .select('sender_id, receiver_id, content, sent_at')
-          .or(`sender_id.eq.${appUser.id},receiver_id.eq.${appUser.id}`)
-          .order('sent_at', { ascending: false })
-          .limit(200);
-
-        // Map latest messages by the *other* person's ID for easy lookup
-        const latestMsgsMap = (latestMessages || []).reduce((acc: any, msg: any) => {
-          const otherId = msg.sender_id === appUser.id ? msg.receiver_id : msg.sender_id;
-          if (!acc[otherId]) acc[otherId] = msg; // only save the first one (newest)
-          return acc;
-        }, {});
-
-        // Transform data to get the *other* person's profile
-        const chats = activeData.map((chat: any) => {
-          const isSender = chat.sender_id === appUser.id;
-          const otherId = isSender ? chat.receiver_id : chat.sender_id;
-          const otherProfile = profilesMap[otherId];
-
-          const latestMsg = latestMsgsMap[otherId];
-          let timeDisplay = '';
-          let previewText = 'Say hi!';
-
-          if (latestMsg) {
-             previewText = latestMsg.sender_id === appUser.id ? `You: ${latestMsg.content}` : latestMsg.content;
-             timeDisplay = formatRelativeTime(latestMsg.sent_at);
-          }
-
-          return {
-            ...chat,
-            otherProfile,
-            preview: previewText,
-            timeDisplay,
-            unreadCount: unreadCounts[otherId] || 0,
-            sortTime: latestMsg ? parseSupabaseDate(latestMsg.sent_at).getTime() : parseSupabaseDate(chat.updated_at).getTime()
-          };
-        });
-        
-        chats.sort((a, b) => b.sortTime - a.sortTime); // Sort by most recent message
-        setActiveChats(chats);
       }
+
+      setRequests(
+        safePendingData.map((req: any) => ({
+          ...req,
+          sender: profilesMap[req.sender_id],
+        }))
+      );
+
+      // Fetch unreads across all active chats
+      const { data: unreadData } = await supabase
+        .from('messages')
+        .select('sender_id, receiver_id')
+        .eq('receiver_id', currentUserId)
+        .eq('is_read', false);
+
+      const unreadCounts = (unreadData || []).reduce((acc: any, msg: any) => {
+        acc[msg.sender_id] = (acc[msg.sender_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Fetch the absolute latest message for each chat
+      const { data: latestMessages } = await supabase
+        .from('messages')
+        .select('sender_id, receiver_id, content, sent_at')
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+        .order('sent_at', { ascending: false })
+        .limit(200);
+
+      // Map latest messages by the *other* person's ID for easy lookup
+      const latestMsgsMap = (latestMessages || []).reduce((acc: any, msg: any) => {
+        const otherId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+        if (!acc[otherId]) acc[otherId] = msg; // only save the first one (newest)
+        return acc;
+      }, {});
+
+      // Transform data to get the *other* person's profile
+      const chats = safeActiveData.map((chat: any) => {
+        const isSender = chat.sender_id === currentUserId;
+        const otherId = isSender ? chat.receiver_id : chat.sender_id;
+        const otherProfile = profilesMap[otherId];
+
+        const latestMsg = latestMsgsMap[otherId];
+        let timeDisplay = '';
+        let previewText = 'Say hi!';
+
+        if (latestMsg) {
+          previewText = latestMsg.sender_id === currentUserId ? `You: ${latestMsg.content}` : latestMsg.content;
+          timeDisplay = formatRelativeTime(latestMsg.sent_at);
+        }
+
+        return {
+          ...chat,
+          otherProfile,
+          preview: previewText,
+          timeDisplay,
+          unreadCount: unreadCounts[otherId] || 0,
+          sortTime: latestMsg ? parseSupabaseDate(latestMsg.sent_at).getTime() : parseSupabaseDate(chat.updated_at).getTime()
+        };
+      });
+
+      chats.sort((a, b) => b.sortTime - a.sortTime); // Sort by most recent message
+      setActiveChats(chats);
     } catch (err) {
       console.error('Error fetching chat data:', err);
+      // Ensure stale data is cleared after hard failure to avoid confusing UI
+      setRequests([]);
+      setActiveChats([]);
     } finally {
       setLoading(false);
     }

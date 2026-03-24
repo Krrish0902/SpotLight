@@ -103,38 +103,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const au = await fetchAppUser(session.user.id);
-        setAppUser(au);
-        const prof = await fetchProfile(session.user.id);
-        setProfile(prof);
-      } else {
-        setAppUser(null);
-        setProfile(null);
-      }
-      setIsLoading(false);
-    });
+    let isMounted = true;
+    const bootstrapAuth = async () => {
+      try {
+        // Guard against rare cold-start hangs
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth bootstrap timeout')), 10000)
+        );
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await Promise.race([sessionPromise, timeout]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           const au = await fetchAppUser(session.user.id);
+          if (!isMounted) return;
           setAppUser(au);
           const prof = await fetchProfile(session.user.id);
+          if (!isMounted) return;
           setProfile(prof);
         } else {
           setAppUser(null);
           setProfile(null);
         }
+      } catch (err) {
+        console.warn('Auth bootstrap failed, continuing as signed-out:', err);
+        if (!isMounted) return;
+        setSession(null);
+        setUser(null);
+        setAppUser(null);
+        setProfile(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    bootstrapAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const au = await fetchAppUser(session.user.id);
+          if (!isMounted) return;
+          setAppUser(au);
+          const prof = await fetchProfile(session.user.id);
+          if (!isMounted) return;
+          setProfile(prof);
+        } else {
+          setAppUser(null);
+          setProfile(null);
+        }
+        setIsLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

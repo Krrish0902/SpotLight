@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Animated, { FadeIn, FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { View, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, FlatList, Dimensions, Modal, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -70,6 +70,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [connectRequestStatus, setConnectRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
   const videoListRef = useRef<FlatList>(null);
   const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -108,6 +109,23 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       fetchReviews();
     }
   }, [targetArtistId, isOwnProfile]);
+
+  useEffect(() => {
+    const fetchConnectStatus = async () => {
+      if (!appUser?.id || !targetArtistId || isOwnProfile) return;
+      try {
+        const { data } = await supabase
+          .from('message_requests')
+          .select('status')
+          .or(`and(sender_id.eq.${appUser.id},receiver_id.eq.${targetArtistId}),and(sender_id.eq.${targetArtistId},receiver_id.eq.${appUser.id})`)
+          .maybeSingle();
+        setConnectRequestStatus((data?.status as any) || 'none');
+      } catch {
+        setConnectRequestStatus('none');
+      }
+    };
+    fetchConnectStatus();
+  }, [appUser?.id, targetArtistId, isOwnProfile]);
 
   const fetchViewedProfile = async () => {
     if (!targetArtistId) return;
@@ -378,6 +396,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
 
   const effectiveProfile = isOwnProfile ? profile : (viewedProfile || artist);
   const isOrganizer = userRole === 'organizer';
+  const isArtistViewer = userRole === 'artist';
   const displayName = effectiveProfile?.display_name ?? effectiveProfile?.name ?? 'Artist';
   const usernameStr = effectiveProfile?.username ?? '';
   const genresStr = Array.isArray(effectiveProfile?.genres) ? effectiveProfile.genres.join(' • ') : (effectiveProfile?.genres ?? effectiveProfile?.genre ?? '');
@@ -398,15 +417,81 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const rawCoverUrl = dbCover || defaultCover;
   const coverSeparator = rawCoverUrl.includes('?') ? '&' : '?';
   const displayCoverUrl = `${rawCoverUrl}${coverSeparator}t=${timestamp}`;
-
   const eventsCount = upcomingEvents.length;
   const totalReviews = reviews.length;
-  const averageRating = totalReviews > 0 ? reviews.reduce((sum, r: any) => sum + (r.rating || 0), 0) / totalReviews : 0;
-  const ratingLabel = totalReviews > 0 ? `${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'No reviews yet';
+  const averageRating = totalReviews > 0
+    ? reviews.reduce((sum, r: any) => sum + (r.rating || 0), 0) / totalReviews
+    : 0;
+
+  const handleConnectRequest = async () => {
+    if (!appUser) {
+      Alert.alert('Login Required', 'Please sign in to connect.');
+      return;
+    }
+
+    if (!targetArtistId) return;
+
+    try {
+      const { data: existing, error: checkError } = await supabase
+        .from('message_requests')
+        .select('id, status')
+        .or(`and(sender_id.eq.${appUser.id},receiver_id.eq.${targetArtistId}),and(sender_id.eq.${targetArtistId},receiver_id.eq.${appUser.id})`)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existing) {
+        setConnectRequestStatus(existing.status as any);
+        if (existing.status === 'accepted') {
+          navigate('messaging', {
+            selectedArtist: effectiveProfile,
+            chatId: existing.id,
+          });
+        } else if (existing.status === 'pending') {
+          Alert.alert('Request Pending', 'Your chat request is waiting for approval.');
+        } else {
+          Alert.alert('Request Rejected', 'This user has declined the chat request.');
+        }
+        return;
+      }
+
+      const { error: createError } = await supabase
+        .from('message_requests')
+        .insert({
+          sender_id: appUser.id,
+          receiver_id: targetArtistId,
+          status: 'pending',
+        });
+
+      if (createError) {
+        if ((createError as any)?.code === '23505') {
+          setConnectRequestStatus('pending');
+          Alert.alert('Request Pending', 'A chat request already exists.');
+          return;
+        }
+        throw createError;
+      }
+
+      setConnectRequestStatus('pending');
+      Alert.alert('Request Sent', 'Chat request sent. You can message once accepted.');
+    } catch (err: any) {
+      console.error('Messaging logic error:', err);
+      Alert.alert('Error', 'Failed to process chat request.');
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 120 : 48 }]} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 84 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 140 : 180 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* ... (keep existing cover/header code) ... */}
         <Animated.View entering={FadeIn.duration(800)} style={styles.coverWrap}>
           
@@ -463,7 +548,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               {isBoosted && <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>}
             </Animated.View>
             {usernameStr ? (
-              <Badge style={styles.usernamePill}>@{usernameStr}</Badge>
+              <View style={styles.usernameWrap}>
+                <Badge style={styles.usernamePill}>@{usernameStr}</Badge>
+              </View>
             ) : null}
             <View style={styles.meta}>
               <Music size={20} color="#ffffff" />
@@ -493,86 +580,26 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                 </Button>
                 <Button 
                   variant="outline" 
-                  onPress={async () => {
-                    if (!appUser) {
-                      Alert.alert('Login Required', 'Please sign in to message artists.');
-                      return;
-                    }
-                    
-                    try {
-                      // Check if a request already exists
-                      const { data: existing, error: checkError } = await supabase
-                        .from('message_requests')
-                        .select('id, status')
-                        .or(`and(sender_id.eq.${appUser.id},receiver_id.eq.${targetArtistId}),and(sender_id.eq.${targetArtistId},receiver_id.eq.${appUser.id})`)
-                        .maybeSingle();
-                        
-                      if (checkError) throw checkError;
-                      
-                      if (existing) {
-                        if (existing.status === 'accepted') {
-                          // Already accepted, go to chat
-                          navigate('messaging', { 
-                            selectedArtist: effectiveProfile,
-                            chatId: existing.id
-                          });
-                        } else if (existing.status === 'pending') {
-                          Alert.alert('Request Pending', 'Your message request is still waiting for approval.');
-                        } else {
-                          Alert.alert('Request Rejected', 'This artist has declined the message request.');
-                        }
-                      } else {
-                        // Create new request
-                        const { data: newReq, error: createError } = await supabase
-                          .from('message_requests')
-                          .insert({
-                            sender_id: appUser.id,
-                            receiver_id: targetArtistId,
-                            status: 'pending'
-                          })
-                          .select()
-                          .single();
-                          
-                        if (createError) throw createError;
-                        Alert.alert('Request Sent', 'Message request sent! You can chat once they accept.');
-                      }
-                    } catch (err: any) {
-                      console.error('Messaging logic error:', err);
-                      Alert.alert('Error', 'Failed to process message request.');
-                    }
-                  }} 
+                  onPress={handleConnectRequest}
                   style={styles.msgBtn}
                 >
                   <MessageSquare size={20} color="#fff" />
                 </Button>
               </>
             )}
-            {!isOrganizer && !isOwnProfile && (
-              <Button 
-                style={styles.bookBtn} 
-                onPress={async () => {
-                  if (!appUser || !targetArtistId) {
-                    Alert.alert('Login Required', 'Please sign in to follow artists.');
-                    return;
-                  }
-                  try {
-                    // Actual follow insertion into our new table (Section 2 addition)
-                    await supabase.from('user_follows').insert({
-                      follower_id: appUser.id,
-                      following_id: targetArtistId
-                    });
-                    
-                    // Analytics tracking
-                    track.follow(targetArtistId, appUser.id);
-                    
-                    Alert.alert('Followed', 'You are now following this artist!');
-                  } catch (e: any) {
-                    Alert.alert('Info', 'You are already following this artist.');
-                  }
-                }}
-              >
-                <Text style={styles.bookBtnText} numberOfLines={1} adjustsFontSizeToFit>Follow</Text>
-              </Button>
+            {isArtistViewer && !isOwnProfile && (
+              connectRequestStatus === 'accepted' ? (
+                <View style={styles.centeredActionWrap}>
+                  <Button variant="outline" onPress={handleConnectRequest} style={styles.msgBtn}>
+                    <MessageSquare size={20} color="#fff" />
+                  </Button>
+                </View>
+              ) : (
+                <Button style={styles.bookBtn} onPress={handleConnectRequest}>
+                  <MessageSquare size={20} color="#fff" />
+                  <Text style={styles.bookBtnText} numberOfLines={1} adjustsFontSizeToFit>Connect</Text>
+                </Button>
+              )
             )}
           </Animated.View>
 
@@ -582,9 +609,16 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           </View>
 
           <View style={styles.statsRow}>
-            <View style={styles.statCard}><Text style={styles.statNum}>2.8K</Text><Text style={styles.statLabel}>Followers</Text></View>
-            <View style={styles.statCard}><Text style={styles.statNum}>142</Text><Text style={styles.statLabel}>Events</Text></View>
-            <View style={styles.statCard}><Text style={styles.statNum}>4.9</Text><Text style={styles.statLabel}>Rating</Text></View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNum}>{eventsCount}</Text>
+              <Text style={styles.statLabel}>Upcoming Events</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNum}>{totalReviews > 0 ? averageRating.toFixed(1) : '—'}</Text>
+              <Text style={styles.statLabel}>
+                {totalReviews > 0 ? `${totalReviews} Review${totalReviews > 1 ? 's' : ''}` : 'No Reviews'}
+              </Text>
+            </View>
           </View>
 
           <Tabs defaultValue="videos" fullWidth tabs={[{ value: 'videos', label: 'Videos' }, { value: 'schedule', label: 'Schedule' }, { value: 'reviews', label: 'Reviews' }]}>
@@ -631,17 +665,17 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               </View>
             ) : tab === 'schedule' ? (
               <View style={styles.scheduleCard}>
+                {isOwnProfile && (
+                  <Button variant="outline" size="sm" onPress={() => navigate('manage-availability')} style={{ marginBottom: 12, alignSelf: 'flex-start' }}>
+                    <Text style={{ color: '#fff' }}>Manage Schedule</Text>
+                  </Button>
+                )}
                 {loadingEvents ? (
                   <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
                 ) : upcomingEvents.length === 0 ? (
                   <View style={styles.emptySchedule}>
                     <Calendar size={40} color="rgba(255,255,255,0.3)" />
                     <Text style={styles.emptyScheduleText}>No upcoming events</Text>
-                    {isOwnProfile && (
-                      <Button variant="outline" size="sm" onPress={() => navigate('manage-availability')} style={{ marginTop: 12 }}>
-                        <Text style={{ color: '#fff' }}>Manage Schedule</Text>
-                      </Button>
-                    )}
                   </View>
                 ) : (
                   upcomingEvents.map((ev) => (
@@ -668,16 +702,80 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                 )}
               </View>
             ) : (
-              <View style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Image source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' }} style={styles.reviewAvatar} />
-                  <View style={styles.reviewMeta}>
-                    <Text style={styles.reviewer}>John Smith</Text>
-                    <View style={styles.stars}>{[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} color="#facc15" fill="#facc15" />)}</View>
+              <View style={{ gap: 12 }}>
+                {loadingReviews ? (
+                  <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
+                ) : (
+                  <>
+                    {reviews.length === 0 ? (
+                      <View style={styles.reviewCard}>
+                        <Text style={styles.reviewText}>No reviews yet.</Text>
+                      </View>
+                    ) : (
+                      reviews.map((r: any) => (
+                        <View key={r.id} style={styles.reviewCard}>
+                          <View style={styles.reviewHeader}>
+                            <Image
+                              source={{ uri: r.reviewer_avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' }}
+                              style={styles.reviewAvatar}
+                            />
+                            <View style={styles.reviewMeta}>
+                              <Text style={styles.reviewer}>
+                                {r.user_id === appUser?.id
+                                  ? 'Your Review'
+                                  : r.reviewer_display_name || (r.reviewer_username ? `@${r.reviewer_username}` : 'Reviewer')}
+                              </Text>
+                              <View style={styles.stars}>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <Star
+                                    key={i}
+                                    size={16}
+                                    color={i <= (r.rating || 0) ? '#facc15' : 'rgba(255,255,255,0.25)'}
+                                    fill={i <= (r.rating || 0) ? '#facc15' : 'transparent'}
+                                  />
+                                ))}
+                              </View>
+                            </View>
+                            <Text style={styles.reviewTime}>
+                              {r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}
+                            </Text>
+                          </View>
+                          <Text style={styles.reviewText}>{r.comment}</Text>
+                        </View>
+                      ))
+                    )}
+                  </>
+                )}
+
+                {!isOwnProfile && appUser && !userReview && (
+                  <View style={styles.reviewCard}>
+                    <Text style={[styles.reviewer, { marginBottom: 10 }]}>Add a Review</Text>
+                    <View style={[styles.stars, { marginBottom: 12 }]}>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Pressable key={i} onPress={() => setNewRating(i)} style={{ padding: 4 }}>
+                          <Star
+                            size={20}
+                            color={i <= newRating ? '#facc15' : 'rgba(255,255,255,0.25)'}
+                            fill={i <= newRating ? '#facc15' : 'transparent'}
+                          />
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Textarea
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      placeholder="Share your experience with this artist..."
+                      style={{ color: '#fff', marginBottom: 12 }}
+                    />
+                    <Button
+                      onPress={handleSubmitReview}
+                      disabled={submittingReview || !newComment.trim()}
+                      style={styles.dashboardBtn}
+                    >
+                      <Text style={styles.bookBtnText}>{submittingReview ? 'Submitting...' : 'Submit Review'}</Text>
+                    </Button>
                   </View>
-                  <Text style={styles.reviewTime}>2 days ago</Text>
-                </View>
-                <Text style={styles.reviewText}>Amazing performance! Maya brought our wedding to life with her incredible voice and stage presence.</Text>
+                )}
               </View>
             )}
           </Tabs>
@@ -694,8 +792,36 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               <ChevronLeft size={24} color="#fff" />
             </Button>
           </View>
-        </Modal>
-      </View>
+          <FlatList
+            ref={videoListRef}
+            data={videos}
+            keyExtractor={(item) => item.video_id}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            onViewableItemsChanged={onViewableVideosChanged}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+            initialScrollIndex={videoFeedInitialIndex}
+            getItemLayout={(_d, index) => ({
+              length: SCREEN_HEIGHT,
+              offset: SCREEN_HEIGHT * index,
+              index,
+            })}
+            renderItem={({ item, index }) => (
+              <VideoFeedItem
+                item={item}
+                isActive={index === activeVideoIndex}
+                muted={videoMuted}
+                onToggleMute={() => setVideoMuted((m) => !m)}
+                showProfileOverlay={false}
+                containerHeight={SCREEN_HEIGHT}
+                containerWidth={SCREEN_WIDTH}
+              />
+            )}
+          />
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -714,7 +840,8 @@ const styles = StyleSheet.create({
   profileHeader: { alignItems: 'center', marginTop: 16, marginBottom: 16, paddingHorizontal: 16 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   name: { fontSize: 44, fontWeight: '800', color: '#ffffff', letterSpacing: -1.5 },
-  usernamePill: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  usernameWrap: { width: '100%', alignItems: 'center' },
+  usernamePill: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 16, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   boostedBadge: { backgroundColor: '#FDF2FF', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   metaText: { color: '#8E8E93', fontSize: 16, fontWeight: '600' },
@@ -724,6 +851,7 @@ const styles = StyleSheet.create({
   dashboardBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
   bookBtnText: { color: '#162447', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
   msgBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 100, width: 64, height: 64, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
+  centeredActionWrap: { width: '100%', alignItems: 'center' },
   bioCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, marginBottom: 16, borderRadius: 40, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   bioTitle: { color: '#8E8E93', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 },
   bioText: { color: '#dce3f0', lineHeight: 28, fontSize: 18, fontWeight: '500' },
