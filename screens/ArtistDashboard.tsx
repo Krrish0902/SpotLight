@@ -1,7 +1,5 @@
-import React, { useMemo } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import { View, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw } from 'lucide-react-native';
