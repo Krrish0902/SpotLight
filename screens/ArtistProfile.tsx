@@ -34,7 +34,7 @@ interface ScheduleEvent {
   time: string | null;
   title: string;
   venue: string | null;
-  source: 'schedule' | 'booking';
+  source: 'schedule' | 'booking' | 'organizer_event';
   status?: string;
 }
 
@@ -193,6 +193,31 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             venue: null,
             source: 'booking',
             status: b.status,
+          });
+        });
+
+        const { data: organizerEventsData } = await supabase
+          .from('events')
+          .select('event_id, title, event_date, location_name, city')
+          .eq('organizer_id', targetArtistId)
+          .eq('approval_status', 'approved')
+          .eq('is_deleted', false)
+          .gte('event_date', today)
+          .order('event_date', { ascending: true })
+          .limit(5);
+
+        (organizerEventsData || []).forEach((ev: any) => {
+          const d = new Date(ev.event_date);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          events.push({
+            id: ev.event_id,
+            date: dateStr,
+            time: timeStr,
+            title: ev.title || 'Event',
+            venue: [ev.location_name, ev.city].filter(Boolean).join(', ') || null,
+            source: 'organizer_event',
+            status: 'approved',
           });
         });
       }

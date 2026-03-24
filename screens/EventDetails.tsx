@@ -33,6 +33,28 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
   const { appUser } = useAuth();
   const [event, setEvent] = useState<any>(initialEvent || (eventId ? null : mockEvent));
   const [loading, setLoading] = useState(false);
+  const [lineupArtists, setLineupArtists] = useState<any[]>([]);
+
+  const parseLineupArtists = (lineup: any): any[] => {
+    if (!lineup) return [];
+    if (Array.isArray(lineup)) {
+      return lineup.filter((item: any) => {
+        if (!item) return false;
+        // Backward compatibility: old records without invite_status remain visible.
+        return !item.invite_status || item.invite_status === 'accepted';
+      });
+    }
+    try {
+      const parsed = JSON.parse(lineup);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((item: any) => {
+        if (!item) return false;
+        return !item.invite_status || item.invite_status === 'accepted';
+      });
+    } catch {
+      return [];
+    }
+  };
 
   // Booking State
   const [modalVisible, setModalVisible] = useState(false);
@@ -45,6 +67,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
       fetchEventDetails(eventId);
     } else if (initialEvent) {
       setEvent(initialEvent);
+      setLineupArtists(parseLineupArtists(initialEvent.lineup_artists));
     }
 
     // Step 3: Silent Tracking - Event View
@@ -82,16 +105,18 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
         date: new Date(data.event_date).toLocaleDateString(),
         venue: data.location_name + (data.city ? `, ${data.city}` : ''),
         image: data.poster_url, // Poster URL might need fallback if null in DB, handled in Image source
-        lineup: mockEvent.lineup, // Placeholder as we don't have lineup in DB yet
+        lineup: [],
         price: data.ticket_price,
         available: data.available_tickets,
         total: data.total_tickets,
       };
       setEvent(mappedEvent);
+      setLineupArtists(parseLineupArtists(data.lineup_artists));
     } catch (error) {
       console.error("Error fetching event details:", error);
       // Fallback to mock on error or show alert
       setEvent(mockEvent);
+      setLineupArtists(mockEvent.lineup);
     } finally {
       setLoading(false);
     }
@@ -297,16 +322,29 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
           <Text style={styles.description}>{event.description}</Text>
 
           <Text style={styles.sectionTitle}>Lineup</Text>
-          {event.lineup && event.lineup.map((artist: any) => (
-            <Card key={artist.id} onPress={() => navigate('artist-profile', { selectedArtist: artist })} style={styles.lineupCard}>
-              <Image source={{ uri: `https://images.unsplash.com/${artist.image}?w=200&h=200&fit=crop` }} style={styles.lineupImg} />
-              <View style={styles.lineupInfo}>
-                <Text style={styles.lineupName}>{artist.name}</Text>
-                <Text style={styles.lineupGenre}>{artist.genre}</Text>
-              </View>
-              <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
-            </Card>
-          ))}
+          {lineupArtists.length === 0 ? (
+            <Text style={styles.description}>No artists added to this event yet.</Text>
+          ) : (
+            lineupArtists.map((artist: any) => {
+              const name = artist.display_name || (artist.username ? `@${artist.username}` : 'Artist');
+              const genreText = Array.isArray(artist.genres) ? artist.genres.join(' • ') : (artist.genres || artist.genre || 'Performer');
+              const image = artist.avatar_url || artist.profile_image_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop';
+              return (
+                <Card
+                  key={artist.user_id}
+                  onPress={() => navigate('artist-profile', { selectedArtist: artist })}
+                  style={styles.lineupCard}
+                >
+                  <Image source={{ uri: image }} style={styles.lineupImg} />
+                  <View style={styles.lineupInfo}>
+                    <Text style={styles.lineupName}>{name}</Text>
+                    <Text style={styles.lineupGenre}>{genreText}</Text>
+                  </View>
+                  <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+                </Card>
+              );
+            })
+          )}
 
           {appUser?.id === event.organizer_id && (
             <>

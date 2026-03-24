@@ -1,8 +1,8 @@
-import { View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Modal, Pressable, Alert } from 'react-native';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw, MessageSquare, Star, CalendarDays, X } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -39,8 +39,12 @@ export default function ArtistDashboard({ navigate }: Props) {
   const isBoosted = profile?.is_boosted ?? false;
   const [recentReview, setRecentReview] = useState<any | null>(null);
   const [recentMessageRequest, setRecentMessageRequest] = useState<any | null>(null);
+  const [recentMessageRequests, setRecentMessageRequests] = useState<any[]>([]);
   const [recentEvent, setRecentEvent] = useState<any | null>(null);
+  const [lineupInvites, setLineupInvites] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [inviteActionLoadingId, setInviteActionLoadingId] = useState<string | null>(null);
 
   const formatRelativeTime = (iso: string | null | undefined) => {
     if (!iso) return '';
@@ -82,6 +86,34 @@ export default function ArtistDashboard({ navigate }: Props) {
           .maybeSingle();
         setRecentMessageRequest(reqData || null);
 
+        // Recent message requests with sender info
+        const { data: reqListData } = await supabase
+          .from('message_requests')
+          .select('id, sender_id, status, created_at')
+          .eq('receiver_id', appUser.id)
+          .order('created_at', { ascending: false })
+          .limit(8);
+        const safeReqList = reqListData || [];
+        if (safeReqList.length > 0) {
+          const senderIds = Array.from(new Set(safeReqList.map((r: any) => r.sender_id).filter(Boolean)));
+          const { data: senderProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, username, avatar_url')
+            .in('user_id', senderIds);
+          const senderMap = (senderProfiles || []).reduce((acc: Record<string, any>, p: any) => {
+            acc[p.user_id] = p;
+            return acc;
+          }, {});
+          setRecentMessageRequests(
+            safeReqList.map((r: any) => ({
+              ...r,
+              sender: senderMap[r.sender_id] || null,
+            }))
+          );
+        } else {
+          setRecentMessageRequests([]);
+        }
+
         // Latest upcoming booking/event for this artist
         const { data: bookingData } = await supabase
           .from('bookings')
@@ -92,11 +124,46 @@ export default function ArtistDashboard({ navigate }: Props) {
           .limit(1)
           .maybeSingle();
         setRecentEvent(bookingData || null);
+
+        // Recent lineup invites for this artist from events.lineup_artists
+        const { data: eventsData } = await supabase
+          .from('events')
+          .select('event_id, title, event_date, location_name, city, lineup_artists, is_deleted')
+          .eq('is_deleted', false)
+          .gte('event_date', new Date().toISOString())
+          .order('event_date', { ascending: true })
+          .limit(60);
+
+        const invites = (eventsData || []).flatMap((ev: any) => {
+          const lineup = Array.isArray(ev.lineup_artists)
+            ? ev.lineup_artists
+            : (() => {
+                try {
+                  return JSON.parse(ev.lineup_artists || '[]');
+                } catch {
+                  return [];
+                }
+              })();
+          const match = (lineup || []).find((item: any) => item?.user_id === appUser.id);
+          if (!match || match?.invite_status !== 'pending') return [];
+          return [{
+            id: `lineup-${ev.event_id}-${appUser.id}`,
+            event_id: ev.event_id,
+            title: ev.title,
+            event_date: ev.event_date,
+            location_name: ev.location_name,
+            city: ev.city,
+            invited_at: match?.invited_at || ev.event_date,
+          }];
+        });
+        setLineupInvites(invites.slice(0, 8));
       } catch (e) {
         console.error('Error fetching dashboard activity:', e);
         setRecentReview(null);
         setRecentMessageRequest(null);
+        setRecentMessageRequests([]);
         setRecentEvent(null);
+        setLineupInvites([]);
       } finally {
         setLoadingActivity(false);
       }
@@ -150,6 +217,86 @@ export default function ArtistDashboard({ navigate }: Props) {
     return map;
   }, [repeatViewerRate]);
 
+  const unreadActivityCount = useMemo(() => {
+    const pendingReqCount = recentMessageRequests.filter((item: any) => item.status === 'pending').length;
+    return pendingReqCount + lineupInvites.length;
+  }, [recentMessageRequests, lineupInvites]);
+
+  const handleLineupInviteDecision = async (invite: any, decision: 'accept' | 'reject') => {
+    if (!appUser?.id || !invite?.event_id) return;
+    setInviteActionLoadingId(invite.id);
+    try {
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('event_id, title, event_date, location_name, city, lineup_artists')
+        .eq('event_id', invite.event_id)
+        .maybeSingle();
+      if (eventError) throw eventError;
+      if (!eventData) throw new Error('Event not found');
+
+      const lineup = Array.isArray((eventData as any).lineup_artists)
+        ? (eventData as any).lineup_artists
+        : (() => {
+            try {
+              return JSON.parse((eventData as any).lineup_artists || '[]');
+            } catch {
+              return [];
+            }
+          })();
+
+      const nextLineup = (lineup || [])
+        .map((item: any) => {
+          if (item?.user_id !== appUser.id) return item;
+          if (decision === 'reject') return null;
+          return { ...item, invite_status: 'accepted', accepted_at: new Date().toISOString() };
+        })
+        .filter(Boolean);
+
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ lineup_artists: nextLineup })
+        .eq('event_id', invite.event_id);
+      if (updateError) throw updateError;
+
+      if (decision === 'accept') {
+        const eventDate = new Date((eventData as any).event_date);
+        const scheduleDate = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+        const startTime = `${String(eventDate.getHours()).padStart(2, '0')}:${String(eventDate.getMinutes()).padStart(2, '0')}:00`;
+        const scheduleTitle = (eventData as any).title || 'Event';
+        const venue = [(eventData as any).location_name, (eventData as any).city].filter(Boolean).join(', ') || null;
+
+        const { data: existingSchedule } = await supabase
+          .from('artist_schedule')
+          .select('schedule_id')
+          .eq('artist_id', appUser.id)
+          .eq('schedule_date', scheduleDate)
+          .eq('title', scheduleTitle)
+          .limit(1);
+
+        if (!existingSchedule || existingSchedule.length === 0) {
+          const { error: scheduleError } = await supabase.from('artist_schedule').insert({
+            artist_id: appUser.id,
+            schedule_date: scheduleDate,
+            title: scheduleTitle,
+            notes: 'Added from event lineup invite',
+            start_time: startTime,
+            duration_minutes: null,
+            venue,
+            location_address: null,
+          });
+          if (scheduleError) throw scheduleError;
+        }
+      }
+
+      setLineupInvites((prev) => prev.filter((x) => x.id !== invite.id));
+      Alert.alert('Updated', decision === 'accept' ? 'Event invite accepted and added to your schedule.' : 'Event invite rejected.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to update event invite.');
+    } finally {
+      setInviteActionLoadingId(null);
+    }
+  };
+
   if (isLoading && !dailyTrend) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 16 }]}>
@@ -201,7 +348,14 @@ export default function ArtistDashboard({ navigate }: Props) {
           <View style={styles.headerBtns}>
             {isLoading && <ActivityIndicator size="small" color="#6366F1" />}
             <Button variant="ghost" size="icon" onPress={refresh}><RefreshCw size={18} color="rgba(255,255,255,0.5)" /></Button>
-            <Button variant="ghost" size="icon"><Bell size={20} color="rgba(255,255,255,0.5)" /></Button>
+            <Button variant="ghost" size="icon" onPress={() => setShowNotifications(true)} style={styles.bellBtn}>
+              <Bell size={20} color="rgba(255,255,255,0.5)" />
+              {unreadActivityCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadActivityCount > 9 ? '9+' : unreadActivityCount}</Text>
+                </View>
+              )}
+            </Button>
             <Button variant="ghost" size="icon"><Settings size={20} color="rgba(255,255,255,0.5)" /></Button>
           </View>
         </View>
@@ -340,6 +494,108 @@ export default function ArtistDashboard({ navigate }: Props) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <Modal visible={showNotifications} transparent animationType="slide" onRequestClose={() => setShowNotifications(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowNotifications(false)}>
+          <Pressable style={styles.notificationsSheet} onPress={() => {}}>
+            <View style={styles.notificationsHeader}>
+              <Text style={styles.notificationsTitle}>Recent Activity</Text>
+              <Button variant="ghost" size="icon" onPress={() => setShowNotifications(false)}>
+                <X size={18} color="rgba(255,255,255,0.7)" />
+              </Button>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+              {loadingActivity ? (
+                <ActivityIndicator color="#6366F1" style={{ marginTop: 20 }} />
+              ) : (
+                <>
+                  {lineupInvites.length > 0 && lineupInvites.map((invite: any) => (
+                    <View key={invite.id} style={styles.inviteCard}>
+                      <View style={styles.activityRowNoBorder}>
+                        <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(16,185,129,0.14)' }]}>
+                          <CalendarDays size={15} color="#34D399" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.activityTitle}>Lineup invite: {invite.title}</Text>
+                          <Text style={styles.activityMeta}>
+                            {new Date(invite.event_date).toLocaleDateString()} • {invite.location_name || invite.city || 'Event venue'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.inviteActions}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onPress={() => handleLineupInviteDecision(invite, 'reject')}
+                          disabled={inviteActionLoadingId === invite.id}
+                          style={styles.rejectBtn}
+                        >
+                          <Text style={styles.rejectBtnText}>Reject</Text>
+                        </Button>
+                        <Button
+                          size="sm"
+                          onPress={() => handleLineupInviteDecision(invite, 'accept')}
+                          disabled={inviteActionLoadingId === invite.id}
+                          style={styles.acceptBtn}
+                        >
+                          <Text style={styles.acceptBtnText}>
+                            {inviteActionLoadingId === invite.id ? 'Saving...' : 'Accept'}
+                          </Text>
+                        </Button>
+                      </View>
+                    </View>
+                  ))}
+
+                  {recentMessageRequests.length > 0 ? (
+                    recentMessageRequests.map((req: any) => {
+                      const senderName = req.sender?.display_name || (req.sender?.username ? `@${req.sender.username}` : 'Someone');
+                      return (
+                        <View key={req.id} style={styles.activityRow}>
+                          <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(99,102,241,0.16)' }]}>
+                            <MessageSquare size={15} color="#A5B4FC" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.activityTitle}>{senderName} sent a message request</Text>
+                            <Text style={styles.activityMeta}>{req.status} • {formatRelativeTime(req.created_at)}</Text>
+                          </View>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.emptyActivityText}>No recent message requests.</Text>
+                  )}
+
+                  {recentReview && (
+                    <View style={styles.activityRow}>
+                      <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(250,204,21,0.14)' }]}>
+                        <Star size={15} color="#FACC15" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.activityTitle}>New review received</Text>
+                        <Text style={styles.activityMeta}>{formatRelativeTime(recentReview.created_at)}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {recentEvent && (
+                    <View style={styles.activityRow}>
+                      <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(16,185,129,0.14)' }]}>
+                        <CalendarDays size={15} color="#34D399" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.activityTitle}>Upcoming booking on {new Date(recentEvent.event_date).toLocaleDateString()}</Text>
+                        <Text style={styles.activityMeta}>{recentEvent.status} • {formatRelativeTime(recentEvent.created_at || recentEvent.event_date)}</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <BottomNav activeTab="home" navigate={navigate} userRole="artist" isAuthenticated />
     </View>
   );
@@ -366,6 +622,20 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.8 },
   subtitle: { color: 'rgba(255,255,255,0.4)', marginTop: 3, fontSize: 13 },
   headerBtns: { flexDirection: 'row', gap: 4, alignItems: 'center' },
+  bellBtn: { position: 'relative' },
+  bellBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: '#F43F5E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   boostBadge: { alignSelf: 'flex-start', marginBottom: 20 },
 
   // Section titles
@@ -424,4 +694,69 @@ const styles = StyleSheet.create({
 
   // Churn
   churnBtn: { marginTop: 16, backgroundColor: '#F43F5E', width: 220, alignSelf: 'flex-start' },
+
+  // Notifications
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  notificationsSheet: {
+    backgroundColor: '#0F172A',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 22,
+    maxHeight: '70%',
+    borderTopWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  notificationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  notificationsTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  activityIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  activityTitle: { color: '#E5E7EB', fontSize: 14, fontWeight: '600' },
+  activityMeta: { color: 'rgba(255,255,255,0.48)', fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
+  emptyActivityText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, paddingVertical: 8 },
+  inviteCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.25)',
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    marginBottom: 10,
+  },
+  activityRowNoBorder: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingBottom: 10,
+  },
+  inviteActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  acceptBtn: { backgroundColor: '#22C55E' },
+  acceptBtnText: { color: '#fff', fontWeight: '700' },
+  rejectBtn: { borderColor: 'rgba(239,68,68,0.5)' },
+  rejectBtnText: { color: '#FCA5A5', fontWeight: '700' },
 });
