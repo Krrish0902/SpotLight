@@ -28,6 +28,8 @@ interface ProfileRow {
   latitude: number | null;
   longitude: number | null;
   is_boosted: boolean | null;
+  avatar_url?: string | null;
+  profile_image_url?: string | null;
 }
 
 /** Haversine distance in km */
@@ -81,7 +83,25 @@ export const searchArtists = async (
       return [];
     }
 
-    return (data || []).map((profile: ProfileRow) => ({
+    const rows: ProfileRow[] = data || [];
+    if (rows.length === 0) return [];
+
+    // Backfill avatar URLs in case RPC does not include image fields.
+    const userIds = rows.map((p) => p.user_id).filter(Boolean);
+    let profileImageByUserId: Record<string, string | null> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, avatar_url, profile_image_url')
+        .in('user_id', userIds);
+
+      profileImageByUserId = (profiles || []).reduce((acc: Record<string, string | null>, p: any) => {
+        acc[p.user_id] = p.avatar_url || p.profile_image_url || null;
+        return acc;
+      }, {});
+    }
+
+    return rows.map((profile: ProfileRow) => ({
       id: profile.profile_id || profile.user_id || 'unknown',
       user_id: profile.user_id,
       name: profile.display_name || profile.username || 'Unknown Artist',
@@ -90,7 +110,10 @@ export const searchArtists = async (
       genre: Array.isArray(profile.genres) ? profile.genres.join(' • ') : (profile.genres || 'Music'),
       location: profile.city || 'Unknown Location',
       profile_image:
-        'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop',
+        profile.avatar_url ||
+        profile.profile_image_url ||
+        profileImageByUserId[profile.user_id] ||
+        '',
       is_available: true,
       is_boosted: profile.is_boosted ?? false,
       latitude: profile.latitude,

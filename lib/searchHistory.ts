@@ -1,16 +1,57 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Artist } from '../screens/searchService';
+import { supabase } from './supabase';
 
 const MAX_HISTORY_ITEMS = 8;
 
 // Helper to generate user-specific storage key
 const getStorageKey = (userId: string) => `spotlight_recent_artists_${userId}`;
+const PLACEHOLDER_MARKERS = [
+  'images.unsplash.com/photo-1511671782779-c97d3d27a1d4',
+  'images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+];
+
+const isPlaceholderImage = (url?: string | null) =>
+  !url || PLACEHOLDER_MARKERS.some((marker) => url.includes(marker));
+
+const hydrateRecentSearchImages = async (items: Artist[]): Promise<Artist[]> => {
+  const candidates = items.filter((item) => isPlaceholderImage(item.profile_image));
+  if (candidates.length === 0) return items;
+
+  const userIds = Array.from(new Set(candidates.map((item) => item.user_id).filter(Boolean)));
+  if (userIds.length === 0) return items;
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, avatar_url, profile_image_url')
+    .in('user_id', userIds);
+
+  if (!profiles || profiles.length === 0) return items;
+
+  const imageByUserId = (profiles as any[]).reduce((acc: Record<string, string>, p: any) => {
+    const image = p.avatar_url || p.profile_image_url;
+    if (image) acc[p.user_id] = image;
+    return acc;
+  }, {});
+
+  return items.map((item) => {
+    if (!isPlaceholderImage(item.profile_image)) return item;
+    const image = imageByUserId[item.user_id];
+    return image ? { ...item, profile_image: image } : item;
+  });
+};
 
 export const getRecentSearches = async (userId: string): Promise<Artist[]> => {
   if (!userId) return [];
   try {
     const jsonValue = await AsyncStorage.getItem(getStorageKey(userId));
-    return jsonValue != null ? JSON.parse(jsonValue) : [];
+    const parsed: Artist[] = jsonValue != null ? JSON.parse(jsonValue) : [];
+    const hydrated = await hydrateRecentSearchImages(parsed);
+    // Persist upgraded history to avoid repeated lookups
+    if (hydrated.some((item, idx) => item.profile_image !== parsed[idx]?.profile_image)) {
+      await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(hydrated));
+    }
+    return hydrated;
   } catch (e) {
     console.error('Failed to load search history', e);
     return [];

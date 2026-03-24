@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert 
 import * as Location from 'expo-location';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Filter, X, MapPin } from 'lucide-react-native';
+import { Search, X, MapPin, SlidersHorizontal } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -15,6 +15,10 @@ import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSear
 interface Props {
   navigate: (screen: string, data?: any) => void;
 }
+
+const ACCENT = '#22D3EE';
+const ACCENT_SOFT = 'rgba(34,211,238,0.35)';
+const ACCENT_TEXT_DARK = '#0A2A33';
 
 export default function SearchDiscover({ navigate }: Props) {
   const { appUser, profile } = useAuth();
@@ -130,17 +134,21 @@ export default function SearchDiscover({ navigate }: Props) {
   };
 
   const renderItem = ({ item }: { item: Artist }) => {
+    const avatarSource = item.profile_image?.trim()
+      ? { uri: item.profile_image }
+      : { uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop' };
     return (
       <Pressable
-        style={({ pressed }) => [styles.resultItem, pressed && styles.pressedItem]}
+        style={({ pressed }) => [styles.resultCard, pressed && styles.pressedItem]}
         onPress={() => handleArtistSelect(item)}
       >
-        <Image source={{ uri: item.profile_image }} style={styles.avatar} />
+        <Image source={avatarSource} style={styles.avatar} />
         <View style={styles.textContainer}>
-          <Text style={styles.name}>{item.display_name || item.name}</Text>
-          <Text style={styles.username}>
+          <Text style={styles.name} numberOfLines={1}>{item.display_name || item.name}</Text>
+          <Text style={styles.username} numberOfLines={1}>
             {item.username ? `@${item.username}` : item.genre}
           </Text>
+          <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
         </View>
         {showRecent && (
           <Pressable onPress={() => handleRemoveRecent(item.id)} hitSlop={12} style={styles.removeBtn}>
@@ -154,13 +162,12 @@ export default function SearchDiscover({ navigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={StyleSheet.absoluteFill} />
 
       <FlatList
         data={showRecent ? recentSearches : artists}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         
@@ -169,9 +176,6 @@ export default function SearchDiscover({ navigate }: Props) {
         ListHeaderComponent={
           <>
             <View style={styles.header}>
-              <Button variant="ghost" size="icon" onPress={() => navigate('public-home')}>
-                <ChevronLeft size={24} color="#fff" />
-              </Button>
               <Text style={styles.title}>Discover Artists</Text>
             </View>
 
@@ -180,8 +184,9 @@ export default function SearchDiscover({ navigate }: Props) {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search artists, genres..."
-                leftIcon={<Search size={20} color="rgba(255,255,255,0.4)" />}
+                leftIcon={<Search size={20} color="rgba(255,255,255,0.45)" />}
                 containerStyle={styles.searchInput}
+                style={styles.searchInputField}
                 onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
               />
@@ -190,14 +195,14 @@ export default function SearchDiscover({ navigate }: Props) {
                 style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
                 onPress={() => setShowFilters(!showFilters)}
               >
-                <Filter size={20} color="#fff" />
+                <SlidersHorizontal size={19} color="#fff" />
               </Button>
             </View>
 
             {showFilters && (
               <Card style={styles.filterCard}>
                 <View style={styles.filterHeader}>
-                  <MapPin size={18} color="#a855f7" />
+                  <MapPin size={18} color={ACCENT} />
                   <Text style={styles.filterTitle}>Filter by distance (km)</Text>
                 </View>
                 <Input
@@ -208,6 +213,21 @@ export default function SearchDiscover({ navigate }: Props) {
                   containerStyle={styles.distanceInput}
                 />
                 <Text style={styles.distanceHint}>Leave empty for no distance limit</Text>
+                <View style={styles.filterActions}>
+                  <Button
+                    variant="outline"
+                    style={styles.filterActionBtn}
+                    onPress={() => setDistanceInput('')}
+                  >
+                    <Text style={styles.filterActionText}>Reset</Text>
+                  </Button>
+                  <Button
+                    style={[styles.filterActionBtn, styles.applyBtn]}
+                    onPress={() => setShowFilters(false)}
+                  >
+                    <Text style={styles.filterActionTextPrimary}>Apply</Text>
+                  </Button>
+                </View>
               </Card>
             )}
 
@@ -220,7 +240,7 @@ export default function SearchDiscover({ navigate }: Props) {
               </View>
             )}
 
-            {loading && <ActivityIndicator color="#a855f7" style={styles.loader} />}
+            {loading && <ActivityIndicator color={ACCENT} style={styles.loader} />}
           </>
         }
         ListEmptyComponent={
@@ -242,34 +262,41 @@ export default function SearchDiscover({ navigate }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingBottom: 120 }, // Removed vertical padding to allow edge-to-edge feel
+  listContent: { paddingBottom: 120, paddingTop: 8 },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingTop: 72,
+    paddingBottom: 22,
   },
-
-  
-
-  
 
   searchInput: { flex: 1 },
+  searchInputField: {
+    minHeight: 56,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
 
   filterBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   filterBtnActive: {
-    backgroundColor: 'rgba(168,85,247,0.5)',
+    backgroundColor: ACCENT_SOFT,
   },
   filterCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     marginBottom: 16,
     padding: 16,
     backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   filterHeader: {
     flexDirection: 'row',
@@ -290,6 +317,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
   },
+  filterActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  filterActionBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 100,
+  },
+  applyBtn: {
+    backgroundColor: ACCENT,
+  },
+  filterActionText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '700',
+  },
+  filterActionTextPrimary: {
+    color: ACCENT_TEXT_DARK,
+    fontWeight: '800',
+  },
 
   loader: {
     marginTop: 20,
@@ -304,45 +352,53 @@ const styles = StyleSheet.create({
 
   
   resultItem: {
+    display: 'none',
+  },
+  resultCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    width: '100%',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   pressedItem: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    marginRight: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
   textContainer: { flex: 1, justifyContent: 'center' },
-  name: { color: '#ffffff', fontWeight: '600', fontSize: 16, marginBottom: 2 },
-  username: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '500' },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: 84 },
+  name: { color: '#ffffff', fontWeight: '700', fontSize: 16, marginBottom: 2, letterSpacing: -0.2 },
+  username: { color: 'rgba(255,255,255,0.72)', fontSize: 13, fontWeight: '500' },
+  location: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 3 },
 
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 24,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#ffffff',
-    letterSpacing: -1,
   },// Recent Search Styles
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     marginTop: 8,
     marginBottom: 8,
   },
@@ -352,7 +408,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   clearText: {
-    color: '#a855f7',
+    color: ACCENT,
     fontSize: 14,
     fontWeight: '500',
   },
