@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Image, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw } from 'lucide-react-native';
@@ -7,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import BottomNav from '../components/layout/BottomNav';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 
 // Analytics Imports
@@ -36,6 +39,73 @@ export default function ArtistDashboard({ navigate }: Props) {
   const { profile, appUser } = useAuth();
   const displayName = profile?.display_name ?? appUser?.email?.split('@')[0] ?? 'Artist';
   const isBoosted = profile?.is_boosted ?? false;
+  const [recentReview, setRecentReview] = useState<any | null>(null);
+  const [recentMessageRequest, setRecentMessageRequest] = useState<any | null>(null);
+  const [recentEvent, setRecentEvent] = useState<any | null>(null);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+
+  const formatRelativeTime = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return '';
+    const diffMs = Date.now() - t;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (!appUser?.id) return;
+      setLoadingActivity(true);
+      try {
+        // Latest review on this artist
+        const { data: reviewData } = await supabase
+          .from('artist_reviews')
+          .select('*')
+          .eq('artist_id', appUser.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setRecentReview(reviewData || null);
+
+        // Latest pending message request to this artist
+        const { data: reqData } = await supabase
+          .from('message_requests')
+          .select('*')
+          .eq('receiver_id', appUser.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setRecentMessageRequest(reqData || null);
+
+        // Latest upcoming booking/event for this artist
+        const { data: bookingData } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('artist_id', appUser.id)
+          .gte('event_date', new Date().toISOString())
+          .order('event_date', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        setRecentEvent(bookingData || null);
+      } catch (e) {
+        console.error('Error fetching dashboard activity:', e);
+        setRecentReview(null);
+        setRecentMessageRequest(null);
+        setRecentEvent(null);
+      } finally {
+        setLoadingActivity(false);
+      }
+    };
+
+    fetchActivity();
+  }, [appUser?.id]);
 
   const {
     isLoading, error, period, setPeriod, refresh, reachTrend, dailyTrend, heatmap, geo, funnel,

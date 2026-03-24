@@ -12,6 +12,7 @@ import { ChevronLeft, Share2, MapPin, Music, Calendar, MessageSquare, Star, Penc
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Tabs } from '../components/ui/Tabs';
+import { Textarea } from '../components/ui/Textarea';
 import BottomNav from '../components/layout/BottomNav';
 import { VideoFeedItem, VideoFeedItemData } from '../components/VideoFeedItem';
 import { useAuth } from '../lib/auth-context';
@@ -63,6 +64,12 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [videoFeedVisible, setVideoFeedVisible] = useState(false);
   const [videoFeedInitialIndex, setVideoFeedInitialIndex] = useState(0);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [userReview, setUserReview] = useState<any | null>(null);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   const videoListRef = useRef<FlatList>(null);
   const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -98,6 +105,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           }
         })();
       }
+      fetchReviews();
     }
   }, [targetArtistId, isOwnProfile]);
 
@@ -182,6 +190,94 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       setUpcomingEvents([]);
     } finally {
       setLoadingEvents(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    if (!targetArtistId) return;
+    setLoadingReviews(true);
+    try {
+      const { data, error } = await supabase
+        .from('artist_reviews')
+        .select('*')
+        .eq('artist_id', targetArtistId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const allReviews = data || [];
+      setReviews(allReviews);
+
+      if (appUser?.id) {
+        const existing = allReviews.find((r: any) => r.user_id === appUser.id);
+        setUserReview(existing || null);
+      } else {
+        setUserReview(null);
+      }
+    } catch (e) {
+      console.error('Error fetching reviews:', e);
+      setReviews([]);
+      setUserReview(null);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!targetArtistId || !appUser || !newComment.trim() || submittingReview) return;
+
+    try {
+      setSubmittingReview(true);
+
+      const reviewerDisplayName =
+        (profile as any)?.display_name ||
+        (profile as any)?.name ||
+        (profile as any)?.username ||
+        null;
+      const reviewerUsername = (profile as any)?.username || null;
+      const reviewerAvatarUrl = (profile as any)?.avatar_url || null;
+
+      const { data: existing, error: existingError } = await supabase
+        .from('artist_reviews')
+        .select('id')
+        .eq('artist_id', targetArtistId)
+        .eq('user_id', appUser.id)
+        .limit(1);
+
+      if (existingError) throw existingError;
+
+      if (existing && existing.length > 0) {
+        Alert.alert('Already reviewed', 'You can only leave one review for this artist.');
+        await fetchReviews();
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('artist_reviews')
+        .insert({
+          artist_id: targetArtistId,
+          user_id: appUser.id,
+          rating: newRating,
+          comment: newComment.trim(),
+          reviewer_display_name: reviewerDisplayName,
+          reviewer_username: reviewerUsername,
+          reviewer_avatar_url: reviewerAvatarUrl,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const inserted = data as any;
+      setNewComment('');
+      setNewRating(5);
+      setUserReview(inserted);
+      setReviews((prev) => [inserted, ...prev]);
+    } catch (e: any) {
+      console.error('Error submitting review:', e);
+      Alert.alert('Error', e?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -302,6 +398,11 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const rawCoverUrl = dbCover || defaultCover;
   const coverSeparator = rawCoverUrl.includes('?') ? '&' : '?';
   const displayCoverUrl = `${rawCoverUrl}${coverSeparator}t=${timestamp}`;
+
+  const eventsCount = upcomingEvents.length;
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 ? reviews.reduce((sum, r: any) => sum + (r.rating || 0), 0) / totalReviews : 0;
+  const ratingLabel = totalReviews > 0 ? `${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'No reviews yet';
 
   return (
     <View style={styles.container}>
@@ -593,37 +694,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
               <ChevronLeft size={24} color="#fff" />
             </Button>
           </View>
-          <FlatList
-            ref={videoListRef}
-            data={videos}
-            keyExtractor={(item) => item.video_id}
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            onViewableItemsChanged={onViewableVideosChanged}
-            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-            initialScrollIndex={videoFeedInitialIndex}
-            getItemLayout={(_d, index) => ({
-              length: SCREEN_HEIGHT,
-              offset: SCREEN_HEIGHT * index,
-              index,
-            })}
-            renderItem={({ item, index }) => (
-              <VideoFeedItem
-                item={item}
-                isActive={index === activeVideoIndex}
-                muted={videoMuted}
-                onToggleMute={() => setVideoMuted((m) => !m)}
-                showProfileOverlay={false}
-                containerHeight={SCREEN_HEIGHT}
-                containerWidth={SCREEN_WIDTH}
-              />
-            )}
-          />
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
