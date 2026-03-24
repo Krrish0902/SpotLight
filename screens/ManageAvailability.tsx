@@ -41,8 +41,9 @@ type WorkItem = Booking | ScheduleEntry;
 
 interface Props { navigate: (screen: string) => void; }
 
-const WORK_DATE_COLOR = '#a855f7';
-const SELECTED_COLOR = '#7e22ce';
+const WORK_DATE_COLOR = '#22D3EE';
+const SELECTED_COLOR = 'rgba(34,211,238,0.28)';
+const SELECTED_TEXT_COLOR = '#FFFFFF';
 
 export default function ManageAvailability({ navigate }: Props) {
   const { appUser } = useAuth();
@@ -103,7 +104,7 @@ export default function ManageAvailability({ navigate }: Props) {
   const markedDates = (): Record<string, object> => {
     const base = getWorkDates();
     if (selectedDate) {
-      base[selectedDate] = { ...base[selectedDate], selected: true, selectedColor: SELECTED_COLOR };
+      base[selectedDate] = { ...base[selectedDate], selected: true, selectedColor: SELECTED_COLOR, selectedTextColor: SELECTED_TEXT_COLOR };
     }
     return base;
   };
@@ -213,12 +214,15 @@ export default function ManageAvailability({ navigate }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+    <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={styles.container}>
       <View style={styles.header}>
         <Button variant="ghost" size="icon" onPress={() => navigate('artist-dashboard')}>
           <ChevronLeft size={24} color="#fff" />
         </Button>
-        <Text style={styles.title}>Manage Availability</Text>
+        <View>
+          <Text style={styles.title}>Manage Availability</Text>
+          <Text style={styles.subtitle}>Plan your time and keep your schedule updated</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -231,16 +235,19 @@ export default function ManageAvailability({ navigate }: Props) {
         <View style={styles.calendarWrap}>
           <Calendar
             theme={{
-              backgroundColor: 'rgba(17,24,39,0.5)',
-              calendarBackground: 'rgba(17,24,39,0.5)',
-              textSectionTitleColor: '#fff',
+              backgroundColor: 'transparent',
+              calendarBackground: 'transparent',
+              textSectionTitleColor: 'rgba(255,255,255,0.72)',
               selectedDayBackgroundColor: SELECTED_COLOR,
-              selectedDayTextColor: '#fff',
-              todayTextColor: '#a855f7',
+              selectedDayTextColor: SELECTED_TEXT_COLOR,
+              todayTextColor: '#22D3EE',
               dayTextColor: '#fff',
               monthTextColor: '#fff',
               textDisabledColor: 'rgba(255,255,255,0.3)',
-              arrowColor: '#a855f7',
+              arrowColor: '#22D3EE',
+              textDayFontWeight: '600',
+              textMonthFontWeight: '700',
+              textDayHeaderFontWeight: '600',
             }}
             markedDates={markedDates()}
             onDayPress={(day) => setSelectedDate(day.dateString)}
@@ -260,7 +267,6 @@ export default function ManageAvailability({ navigate }: Props) {
               </Text>
               <Button
                 variant="outline"
-                size="sm"
                 onPress={() => {
                   setShowAddModal(true);
                   setAddTitle('');
@@ -278,7 +284,7 @@ export default function ManageAvailability({ navigate }: Props) {
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#a855f7" style={{ marginVertical: 24 }} />
+              <ActivityIndicator color="#22D3EE" style={{ marginVertical: 24 }} />
             ) : (
               <>
                 {itemsForDate(selectedDate).length === 0 ? (
@@ -319,7 +325,7 @@ export default function ManageAvailability({ navigate }: Props) {
                               </View>
                               <View style={styles.itemActions}>
                                 <Button variant="ghost" size="icon" onPress={() => setEditItem(item as ScheduleEntry)}>
-                                  <Pencil size={18} color="#a855f7" />
+                                  <Pencil size={18} color="#22D3EE" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onPress={() => handleDeleteSchedule(item as ScheduleEntry)}>
                                   <Trash2 size={18} color="#f87171" />
@@ -362,7 +368,7 @@ export default function ManageAvailability({ navigate }: Props) {
                   onPress={() => setShowTimePicker((v) => !v)}
                   style={styles.timeBtn}
                 >
-                  <Clock size={18} color="#a855f7" />
+                  <Clock size={18} color="#22D3EE" />
                   <Text style={styles.timeBtnText}>
                     {addStartTime
                       ? addStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -409,7 +415,7 @@ export default function ManageAvailability({ navigate }: Props) {
               <Button variant="outline" onPress={() => setShowAddModal(false)} style={styles.modalBtn}>
                 Cancel
               </Button>
-              <Button onPress={handleAddWork} disabled={saving} style={styles.modalBtn}>
+              <Button onPress={handleAddWork} disabled={saving} style={[styles.modalBtn, styles.modalPrimaryBtn]}>
                 {saving ? <ActivityIndicator color="#fff" /> : 'Add'}
               </Button>
             </View>
@@ -485,7 +491,7 @@ function EditScheduleForm({
       <Input placeholder="Title" value={title} onChangeText={setTitle} containerStyle={styles.editInput} />
       <View style={styles.timeRow}>
         <Button variant="outline" onPress={() => setShowTimePicker((v) => !v)} style={styles.editTimeBtn}>
-          <Clock size={16} color="#a855f7" />
+          <Clock size={16} color="#22D3EE" />
           <Text style={styles.timeBtnText}>
             {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Set time'}
           </Text>
@@ -523,31 +529,62 @@ function EditScheduleForm({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  scroll: { padding: 24 },
-  infoCard: { backgroundColor: 'rgba(147,51,234,0.2)', borderColor: 'rgba(168,85,247,0.3)', padding: 16, marginBottom: 24 },
-  infoText: { color: '#fff', fontSize: 14 },
-  calendarWrap: { marginBottom: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(17,24,39,0.5)' },
-  detailsCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 20 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  title: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  subtitle: { color: 'rgba(255,255,255,0.55)', fontSize: 13, marginTop: 2 },
+  scroll: { padding: 16, paddingBottom: 30 },
+  infoCard: {
+    backgroundColor: 'rgba(34,211,238,0.1)',
+    borderColor: 'rgba(34,211,238,0.28)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  infoText: { color: '#D8EEF3', fontSize: 14, lineHeight: 20 },
+  calendarWrap: {
+    marginBottom: 16,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
+    padding: 10,
+  },
+  detailsCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
+    padding: 20,
+  },
   detailsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  detailsTitle: { color: '#fff', fontWeight: '600', fontSize: 18 },
-  addBtn: { flexDirection: 'row', gap: 6, borderColor: 'rgba(168,85,247,0.5)' },
+  detailsTitle: { color: '#fff', fontWeight: '700', fontSize: 18 },
+  addBtn: { flexDirection: 'row', gap: 6, borderColor: 'rgba(34,211,238,0.5)', borderRadius: 100, paddingHorizontal: 14 },
   addBtnText: { color: '#fff', fontSize: 14 },
   emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginVertical: 8 },
-  itemRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  itemRow: { paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)' },
   itemInfo: { flex: 1 },
-  itemTitle: { color: '#fff', fontWeight: '500' },
+  itemTitle: { color: '#fff', fontWeight: '700', fontSize: 15 },
   itemMeta: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
   itemNotes: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
   itemActions: { flexDirection: 'row', gap: 4 },
-  statusBadge: { backgroundColor: 'rgba(59,130,246,0.2)', borderWidth: 0 },
+  statusBadge: { backgroundColor: 'rgba(34,211,238,0.16)', borderWidth: 0, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   editForm: { marginTop: 8 },
   editInput: { marginBottom: 12 },
   editTextarea: { minHeight: 60, marginBottom: 12 },
   editActions: { flexDirection: 'row', gap: 12 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#111827', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalContent: { backgroundColor: '#0F172A', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
   modalSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 20 },
   modalScroll: { flex: 1 },
@@ -556,10 +593,11 @@ const styles = StyleSheet.create({
   modalTextarea: { minHeight: 80, marginBottom: 20 },
   modalActions: { flexDirection: 'row', gap: 12 },
   modalBtn: { flex: 1 },
+  modalPrimaryBtn: { backgroundColor: '#FDF2FF' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  timeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeBtnText: { color: '#a855f7', fontSize: 14 },
+  timeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderColor: 'rgba(34,211,238,0.4)' },
+  timeBtnText: { color: '#22D3EE', fontSize: 14, fontWeight: '700' },
   durationInput: { width: 100 },
-  editTimeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  editTimeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderColor: 'rgba(34,211,238,0.4)' },
   editDurationInput: { width: 90 },
 });

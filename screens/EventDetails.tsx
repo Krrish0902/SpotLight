@@ -234,7 +234,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#a855f7" />
+        <ActivityIndicator size="large" color="#22D3EE" />
       </View>
     );
   }
@@ -257,10 +257,11 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
 
   return (
     <View style={styles.container}>
+      <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerImage}>
           <Image source={imageSource} style={styles.headerImg} />
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)', '#000']} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['transparent', 'rgba(5,10,24,0.45)', '#050A18']} style={StyleSheet.absoluteFill} />
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={handleBack}>
             <ChevronLeft size={24} color="#fff" />
           </Button>
@@ -296,11 +297,11 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
             </View>
 
             <View style={styles.eventMeta}>
-              <MapPin size={20} color="#a855f7" />
+              <MapPin size={20} color="#22D3EE" />
               <Text style={styles.metaText}>{event.date}</Text>
             </View>
             <View style={styles.eventMeta}>
-              <MapPin size={20} color="#a855f7" />
+              <MapPin size={20} color="#22D3EE" />
               <Text style={styles.metaText}>{event.venue}</Text>
             </View>
             <View style={styles.eventMeta}>
@@ -314,7 +315,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
               disabled={status.disabled}
               onPress={() => { setQuantity(1); setModalVisible(true); }}
             >
-              {status.disabled ? 'Sold Out' : 'Get Tickets'}
+              <Text style={styles.ticketBtnText}>{status.disabled ? 'Sold Out' : 'Get Tickets'}</Text>
             </Button>
           </Card>
 
@@ -351,7 +352,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
               <Text style={styles.sectionTitle}>Organizer Insights</Text>
               <Card style={styles.insightsCard}>
                 <View style={styles.insightHeader}>
-                  <TrendingUp size={20} color="#a855f7" />
+                  <TrendingUp size={20} color="#22D3EE" />
                   <Text style={styles.insightTitle}>Sales Progress</Text>
                 </View>
                 <View style={styles.ringContainer}>
@@ -360,7 +361,7 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
                     radius={70}
                     innerRadius={55}
                     data={[
-                      { value: event.total - event.available, color: '#a855f7' },
+                      { value: event.total - event.available, color: '#22D3EE' },
                       { value: event.available, color: 'rgba(255,255,255,0.1)' },
                     ]}
                     centerLabelComponent={() => (
@@ -419,9 +420,9 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
             <Button
               onPress={handleBooking}
               disabled={bookingLoading}
-              style={{ marginTop: 24, backgroundColor: '#a855f7' }}
+              style={{ marginTop: 24, backgroundColor: '#FDF2FF' }}
             >
-              {bookingLoading ? <ActivityIndicator color="#fff" /> : 'Confirm Booking'}
+              {bookingLoading ? <ActivityIndicator color="#162447" /> : <Text style={styles.ticketBtnText}>Confirm Booking</Text>}
             </Button>
           </View>
         </View>
@@ -433,25 +434,28 @@ export default function EventDetails({ navigate, event: initialEvent, eventId }:
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#050A18' },
   scrollContent: { paddingBottom: 120 },
-  headerImage: { height: 320, position: 'relative' },
+  headerImage: { height: 320, position: 'relative', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: 'hidden' },
   headerImg: { width: '100%', height: '100%' },
-  backBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.4)' },
-  headerActions: { position: 'absolute', top: 48, right: 16, flexDirection: 'row', gap: 8 },
-  actionBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
+  backBtn: { position: 'absolute', top: 56, left: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.25)' },
+  headerActions: { position: 'absolute', top: 56, right: 16, flexDirection: 'row', gap: 8 },
+  actionBtn: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.25)' },
   shareBtn: { backgroundColor: 'rgba(0,0,0,0.4)' },
-  content: { padding: 24, marginTop: -32 },
+  content: { padding: 18, marginTop: -26 },
   eventCard: {
-    backgroundColor: 'rgba(17,24,39,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
     padding: 24,
     marginBottom: 24,
+    borderRadius: 28,
   },
-  eventTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
+  eventTitle: { fontSize: 30, fontWeight: '800', color: '#fff', marginBottom: 16, letterSpacing: -0.7 },
   eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   metaText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
-  ticketBtn: { backgroundColor: '#a855f7', marginTop: 16 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 12 },
+  ticketBtn: { backgroundColor: '#FDF2FF', marginTop: 16, borderRadius: 100, minHeight: 52 },
+  sectionTitle: { fontSize: 21, fontWeight: '800', color: '#fff', marginBottom: 12, letterSpacing: -0.4 },
   description: { color: 'rgba(255,255,255,0.7)', lineHeight: 24, marginBottom: 24 },
   lineupCard: {
     flexDirection: 'row',
@@ -459,18 +463,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     padding: 16,
     marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   lineupImg: { width: 64, height: 64, borderRadius: 8 },
   lineupInfo: { flex: 1, marginLeft: 16 },
   lineupName: { color: '#fff', fontWeight: '600', fontSize: 16 },
   lineupGenre: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  ticketBtnText: { color: '#fff', fontWeight: '600' },
+  ticketBtnText: { color: '#162447', fontWeight: '800' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
   disabledBtn: { backgroundColor: '#374151', opacity: 0.7 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#1f2937', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 },
+  modalContent: { backgroundColor: '#0F172A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48, borderTopWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   qtyContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
@@ -481,7 +488,7 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#374151', paddingTop: 16 },
   totalLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
   totalValue: { color: '#fbbf24', fontSize: 24, fontWeight: 'bold' },
-  insightsCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 20, marginBottom: 24 },
+  insightsCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)', borderWidth: StyleSheet.hairlineWidth, borderRadius: 24, padding: 20, marginBottom: 24 },
   insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   insightTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
   ringContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },

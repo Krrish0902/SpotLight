@@ -30,6 +30,7 @@ interface Video extends VideoFeedItemData {
 
 interface ScheduleEvent {
   id: string;
+  eventId?: string;
   date: string;
   time: string | null;
   title: string;
@@ -212,6 +213,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
           events.push({
             id: ev.event_id,
+            eventId: ev.event_id,
             date: dateStr,
             time: timeStr,
             title: ev.title || 'Event',
@@ -691,8 +693,13 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
             ) : tab === 'schedule' ? (
               <View style={styles.scheduleCard}>
                 {isOwnProfile && (
-                  <Button variant="outline" size="sm" onPress={() => navigate('manage-availability')} style={{ marginBottom: 12, alignSelf: 'flex-start' }}>
-                    <Text style={{ color: '#fff' }}>Manage Schedule</Text>
+                  <Button
+                    variant="outline"
+                    onPress={() => navigate('manage-availability')}
+                    style={{ marginBottom: 12, alignSelf: 'flex-start', minWidth: 170, minHeight: 40, paddingHorizontal: 14 }}
+                    textStyle={{ fontSize: 14, fontWeight: '600' }}
+                  >
+                    Manage Schedule
                   </Button>
                 )}
                 {loadingEvents ? (
@@ -704,7 +711,14 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                   </View>
                 ) : (
                   upcomingEvents.map((ev) => (
-                    <View key={ev.id} style={styles.scheduleRow}>
+                    <Pressable
+                      key={ev.id}
+                      style={styles.scheduleRow}
+                      onPress={() => {
+                        if (ev.eventId) navigate('event-details', { eventId: ev.eventId });
+                      }}
+                      disabled={!ev.eventId}
+                    >
                       <Calendar size={20} color="#a855f7" />
                       <View style={styles.scheduleInfo}>
                         <Text style={styles.scheduleTitle}>{ev.title}</Text>
@@ -722,7 +736,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                           <Badge style={styles.scheduleBadge}>{ev.status}</Badge>
                         )}
                       </View>
-                    </View>
+                    </Pressable>
                   ))
                 )}
               </View>

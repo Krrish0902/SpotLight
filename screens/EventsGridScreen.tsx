@@ -10,7 +10,7 @@ import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - 48) / 2; // 24px padding on sides, 12px gap
+const COLUMN_WIDTH = (width - 44) / 2;
 
 interface Event {
     event_id: string;
@@ -60,15 +60,15 @@ export default function EventsGridScreen({ navigate }: Props) {
                     style={styles.poster}
                     resizeMode="cover"
                 />
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.gradient} />
+                <LinearGradient colors={['transparent', 'rgba(5,10,24,0.85)']} style={styles.gradient} />
                 <View style={styles.info}>
                     <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
                     <View style={styles.metaRow}>
-                        <Calendar size={12} color="#a855f7" />
+                        <Calendar size={12} color="#22D3EE" />
                         <Text style={styles.metaText}>{new Date(item.event_date).toLocaleDateString()}</Text>
                     </View>
                     <View style={styles.metaRow}>
-                        <MapPin size={12} color="#a855f7" />
+                        <MapPin size={12} color="#22D3EE" />
                         <Text style={styles.metaText} numberOfLines={1}>{item.location_name}</Text>
                     </View>
                 </View>
@@ -77,7 +77,7 @@ export default function EventsGridScreen({ navigate }: Props) {
     );
 
     return (
-        <LinearGradient colors={['#030712', '#000']} style={styles.container}>
+        <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Upcoming Events</Text>
@@ -85,7 +85,7 @@ export default function EventsGridScreen({ navigate }: Props) {
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#a855f7" />
+                        <ActivityIndicator size="large" color="#22D3EE" />
                     </View>
                 ) : events.length === 0 ? (
                     <View style={styles.center}>
@@ -113,20 +113,21 @@ export default function EventsGridScreen({ navigate }: Props) {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     safeArea: { flex: 1 },
-    header: { padding: 24, paddingBottom: 16 },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+    header: { paddingHorizontal: 22, paddingTop: 72, paddingBottom: 20 },
+    headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.6 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
     emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16 },
-    listContent: { padding: 24, paddingBottom: 100 },
-    columnWrapper: { gap: 12 },
+    listContent: { paddingHorizontal: 14, paddingBottom: 100 },
+    columnWrapper: { gap: 10 },
     card: {
         width: COLUMN_WIDTH,
         backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 12,
+        borderRadius: 22,
         overflow: 'hidden',
-        marginBottom: 12,
+        marginBottom: 10,
         padding: 0,
-        borderWidth: 0,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: 'rgba(255,255,255,0.14)',
     },
     poster: {
         width: '100%',
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     },
     title: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '700',
         fontSize: 14,
         marginBottom: 8,
         ...Platform.select({
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     },
     metaText: {
         color: 'rgba(255,255,255,0.8)',
-        fontSize: 10,
+        fontSize: 11,
         flex: 1,
     },
 });

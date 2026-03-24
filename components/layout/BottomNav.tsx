@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Text } from '../ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Search, Calendar, User, MessageCircle } from 'lucide-react-native';
@@ -21,6 +21,9 @@ const tabs = [
   { id: 'events', Icon: Calendar, label: 'Events' },
   { id: 'profile', Icon: User, label: 'Profile' },
 ];
+
+const ACTIVE = '#22D3EE';
+const INACTIVE = 'rgba(255,255,255,0.58)';
 
 export default function BottomNav({ activeTab, navigate, userRole, isAuthenticated }: BottomNavProps) {
   const insets = useSafeAreaInsets();
@@ -100,7 +103,7 @@ export default function BottomNav({ activeTab, navigate, userRole, isAuthenticat
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View style={styles.content}>
         {tabs.map((tab) => {
           const Icon = tab.Icon;
@@ -109,12 +112,12 @@ export default function BottomNav({ activeTab, navigate, userRole, isAuthenticat
             <Pressable
               key={tab.id}
               onPress={() => handleTabPress(tab.id)}
-              style={styles.tab}
+              style={[styles.tab, isActive && styles.tabActive]}
             >
               <View>
                 <Icon
-                  size={24}
-                  color={isActive ? colors.purple[400] : colors['white/60']}
+                  size={20}
+                  color={isActive ? ACTIVE : INACTIVE}
                   strokeWidth={2}
                 />
                 {tab.id === 'chat' && unreadCount > 0 && (
@@ -126,7 +129,7 @@ export default function BottomNav({ activeTab, navigate, userRole, isAuthenticat
               <Text
                 style={[
                   styles.label,
-                  { color: isActive ? colors.purple[400] : colors['white/60'] },
+                  { color: isActive ? ACTIVE : INACTIVE },
                   isActive && styles.labelActive,
                 ]}
               >
@@ -146,43 +149,54 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    paddingHorizontal: 14,
+    backgroundColor: 'transparent',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(8,12,24,0.92)',
+    borderRadius: 26,
   },
   tab: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    minWidth: 62,
+  },
+  tabActive: {
+    backgroundColor: 'rgba(34,211,238,0.14)',
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
   },
   labelActive: {
-    fontWeight: '600',
+    fontWeight: '800',
   },
   badge: {
     position: 'absolute',
-    top: -4,
+    top: -5,
     right: -8,
-    backgroundColor: colors.purple[500],
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    backgroundColor: '#F43F5E',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: 'black',
+    borderColor: '#080C18',
   },
   badgeText: {
     color: 'white',

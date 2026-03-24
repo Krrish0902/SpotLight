@@ -221,7 +221,7 @@ export default function ChatHub({ navigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#030712', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={StyleSheet.absoluteFill} />
       
       <View style={styles.header}>
         <Text style={styles.title}>Messages</Text>
@@ -239,7 +239,7 @@ export default function ChatHub({ navigate }: Props) {
           {(tab) => tab === 'requests' ? (
              <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
                 {loading ? (
-                  <ActivityIndicator color="#a855f7" style={{ marginTop: 40 }} />
+                  <ActivityIndicator color="#22D3EE" style={{ marginTop: 40 }} />
                 ) : requests.length > 0 ? (
                   requests.map((req) => (
                     <Card key={req.id} style={styles.requestCard}>
@@ -270,11 +270,11 @@ export default function ChatHub({ navigate }: Props) {
                           <Text style={styles.btnText}>Decline</Text>
                         </Button>
                         <Button 
-                          style={[styles.actionBtn, { backgroundColor: '#a855f7' }]}
+                          style={[styles.actionBtn, styles.acceptBtn]}
                           onPress={() => handleRequestAction(req.id, 'accepted')}
                         >
                           <Check size={16} color="#fff" />
-                          <Text style={styles.btnText}>Accept</Text>
+                          <Text style={styles.btnTextPrimary}>Accept</Text>
                         </Button>
                       </View>
                     </Card>
@@ -290,7 +290,7 @@ export default function ChatHub({ navigate }: Props) {
           ) : (
             <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
                 {loading ? (
-                  <ActivityIndicator color="#a855f7" style={{ marginTop: 40 }} />
+                  <ActivityIndicator color="#22D3EE" style={{ marginTop: 40 }} />
                 ) : activeChats.length > 0 ? (
                   activeChats.map((chat) => (
                     <Pressable 
@@ -353,33 +353,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 72,
+    paddingHorizontal: 22,
+    paddingBottom: 18,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: '800',
     color: '#fff',
+    letterSpacing: -0.6,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 14,
   },
   listContainer: {
-    marginTop: 20,
+    marginTop: 18,
     marginBottom: 80, // Space for BottomNav
   },
   requestCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 24,
-    marginHorizontal: 16,
+    padding: 20,
+    marginHorizontal: 10,
     marginBottom: 16,
-    borderRadius: 32,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 26,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   requestRow: {
     flexDirection: 'row',
@@ -399,7 +398,7 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
@@ -431,21 +430,27 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 100,
   },
+  acceptBtn: { backgroundColor: '#FDF2FF' },
   btnText: {
-    color: '#162447',
+    color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  btnTextPrimary: {
+    color: '#162447',
+    fontSize: 15,
+    fontWeight: '800',
   },
   chatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 16,
+    padding: 14,
+    marginHorizontal: 10,
     marginBottom: 12,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 22,
     gap: 16,
   },
   chatAvatar: {
@@ -494,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   unreadBadge: {
-    backgroundColor: '#FDF2FF',
+    backgroundColor: '#22D3EE',
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -503,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadText: {
-    color: '#162447',
+    color: '#08313C',
     fontSize: 13,
     fontWeight: '800',
   },
