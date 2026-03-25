@@ -145,6 +145,7 @@ export default function UploadVideo({ navigate }: Props) {
           thumbnail_url: thumbnailPublicUrl,
           title: title,
           description: caption.trim() || null,
+          is_contest_entry: false,
           genres: genresArray,
           instruments: instrumentsArray,
           // Keep tags for existing feed/admin flows until those are migrated.

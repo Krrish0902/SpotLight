@@ -195,10 +195,7 @@ export default function AdminDashboard({ navigate }: Props) {
               <Calendar size={18} color="#22D3EE" />
               <Text style={styles.menuText}>Manage Live Events</Text>
             </Button>
-            <Button variant="ghost" onPress={() => navigate('moderate-content')} style={styles.menuBtn}>
-              <Flag size={18} color="#22D3EE" />
-              <Text style={styles.menuText}>Reported videos</Text>
-            </Button>
+           
           </Card>
           <Card style={styles.manageCard}>
             <Text style={styles.manageTitle}>Recent Activity</Text>

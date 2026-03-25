@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Svg, { Circle } from 'react-native-svg';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw, MessageSquare, Star, CalendarDays, X } from 'lucide-react-native';
+import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw, MessageSquare, Star, CalendarDays, X, Trophy } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -90,6 +90,8 @@ export default function ArtistDashboard({ navigate }: Props) {
   const [recentEvent, setRecentEvent] = useState<any | null>(null);
   const [lineupInvites, setLineupInvites] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [contestNotifications, setContestNotifications] = useState<any[]>([]);
+  const [unreadContestNotificationsCount, setUnreadContestNotificationsCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [inviteActionLoadingId, setInviteActionLoadingId] = useState<string | null>(null);
 
@@ -172,6 +174,34 @@ export default function ArtistDashboard({ navigate }: Props) {
           .maybeSingle();
         setRecentEvent(bookingData || null);
 
+        // Recent contest winner notifications
+        try {
+          const { data: notifListData, error: notifListErr } = await supabase
+            .from('user_notifications')
+            .select('notification_id, notification_type, message, created_at, is_read')
+            .eq('user_id', appUser.id)
+            .order('created_at', { ascending: false })
+            .limit(8);
+
+          if (!notifListErr) {
+            setContestNotifications(notifListData || []);
+          }
+
+          const { count: unreadCount, error: unreadCountErr } = await supabase
+            .from('user_notifications')
+            .select('notification_id', { count: 'exact', head: true })
+            .eq('user_id', appUser.id)
+            .eq('is_read', false);
+
+          if (!unreadCountErr) {
+            setUnreadContestNotificationsCount(unreadCount ?? 0);
+          }
+        } catch (e) {
+          console.error('Failed to load contest notifications:', e);
+          setContestNotifications([]);
+          setUnreadContestNotificationsCount(0);
+        }
+
         // Recent lineup invites for this artist from events.lineup_artists
         const { data: eventsData } = await supabase
           .from('events')
@@ -218,6 +248,27 @@ export default function ArtistDashboard({ navigate }: Props) {
 
     fetchActivity();
   }, [appUser?.id]);
+
+  // Mark contest winner notifications as read when the sheet opens.
+  useEffect(() => {
+    if (!showNotifications) return;
+    if (!appUser?.id) return;
+
+    const run = async () => {
+      try {
+        await supabase
+          .from('user_notifications')
+          .update({ is_read: true })
+          .eq('user_id', appUser.id)
+          .eq('is_read', false);
+        setUnreadContestNotificationsCount(0);
+      } catch (e) {
+        console.error('Failed to mark notifications as read:', e);
+      }
+    };
+
+    run();
+  }, [showNotifications, appUser?.id]);
 
   const {
     isLoading, error, period, setPeriod, refresh, reachTrend, dailyTrend, heatmap, geo, funnel,
@@ -266,8 +317,8 @@ export default function ArtistDashboard({ navigate }: Props) {
 
   const unreadActivityCount = useMemo(() => {
     const pendingReqCount = recentMessageRequests.filter((item: any) => item.status === 'pending').length;
-    return pendingReqCount + lineupInvites.length;
-  }, [recentMessageRequests, lineupInvites]);
+    return pendingReqCount + lineupInvites.length + unreadContestNotificationsCount;
+  }, [recentMessageRequests, lineupInvites, unreadContestNotificationsCount]);
 
   const handleLineupInviteDecision = async (invite: any, decision: 'accept' | 'reject') => {
     if (!appUser?.id || !invite?.event_id) return;
@@ -617,6 +668,21 @@ export default function ArtistDashboard({ navigate }: Props) {
                 <ActivityIndicator color="#6366F1" style={{ marginTop: 20 }} />
               ) : (
                 <>
+                  {contestNotifications.length > 0 &&
+                    contestNotifications.map((n: any) => (
+                      <View key={n.notification_id || String(n.created_at)} style={styles.activityRow}>
+                        <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(34,211,238,0.14)' }]}>
+                          <Trophy size={15} color="#22D3EE" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.activityTitle}>Contest Winner</Text>
+                          <Text style={styles.activityMeta}>
+                            {n.message} • {formatRelativeTime(n.created_at)}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+
                   {lineupInvites.length > 0 && lineupInvites.map((invite: any) => (
                     <View key={invite.id} style={styles.inviteCard}>
                       <View style={styles.activityRowNoBorder}>

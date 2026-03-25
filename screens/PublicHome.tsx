@@ -48,6 +48,7 @@ export default function PublicHome({ navigate }: Props) {
             is_boosted
           )
         `)
+        .eq('is_contest_entry', false)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;

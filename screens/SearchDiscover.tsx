@@ -103,6 +103,30 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
     }>
   >([]);
 
+  const [contestsLoading, setContestsLoading] = useState(false);
+  const [contests, setContests] = useState<
+    Array<{
+      contest_id: string;
+      title: string;
+      poster_url?: string | null;
+      end_date?: string | null;
+    }>
+  >([]);
+
+  const [winnersLoading, setWinnersLoading] = useState(false);
+  const [contestWinners, setContestWinners] = useState<
+    Array<{
+      contest_id: string;
+      contest_title: string;
+      contest_poster_url?: string | null;
+      winner_video_title?: string | null;
+      winner_thumbnail_url?: string | null;
+      winner_artist_id?: string | null;
+      winner_display_name?: string | null;
+      winner_username?: string | null;
+    }>
+  >([]);
+
   useEffect(() => {
     if (appUser?.id) {
       getRecentSearches(appUser.id).then(setRecentSearches);
@@ -218,6 +242,52 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
     run();
   }, [hasActiveSearch, showRecent]);
 
+  useEffect(() => {
+    if (hasActiveSearch || showRecent) {
+      setContests([]);
+      return;
+    }
+
+    const run = async () => {
+      setContestsLoading(true);
+      try {
+        const { data, error } = await supabase.rpc('get_active_contests_for_discover');
+        if (error) throw error;
+        setContests((data || []) as any);
+      } catch (e) {
+        console.error('Failed to load contests strip:', e);
+        setContests([]);
+      } finally {
+        setContestsLoading(false);
+      }
+    };
+
+    run();
+  }, [hasActiveSearch, showRecent]);
+
+  useEffect(() => {
+    if (hasActiveSearch || showRecent) {
+      setContestWinners([]);
+      return;
+    }
+
+    const run = async () => {
+      setWinnersLoading(true);
+      try {
+        const { data, error } = await supabase.rpc('get_contest_winners_for_discover');
+        if (error) throw error;
+        setContestWinners((data || []) as any);
+      } catch (e) {
+        console.error('Failed to load contest winners:', e);
+        setContestWinners([]);
+      } finally {
+        setWinnersLoading(false);
+      }
+    };
+
+    run();
+  }, [hasActiveSearch, showRecent]);
+
   const handleArtistSelect = async (artist: Artist) => {
     // Save full artist object to history
     if (appUser?.id) {
@@ -316,6 +386,109 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
 
             {!hasActiveSearch && !showRecent && (
               <>
+                <View style={styles.contestsSection}>
+                  <View style={styles.contestsHeader}>
+                    <Text style={styles.contestsTitle}>Contests</Text>
+                    <Text style={styles.contestsSub}>
+                      {contestsLoading ? 'Loading…' : `${contests.length} active`}
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.contestsScroll}
+                  >
+                    {contestsLoading ? null : contests.length === 0 ? (
+                      <View style={styles.contestsEmpty}>
+                        <Text style={styles.contestsEmptyText}>No active contests</Text>
+                      </View>
+                    ) : (
+                      contests.map((c) => (
+                        <Pressable
+                          key={c.contest_id}
+                          style={styles.contestCardWrap}
+                          onPress={() => navigate('contest-details', { contestId: c.contest_id })}
+                        >
+                          <View style={styles.contestPosterWrap}>
+                            <Image
+                              source={{
+                                uri:
+                                  c.poster_url ||
+                                  'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=450&fit=crop',
+                              }}
+                              style={styles.contestPoster}
+                              resizeMode="cover"
+                            />
+                            <LinearGradient
+                              colors={['transparent', 'rgba(0,0,0,0.65)']}
+                              style={styles.contestPosterGradient}
+                            />
+                          </View>
+                          <Text style={styles.contestTitleText} numberOfLines={1}>
+                            {c.title}
+                          </Text>
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+
+                <View style={styles.winnersSection}>
+                  <View style={styles.winnersHeader}>
+                    <Text style={styles.winnersTitle}>Winners</Text>
+                    <Text style={styles.winnersSub}>
+                      {winnersLoading ? 'Loading…' : `${contestWinners.length} recent`}
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.winnersScroll}
+                  >
+                    {winnersLoading ? null : contestWinners.length === 0 ? (
+                      <View style={styles.winnersEmpty}>
+                        <Text style={styles.winnersEmptyText}>No winners yet</Text>
+                      </View>
+                    ) : (
+                      contestWinners.map((w) => (
+                        <Pressable
+                          key={w.contest_id}
+                          style={styles.winnerCardWrap}
+                          onPress={() =>
+                            navigate('contest-details', { contestId: w.contest_id })
+                          }
+                        >
+                          <View style={styles.winnerPosterWrap}>
+                            <Image
+                              source={{
+                                uri:
+                                  w.winner_thumbnail_url ||
+                                  'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=400&h=600&fit=crop',
+                              }}
+                              style={styles.winnerPoster}
+                              resizeMode="cover"
+                            />
+                            <LinearGradient
+                              colors={['transparent', 'rgba(0,0,0,0.55)']}
+                              style={styles.winnerPosterGradient}
+                            />
+                          </View>
+                          <Text style={styles.winnerTitleText} numberOfLines={1}>
+                            {w.winner_video_title || 'Untitled'}
+                          </Text>
+                          {w.winner_display_name || w.winner_username ? (
+                            <Text style={styles.winnerSubText} numberOfLines={1}>
+                              {w.winner_display_name
+                                ? w.winner_display_name
+                                : `@${w.winner_username}`}
+                            </Text>
+                          ) : null}
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+
                 <View style={styles.picksSection}>
                   <View style={styles.picksHeader}>
                     <Text style={styles.picksTitle}>Our Picks</Text>
@@ -625,6 +798,116 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   picksEmptyText: { color: 'rgba(255,255,255,0.65)', fontWeight: '600', fontSize: 13 },
+
+  contestsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 10,
+  },
+  contestsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  contestsTitle: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  contestsSub: { color: 'rgba(255,255,255,0.55)', fontWeight: '600', fontSize: 12 },
+  contestsScroll: { gap: 14, paddingVertical: 2 },
+  contestsEmpty: {
+    width: 190,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  contestsEmptyText: { color: 'rgba(255,255,255,0.65)', fontWeight: '700', fontSize: 13 },
+  contestCardWrap: { width: 140, alignItems: 'center' },
+  contestPosterWrap: {
+    width: 140,
+    height: 180,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    position: 'relative',
+  },
+  contestPoster: { width: '100%', height: '100%' },
+  contestPosterGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 32,
+  },
+  contestTitleText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+    marginTop: 8,
+    width: '100%',
+  },
+
+  winnersSection: {
+    paddingHorizontal: 24,
+    marginBottom: 10,
+  },
+  winnersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  winnersTitle: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  winnersSub: { color: 'rgba(255,255,255,0.55)', fontWeight: '600', fontSize: 12 },
+  winnersScroll: { gap: 14, paddingVertical: 2 },
+  winnersEmpty: {
+    width: 190,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  winnersEmptyText: { color: 'rgba(255,255,255,0.65)', fontWeight: '700', fontSize: 13 },
+
+  winnerCardWrap: { width: 140, alignItems: 'center' },
+  winnerPosterWrap: {
+    width: 140,
+    height: 180,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    position: 'relative',
+  },
+  winnerPoster: { width: '100%', height: '100%' },
+  winnerPosterGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 32,
+  },
+  winnerTitleText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+    marginTop: 8,
+    width: '100%',
+  },
+  winnerSubText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '700',
+    fontSize: 12,
+    marginTop: 4,
+    width: '100%',
+  },
 
   pickCard: { width: 92, alignItems: 'center' },
   pickAvatarWrap: {

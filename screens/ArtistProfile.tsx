@@ -425,6 +425,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
         .from('videos')
         .select('*')
         .eq('artist_id', targetArtistId)
+        .eq('is_contest_entry', false)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
@@ -636,7 +637,6 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           <View style={styles.profileHeader}>
             <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.nameRow}>
               <Text style={styles.name}>{displayName}</Text>
-              {isBoosted && <Badge icon={<Star size={12} color="#fff" fill="#fff" />} style={styles.boostedBadge}>Boosted</Badge>}
             </Animated.View>
             {usernameStr ? (
               <View style={styles.usernameWrap}>

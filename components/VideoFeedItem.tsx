@@ -14,6 +14,54 @@ import { Button } from './ui/Button';
 const { width, height } = Dimensions.get('window');
 const BOTTOM_NAV_HEIGHT = 80;
 
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+
+async function callRpcRaw<T>(rpcName: string, params: Record<string, any>): Promise<T> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    },
+    body: JSON.stringify(params),
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    // Keep error info usable for debugging.
+    throw new Error(`RPC ${rpcName} failed (${res.status}): ${text}`);
+  }
+
+  return JSON.parse(text) as T;
+}
+
+function parseRpcFirstRow(result: any): any {
+  if (Array.isArray(result)) return result[0] ?? {};
+  return result ?? {};
+}
+
+function parseRpcBoolean(result: any): boolean {
+  if (typeof result === 'boolean') return result;
+  if (Array.isArray(result) && result.length > 0) {
+    const first = result[0];
+    if (typeof first === 'object' && first) {
+      if ('liked' in first) return !!(first as any).liked;
+      const firstVal = (Object.values(first)[0] as any) ?? false;
+      return !!firstVal;
+    }
+  }
+  if (typeof result === 'object' && result) {
+    if ('liked' in result) return !!(result as any).liked;
+    const firstVal = (Object.values(result)[0] as any) ?? false;
+    return !!firstVal;
+  }
+  return false;
+}
+
 export interface VideoFeedItemData {
   video_id: string;
   video_url: string;
@@ -109,6 +157,54 @@ export function VideoFeedItem({
   const [reportReason, setReportReason] = useState('spam');
   const [reportNote, setReportNote] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState<number | undefined>(item.likes_count);
+  const [liking, setLiking] = useState(false);
+
+  useEffect(() => {
+    // Reset local like UI when the tile changes.
+    setLiked(false);
+    setLikesCount(item.likes_count);
+  }, [item.video_id, item.likes_count]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!appUser?.id) return;
+      if (!isActive) return;
+      if (!item.video_id) return;
+
+      try {
+        let likedData: any = null;
+        let error: any = null;
+        try {
+          const rpcRes = await supabase.rpc('is_video_liked', {
+            p_video_id: item.video_id,
+          });
+          likedData = rpcRes.data;
+          error = rpcRes.error;
+        } catch (e: any) {
+          // Supabase-js validates against a local schema cache; if it's stale, fall back to raw RPC.
+          const msg = String(e?.message ?? '');
+          if (e?.code === 'PGRST202' || msg.includes('schema cache')) {
+            likedData = await callRpcRaw<any>('is_video_liked', { p_video_id: item.video_id });
+          } else {
+            throw e;
+          }
+        }
+
+        if (cancelled) return;
+        if (error) throw error;
+        setLiked(parseRpcBoolean(likedData));
+      } catch {
+        // If the check fails, keep the conservative default (outline).
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [appUser?.id, item.video_id, isActive]);
 
   useEffect(() => {
     // Check initial request status when component mounts
@@ -178,12 +274,46 @@ export function VideoFeedItem({
   };
 
   const handleLike = async () => {
-    if (!appUser || !item.artist_id) return;
+    if (!appUser) return;
+    if (!item.video_id) return;
+    if (liking) return;
+
+    setLiking(true);
     try {
-      const t = safePlayerCall(() => Math.floor(playerRef.current.currentTime), 0) ?? 0;
-      track.like(item.artist_id, item.video_id, appUser.id, t);
+      // Toggle like in DB and get updated state.
+      let resData: any = null;
+      let error: any = null;
+      try {
+        const rpcRes = await supabase.rpc('toggle_video_like', {
+          p_video_id: item.video_id,
+        });
+        resData = rpcRes.data;
+        error = rpcRes.error;
+      } catch (e: any) {
+        const msg = String(e?.message ?? '');
+        if (e?.code === 'PGRST202' || msg.includes('schema cache')) {
+          resData = await callRpcRaw<any>('toggle_video_like', { p_video_id: item.video_id });
+        } else {
+          throw e;
+        }
+      }
+
+      if (error) throw error;
+      const firstRow = parseRpcFirstRow(resData);
+      const likedNow = !!firstRow?.liked;
+      const nextLikesCount = firstRow?.likes_count as number | undefined;
+      setLiked(likedNow);
+      setLikesCount(nextLikesCount);
+
+      // Log analytics only when user newly likes.
+      if (likedNow && item.artist_id) {
+        const t = safePlayerCall(() => Math.floor(playerRef.current.currentTime), 0) ?? 0;
+        track.like(item.artist_id, item.video_id, appUser.id, t);
+      }
     } catch (err) {
-      console.error('Failed to log like analytics', err);
+      console.error('Failed to toggle like:', err);
+    } finally {
+      setLiking(false);
     }
   };
 
@@ -387,8 +517,8 @@ export function VideoFeedItem({
                 )}
               </Pressable>
             ) : null}
-            <Pressable style={styles.iconCircle} onPress={handleLike}>
-              <Heart size={28} color="#fff" />
+            <Pressable style={styles.iconCircle} onPress={handleLike} disabled={liking}>
+              <Heart size={28} color={liked ? '#EF4444' : '#fff'} />
             </Pressable>
             <Pressable style={styles.iconCircle} onPress={handleShare}>
               <Share2 size={28} color="#fff" />

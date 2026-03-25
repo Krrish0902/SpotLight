@@ -34,6 +34,7 @@ import ManageProfiles from './screens/ManageProfiles';
 import CreateEventScreen from './screens/CreateEventScreen';
 import EventsGridScreen from './screens/EventsGridScreen';
 import ChatHub from './screens/ChatHub';
+import ContestDetails from './screens/ContestDetails';
 
 export type { UserRole };
 
@@ -46,6 +47,7 @@ export interface AppState {
   returnTo?: string;
   chatId?: string;
   discoverFilter?: { type: 'genre' | 'instrument'; value: string };
+  contestId?: string;
 }
 
 type NavState = { current: AppState; history: AppState[] };
@@ -56,6 +58,7 @@ const ADMIN_ALLOWED_SCREENS = new Set([
   'manage-contests',
   'approve-boost',
   'moderate-content',
+  'contest-details',
   'event-details',
   'artist-profile',
   'login-signup',
@@ -273,6 +276,8 @@ function AppContent() {
         return <ManageProfiles navigate={navigate} />;
       case 'chat-hub':
         return <ChatHub navigate={navigate} />;
+      case 'contest-details':
+        return <ContestDetails navigate={navigate} contestId={appState.contestId} />;
       default:
         return <PublicHome navigate={navigate} />;
     }
