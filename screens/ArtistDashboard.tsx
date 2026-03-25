@@ -1,5 +1,6 @@
 import { View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Modal, Pressable, Alert } from 'react-native';
 import React, { useEffect, useState, useMemo } from 'react';
+import Svg, { Circle } from 'react-native-svg';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, Settings, Sparkles, Clock, AlertCircle, RefreshCw, MessageSquare, Star, CalendarDays, X } from 'lucide-react-native';
@@ -37,6 +38,52 @@ export default function ArtistDashboard({ navigate }: Props) {
   const { profile, appUser } = useAuth();
   const displayName = profile?.display_name ?? appUser?.email?.split('@')[0] ?? 'Artist';
   const isBoosted = profile?.is_boosted ?? false;
+  const boostExpiryMs = profile?.boost_expiry ? new Date(profile.boost_expiry).getTime() : null;
+  const isBoostActive =
+    isBoosted && (boostExpiryMs == null || Number.isNaN(boostExpiryMs) || boostExpiryMs > Date.now());
+  const boostExpiryDate = profile?.boost_expiry ? new Date(profile.boost_expiry) : null;
+  const boostRemainingText = (() => {
+    if (!boostExpiryDate || Number.isNaN(boostExpiryDate.getTime())) return null;
+    const remainingMs = boostExpiryDate.getTime() - Date.now();
+    if (remainingMs <= 0) return 'Expired';
+    const days = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+    if (days <= 1) return 'Less than a day';
+    return `${days} days left`;
+  })();
+
+  const [boostProgressPct, setBoostProgressPct] = useState<number | null>(null);
+  useEffect(() => {
+    const run = async () => {
+      if (!appUser?.id || !isBoostActive) {
+        setBoostProgressPct(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('boost_requests')
+        .select('duration_days, resolved_at')
+        .eq('artist_id', appUser.id)
+        .eq('status', 'approved')
+        .order('resolved_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data?.resolved_at || !data?.duration_days) {
+        setBoostProgressPct(null);
+        return;
+      }
+
+      const startMs = new Date(data.resolved_at).getTime();
+      const expiryMs = profile?.boost_expiry ? new Date(profile.boost_expiry).getTime() : null;
+      const endMs = expiryMs ?? startMs + Number(data.duration_days) * 24 * 60 * 60 * 1000;
+      const durationMs = Math.max(endMs - startMs, 1);
+      const rawPct = (Date.now() - startMs) / durationMs;
+      const clamped = Math.max(0, Math.min(1, rawPct));
+      setBoostProgressPct(clamped);
+    };
+
+    run();
+  }, [appUser?.id, isBoostActive, profile?.boost_expiry]);
   const [recentReview, setRecentReview] = useState<any | null>(null);
   const [recentMessageRequest, setRecentMessageRequest] = useState<any | null>(null);
   const [recentMessageRequests, setRecentMessageRequests] = useState<any[]>([]);
@@ -360,8 +407,68 @@ export default function ArtistDashboard({ navigate }: Props) {
           </View>
         </View>
 
-        {isBoosted && (
-          <Badge icon={<Sparkles size={12} color="#fff" />} style={styles.boostBadge}>Profile Boosted</Badge>
+        {isBoostActive ? (
+          <Card style={styles.boostActiveCard}>
+            <View style={styles.boostActiveRow}>
+              <View style={styles.boostActiveIcon}>
+                {boostProgressPct == null ? (
+                  <Sparkles size={16} color="#fff" />
+                ) : (
+                  <View style={styles.boostProgressWrap}>
+                    <Svg width={36} height={36} viewBox="0 0 36 36">
+                      <Circle
+                        cx={18}
+                        cy={18}
+                        r={14}
+                        stroke="rgba(255,255,255,0.18)"
+                        strokeWidth={3}
+                        fill="none"
+                      />
+                      <Circle
+                        cx={18}
+                        cy={18}
+                        r={14}
+                        stroke="#22D3EE"
+                        strokeWidth={3}
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={2 * Math.PI * 14}
+                        // Show remaining time: as time passes, the ring shrinks.
+                        strokeDashoffset={boostProgressPct * 2 * Math.PI * 14}
+                        transform="rotate(-90 18 18)"
+                      />
+                    </Svg>
+                    <View style={styles.boostProgressCenter}>
+                      <Sparkles size={15} color="#fff" />
+                    </View>
+                  </View>
+                )}
+              </View>
+              <View style={styles.boostActiveTextWrap}>
+                <Text style={styles.boostActiveTitle}>Boost Active</Text>
+                <Text style={styles.boostActiveSub}>
+                  {boostExpiryDate && boostRemainingText
+                    ? `${boostRemainingText} • Expires ${boostExpiryDate.toLocaleDateString()}`
+                    : 'Your profile is currently boosted.'}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        ) : (
+          <Card style={styles.boostCtaCard}>
+            <View style={styles.boostCtaRow}>
+              <View style={styles.boostCtaTextWrap}>
+                <Text style={styles.boostCtaTitle}>Boost your profile</Text>
+                <Text style={styles.boostCtaDesc}>
+                  Get featured visibility and attract more organizer requests.
+                </Text>
+              </View>
+              <Button style={styles.boostCtaBtn} onPress={() => navigate('purchase-boost')}>
+                <Sparkles size={16} color="#162447" />
+                <Text style={styles.boostCtaBtnText}>Boost</Text>
+              </Button>
+            </View>
+          </Card>
         )}
 
         {anomalies && anomalies.length > 0 && (
@@ -637,6 +744,42 @@ const styles = StyleSheet.create({
   },
   bellBadgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   boostBadge: { alignSelf: 'flex-start', marginBottom: 20 },
+  boostCtaCard: {
+    backgroundColor: 'rgba(34,211,238,0.08)',
+    borderColor: 'rgba(34,211,238,0.3)',
+    marginBottom: 20,
+    padding: 14,
+  },
+  boostActiveCard: {
+    backgroundColor: 'rgba(34,211,238,0.09)',
+    borderColor: 'rgba(34,211,238,0.45)',
+    borderWidth: 1,
+    marginBottom: 20,
+    padding: 14,
+    borderRadius: 22,
+  },
+  boostActiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  boostActiveIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(34,211,238,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  boostProgressWrap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  boostProgressCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 36, height: 36 },
+  boostActiveTextWrap: { flex: 1 },
+  boostActiveTitle: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  boostActiveSub: { color: 'rgba(255,255,255,0.65)', marginTop: 3, fontSize: 12 },
+  boostCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  boostCtaTextWrap: { flex: 1 },
+  boostCtaTitle: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  boostCtaDesc: { color: 'rgba(255,255,255,0.62)', marginTop: 2, fontSize: 12 },
+  boostCtaBtn: { backgroundColor: '#FDF2FF', minHeight: 36, borderRadius: 999, paddingHorizontal: 14 },
+  boostCtaBtnText: { color: '#162447', fontWeight: '800', fontSize: 13 },
 
   // Section titles
   sectionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 36, marginBottom: 16, gap: 10 },

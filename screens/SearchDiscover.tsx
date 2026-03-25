@@ -3,6 +3,7 @@ import {
   View,
   Image,
   StyleSheet,
+  ScrollView,
   FlatList,
   Pressable,
   ActivityIndicator,
@@ -22,6 +23,7 @@ import { useAuth } from '../lib/auth-context';
 import { searchArtists, Artist } from './searchService';
 import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from '../lib/searchHistory';
 import { POPULAR_GENRES, POPULAR_INSTRUMENTS } from '../components/MultiSelectWithCustom';
+import { supabase } from '../lib/supabase';
 
 interface Props {
   navigate: (screen: string, data?: any) => void;
@@ -89,6 +91,17 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [distanceInput, setDistanceInput] = useState<string>('');
   const [searchFocused, setSearchFocused] = useState<boolean>(false);
+
+  const [picksLoading, setPicksLoading] = useState(false);
+  const [picks, setPicks] = useState<
+    Array<{
+      user_id: string;
+      display_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+      boost_expiry: string | null;
+    }>
+  >([]);
 
   useEffect(() => {
     if (appUser?.id) {
@@ -173,6 +186,37 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
     searchInputRef.current?.blur();
     Keyboard.dismiss();
   }, [blurOnPopNonce]);
+
+  useEffect(() => {
+    if (hasActiveSearch || showRecent) {
+      setPicks([]);
+      return;
+    }
+
+    const run = async () => {
+      setPicksLoading(true);
+      try {
+        const nowIso = new Date().toISOString();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url, boost_expiry')
+          .eq('is_boosted', true)
+          .gt('boost_expiry', nowIso)
+          .order('boost_expiry', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+        setPicks((data || []) as any);
+      } catch (e) {
+        console.error('Failed to load our picks:', e);
+        setPicks([]);
+      } finally {
+        setPicksLoading(false);
+      }
+    };
+
+    run();
+  }, [hasActiveSearch, showRecent]);
 
   const handleArtistSelect = async (artist: Artist) => {
     // Save full artist object to history
@@ -271,32 +315,91 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
             </View>
 
             {!hasActiveSearch && !showRecent && (
-              <View style={styles.discoverSection}>
-                <Text style={styles.discoverSectionTitle}>Browse by genre & instrument</Text>
-                <View style={styles.discoverGrid}>
-                  {DISCOVER_CARDS.map((card) => (
-                    <Pressable
-                      key={`${card.type}-${card.value}`}
-                      style={styles.discoverCardWrap}
-                      onPress={() =>
-                        navigate('discover-videos', {
-                          discoverFilter: { type: card.type, value: card.value },
-                        })
-                      }
-                    >
-                      <LinearGradient colors={card.colors} style={styles.discoverCard}>
-                        <View style={styles.discoverCardTop}>
-                          <View style={styles.discoverIconWrap}>
-                            {renderDiscoverCardIcon(card.type, card.value)}
-                          </View>
-                        </View>
-                        <Text style={styles.discoverCardText}>{card.label}</Text>
-                        <Text style={styles.discoverCardSub}>{card.type === 'genre' ? 'Genre' : 'Instrument'}</Text>
-                      </LinearGradient>
-                    </Pressable>
-                  ))}
+              <>
+                <View style={styles.picksSection}>
+                  <View style={styles.picksHeader}>
+                    <Text style={styles.picksTitle}>Our Picks</Text>
+                    <Text style={styles.picksSub}>{picksLoading ? 'Loading…' : 'Boosted now'}</Text>
+                  </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.picksScroll}
+                  >
+                    {picksLoading ? null : picks.length === 0 ? (
+                      <View style={styles.picksEmpty}>
+                        <Text style={styles.picksEmptyText}>No boosted profiles</Text>
+                      </View>
+                    ) : (
+                      picks.map((p) => {
+                        const tag = p.username ? `@${p.username}` : p.display_name || 'Artist';
+                        return (
+                          <Pressable
+                            key={p.user_id}
+                            style={styles.pickCard}
+                            onPress={() =>
+                              navigate('artist-profile', {
+                                selectedArtist: {
+                                  user_id: p.user_id,
+                                  display_name: p.display_name,
+                                  username: p.username,
+                                  avatar_url: p.avatar_url,
+                                  is_boosted: true,
+                                },
+                                returnTo: 'search-discover',
+                              })
+                            }
+                          >
+                            <View style={styles.pickAvatarWrap}>
+                              <Image
+                                source={{
+                                  uri:
+                                    p.avatar_url ||
+                                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop',
+                                }}
+                                style={styles.pickAvatar}
+                              />
+                            </View>
+                            <View style={styles.pickTag}>
+                              <Text style={styles.pickTagText} numberOfLines={1}>
+                                {tag}
+                              </Text>
+                            </View>
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </ScrollView>
                 </View>
-              </View>
+
+                <View style={styles.discoverSection}>
+                  <Text style={styles.discoverSectionTitle}>Browse by genre & instrument</Text>
+                  <View style={styles.discoverGrid}>
+                    {DISCOVER_CARDS.map((card) => (
+                      <Pressable
+                        key={`${card.type}-${card.value}`}
+                        style={styles.discoverCardWrap}
+                        onPress={() =>
+                          navigate('discover-videos', {
+                            discoverFilter: { type: card.type, value: card.value },
+                          })
+                        }
+                      >
+                        <LinearGradient colors={card.colors} style={styles.discoverCard}>
+                          <View style={styles.discoverCardTop}>
+                            <View style={styles.discoverIconWrap}>
+                              {renderDiscoverCardIcon(card.type, card.value)}
+                            </View>
+                          </View>
+                          <Text style={styles.discoverCardText}>{card.label}</Text>
+                          <Text style={styles.discoverCardSub}>{card.type === 'genre' ? 'Genre' : 'Instrument'}</Text>
+                        </LinearGradient>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              </>
             )}
 
             {showFilters && (
@@ -498,6 +601,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 12,
   },
+  picksSection: {
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  picksHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  picksTitle: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  picksSub: { color: 'rgba(255,255,255,0.55)', fontWeight: '600', fontSize: 12 },
+  picksScroll: { gap: 14, paddingVertical: 2 },
+  picksEmpty: {
+    width: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  picksEmptyText: { color: 'rgba(255,255,255,0.65)', fontWeight: '600', fontSize: 13 },
+
+  pickCard: { width: 92, alignItems: 'center' },
+  pickAvatarWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(34,211,238,0.5)',
+    backgroundColor: 'rgba(34,211,238,0.08)',
+    overflow: 'hidden',
+  },
+  pickAvatar: { width: '100%', height: '100%' },
+  pickTag: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(34,211,238,0.14)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(34,211,238,0.35)',
+    maxWidth: 92,
+  },
+  pickTagText: { color: '#CFFAFE', fontSize: 12, fontWeight: '800' },
   discoverSectionTitle: {
     color: 'rgba(255,255,255,0.82)',
     fontWeight: '700',
