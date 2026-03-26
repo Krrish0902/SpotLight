@@ -22,7 +22,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Send, MoreVertical, Ticket, X, CalendarDays, MapPin, DollarSign, FileText, Sparkles } from 'lucide-react-native';
+import { ChevronLeft, Send, MoreVertical, Ticket, X, CalendarDays, MapPin, DollarSign, FileText, Sparkles, ShieldAlert, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 import { formatMessageTime } from '../lib/timeUtils';
@@ -293,6 +293,227 @@ function GigField({ icon, label, required, children }: { icon: React.ReactNode; 
   );
 }
 
+// ─── More Options Modal ───────────────────────────────────────────────────
+function MoreOptionsModal({
+  visible,
+  onClose,
+  onDelete,
+  onReport,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  onReport: (reason: string) => void;
+}) {
+  const slideAnim = useRef(new Animated.Value(60)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const [mode, setMode] = useState<'menu' | 'report'>('menu');
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setMode('menu');
+      setReason('');
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 250 }),
+        Animated.timing(fadeAnim,  { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    } else {
+      slideAnim.setValue(60);
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  const handleReport = () => {
+    onReport(reason);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <Animated.View style={[mo.backdrop, { opacity: fadeAnim }]} />
+      </TouchableWithoutFeedback>
+
+      <Animated.View style={[mo.sheet, { transform: [{ translateY: slideAnim }], opacity: fadeAnim }]}>
+        <View style={mo.handle} />
+        
+        {mode === 'menu' ? (
+          <>
+            <Text style={mo.title}>Chat Settings</Text>
+
+            <Pressable 
+              onPress={() => { onClose(); onDelete(); }} 
+              style={({ pressed }) => [mo.item, pressed && mo.itemPressed]}
+            >
+              <View style={[mo.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                <Trash2 size={20} color="#ef4444" strokeWidth={2} />
+              </View>
+              <Text style={[mo.itemText, { color: '#ef4444' }]}>Delete Chat History</Text>
+            </Pressable>
+
+            <Pressable 
+              onPress={() => setMode('report')} 
+              style={({ pressed }) => [mo.item, pressed && mo.itemPressed]}
+            >
+              <View style={[mo.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                <ShieldAlert size={20} color="#f59e0b" strokeWidth={2} />
+              </View>
+              <Text style={[mo.itemText, { color: '#f59e0b' }]}>Report User</Text>
+            </Pressable>
+
+            <View style={mo.spacing} />
+
+            <Pressable onPress={onClose} style={mo.cancelBtn}>
+              <Text style={mo.cancelText}>Cancel</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={mo.reportHeader}>
+              <Pressable onPress={() => setMode('menu')} hitSlop={12}>
+                <ChevronLeft size={24} color={C.onSurface} strokeWidth={2.5} />
+              </Pressable>
+              <Text style={mo.titleCentered}>Report Profile</Text>
+              <View style={{ width: 24 }} />
+            </View>
+
+            <Text style={mo.reportSub}>Why are you reporting this user? Any details will help our moderators.</Text>
+
+            <TextInput
+              style={mo.reportInput}
+              value={reason}
+              onChangeText={setReason}
+              placeholder="e.g. Inappropriate behavior, spam..."
+              placeholderTextColor={C.onSurfaceMuted}
+              multiline
+              autoFocus
+            />
+
+            <Pressable
+              onPress={handleReport}
+              style={({ pressed }) => [mo.submitBtn, pressed && { opacity: 0.85 }]}
+            >
+              <LinearGradient
+                colors={[C.primary, C.secondary]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={mo.submitGrad}
+              >
+                <Text style={mo.submitText}>Submit Report</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable onPress={onClose} style={mo.cancelTiny}>
+              <Text style={mo.cancelTinyText}>Cancel</Text>
+            </Pressable>
+          </>
+        )}
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── Gig Request Bubble ──────────────────────────────────────────────────────
+function GigRequestBubble({
+  data,
+  isMe,
+  status,
+  onAccept,
+  onDecline,
+}: {
+  data: { id: string; eventName: string; eventDate: string; location: string; budget: string; notes?: string | null };
+  isMe: boolean;
+  status: 'pending' | 'accepted' | 'declined';
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  return (
+    <View style={gb.card}>
+      {/* Header */}
+      <LinearGradient colors={['#0e7490', '#22d3ee']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={gb.header}>
+        <Ticket size={14} color="#fff" strokeWidth={2.5} />
+        <Text style={gb.headerText}>Gig Request</Text>
+        {status !== 'pending' && (
+          <View style={[gb.badge, status === 'accepted' ? gb.badgeAccepted : gb.badgeDeclined]}>
+            <Text style={gb.badgeText}>{status === 'accepted' ? 'Accepted' : 'Declined'}</Text>
+          </View>
+        )}
+      </LinearGradient>
+
+      {/* Details */}
+      <View style={gb.body}>
+        <GigRow icon="📅" label={data.eventDate} />
+        <GigRow icon="📍" label={data.location} />
+        <GigRow icon="💰" label={data.budget} />
+        {data.notes ? <GigRow icon="📝" label={data.notes} /> : null}
+      </View>
+
+      {/* Actions — only shown to artist when still pending */}
+      {!isMe && status === 'pending' && (
+        <View style={gb.actions}>
+          <Pressable onPress={onDecline} style={({ pressed }) => [gb.declineBtn, pressed && { opacity: 0.7 }]}>
+            <Text style={gb.declineText}>Decline</Text>
+          </Pressable>
+          <Pressable onPress={onAccept} style={({ pressed }) => [gb.acceptWrap, pressed && { opacity: 0.7 }]}>
+            <LinearGradient colors={['#22d3ee', '#0891b2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={gb.acceptGrad}>
+              <Text style={gb.acceptText}>Accept</Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function GigRow({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={gb.row}>
+      <Text style={gb.rowIcon}>{icon}</Text>
+      <Text style={gb.rowText}>{label}</Text>
+    </View>
+  );
+}
+
+const gb = StyleSheet.create({
+  card: {
+    backgroundColor: '#0f172a',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(34,211,238,0.25)',
+    overflow: 'hidden',
+    maxWidth: 260,
+  },
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 9,
+  },
+  headerText: { color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 },
+  badge: {
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20,
+  },
+  badgeAccepted: { backgroundColor: 'rgba(34,197,94,0.25)' },
+  badgeDeclined: { backgroundColor: 'rgba(239,68,68,0.25)' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  body: { padding: 12, gap: 5 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  rowIcon: { fontSize: 12, marginTop: 1 },
+  rowText: { color: '#cbd5e1', fontSize: 13, fontWeight: '400', flex: 1 },
+  actions: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 12, paddingBottom: 12,
+  },
+  declineBtn: {
+    flex: 1, paddingVertical: 9, borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    alignItems: 'center',
+  },
+  declineText: { color: '#f87171', fontSize: 13, fontWeight: '700' },
+  acceptWrap: { flex: 1, borderRadius: 10, overflow: 'hidden' },
+  acceptGrad: { paddingVertical: 9, alignItems: 'center' },
+  acceptText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+});
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function Messaging({ navigate, artist, chatId }: { navigate: any, artist: any, chatId?: string }) {
   const { appUser } = useAuth();
@@ -303,7 +524,10 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
   const [isTyping, setIsTyping] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [showGigModal, setShowGigModal] = useState(false);
-  const isFan = appUser?.role === 'public';
+  const [showMoreModal, setShowMoreModal] = useState(false);
+  const [gigStatuses, setGigStatuses] = useState<Record<string, 'pending' | 'accepted' | 'declined'>>({});
+  const canBook = appUser?.role === 'public' || appUser?.role === 'organizer' || appUser?.role === 'artist';
+  const isArtist = appUser?.role === 'artist';
   const scrollRef = useRef<any>(null);
   const channelRef = useRef<any>(null);
   const typingRef = useRef<any>(null);
@@ -363,7 +587,12 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
         if (leftPresences.some((u: any) => u.user_id === artist.id)) setIsOnline(false);
       })
       .subscribe(async (s) => {
-        if (s === 'SUBSCRIBED') await ch.track({ user_id: appUser.id });
+        if (s === 'SUBSCRIBED') {
+          await ch.track({ user_id: appUser.id });
+        } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') {
+          // Resubscribe after a short delay on error
+          setTimeout(() => ch.subscribe(), 2000);
+        }
       });
 
     channelRef.current = ch;
@@ -377,6 +606,33 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
       .order('sent_at', { ascending: true });
     if (data) {
       setMessages(data);
+
+      // Mark all unread messages from the other user as read immediately on open
+      const unreadIds = data
+        .filter((m: any) => m.receiver_id === appUser?.id && m.sender_id === artist?.id && !m.is_read)
+        .map((m: any) => m.message_id);
+      if (unreadIds.length > 0) {
+        supabase.from('messages').update({ is_read: true }).in('message_id', unreadIds).then();
+      }
+
+      // Pre-load statuses for any gig request messages in this conversation
+      const gigIds = data
+        .filter((m: any) => typeof m.content === 'string' && m.content.startsWith('__GIG__'))
+        .map((m: any) => { try { return JSON.parse(m.content.slice(7)).id; } catch { return null; } })
+        .filter(Boolean);
+
+      if (gigIds.length > 0) {
+        const { data: bookings } = await supabase
+          .from('gig_bookings')
+          .select('id, status')
+          .in('id', gigIds);
+        if (bookings) {
+          const statusMap: Record<string, 'pending' | 'accepted' | 'declined'> = {};
+          bookings.forEach((b: any) => { statusMap[b.id] = b.status; });
+          setGigStatuses(statusMap);
+        }
+      }
+
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 200);
     }
     setLoading(false);
@@ -411,15 +667,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
   };
 
   const handleMenu = () => {
-    Alert.alert(
-      artist?.name || 'Chat Settings',
-      'Manage this conversation',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report User', onPress: handleReportUser },
-        { text: 'Delete Chat', style: 'destructive', onPress: handleDeleteChat },
-      ]
-    );
+    setShowMoreModal(true);
   };
 
   const handleDeleteChat = () => {
@@ -444,32 +692,66 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
   };
 
   const handleGigSubmit = async (form: GigForm) => {
-    const { error } = await supabase.from('gig_bookings').insert({
-      fan_id: appUser?.id,
-      artist_id: artist?.id,
-      event_name: form.eventName.trim(),
-      event_date: form.eventDate.trim(),
-      location: form.location.trim(),
-      budget: form.budget.trim(),
-      notes: form.notes.trim() || null,
-      status: 'pending',
-    });
+    const { data: booking, error } = await supabase
+      .from('gig_bookings')
+      .insert({
+        requester_id: appUser?.id,
+        artist_id: artist?.id,
+        event_name: form.eventName.trim(),
+        event_date: form.eventDate.trim(),
+        location: form.location.trim(),
+        budget: form.budget.trim(),
+        notes: form.notes.trim() || null,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
 
-    if (error) {
+    if (error || !booking) {
       Alert.alert('Failed to send', 'Could not submit your gig request. Please try again.');
       return;
     }
 
     setShowGigModal(false);
+    setGigStatuses(p => ({ ...p, [booking.id]: 'pending' }));
 
-    // Send a context message in chat so the artist sees it
-    const contextMsg = `🎫 Gig Request Sent!\n\nEvent: ${form.eventName}\nDate: ${form.eventDate}\nLocation: ${form.location}\nBudget: ${form.budget}${form.notes ? `\nNotes: ${form.notes}` : ''}`;
+    // Embed booking metadata so the artist can act on it in-chat
+    const contextMsg = `__GIG__${JSON.stringify({
+      id: booking.id,
+      eventName: form.eventName.trim(),
+      eventDate: form.eventDate.trim(),
+      location: form.location.trim(),
+      budget: form.budget.trim(),
+      notes: form.notes.trim() || null,
+    })}`;
+
     const temp = { message_id: `temp-gig-${Date.now()}`, sender_id: appUser?.id, receiver_id: artist?.id, content: contextMsg, sent_at: new Date().toISOString() };
     setMessages(p => [...p, temp]);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     await supabase.from('messages').insert({ sender_id: appUser?.id, receiver_id: artist?.id, content: contextMsg });
+  };
 
-    Alert.alert('Gig Request Sent!', `Your booking request has been sent to ${artist?.name || 'the artist'}. They'll get back to you soon.`);
+  const handleGigResponse = async (bookingId: string, response: 'accepted' | 'declined') => {
+    const { error } = await supabase
+      .from('gig_bookings')
+      .update({ status: response })
+      .eq('id', bookingId);
+
+    if (error) {
+      Alert.alert('Error', 'Could not update booking status. Please try again.');
+      return;
+    }
+
+    setGigStatuses(p => ({ ...p, [bookingId]: response }));
+
+    const replyMsg = response === 'accepted'
+      ? `✅ Gig request accepted! Looking forward to performing at your event.`
+      : `❌ Gig request declined. Thank you for reaching out.`;
+
+    const temp = { message_id: `temp-resp-${Date.now()}`, sender_id: appUser?.id, receiver_id: artist?.id, content: replyMsg, sent_at: new Date().toISOString() };
+    setMessages(p => [...p, temp]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    await supabase.from('messages').insert({ sender_id: appUser?.id, receiver_id: artist?.id, content: replyMsg });
   };
 
   const handleReportUser = () => {
@@ -547,36 +829,70 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
             </View>
           ) : messages.map((msg) => {
             const isMe = msg.sender_id === appUser?.id;
+            const isGig = typeof msg.content === 'string' && msg.content.startsWith('__GIG__');
+
+            if (isGig) {
+              let gigData: any = null;
+              try { gigData = JSON.parse(msg.content.slice(7)); } catch {}
+              if (gigData) {
+                const status = gigStatuses[gigData.id] ?? 'pending';
+                return (
+                  <View key={msg.message_id} style={[st.msgRow, isMe ? st.msgRowMe : st.msgRowThem]}>
+                    {!isMe && (
+                      <Pressable onPress={handleProfileNav} style={st.avatarCol}>
+                        <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
+                      </Pressable>
+                    )}
+                    <View style={st.bubbleCol}>
+                      <GigRequestBubble
+                        data={gigData}
+                        isMe={isMe}
+                        status={status}
+                        onAccept={() => handleGigResponse(gigData.id, 'accepted')}
+                        onDecline={() => handleGigResponse(gigData.id, 'declined')}
+                      />
+                      <Text style={[st.time, isMe ? st.timeMe : st.timeThem]}>
+                        {formatMessageTime(msg.sent_at)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+            }
+
             return (
-              <View key={msg.message_id} style={[st.msgRow, isMe ? st.msgMe : st.msgThem]}>
+              <View key={msg.message_id} style={[st.msgRow, isMe ? st.msgRowMe : st.msgRowThem]}>
                 {!isMe && (
-                  <Pressable onPress={handleProfileNav}>
+                  <Pressable onPress={handleProfileNav} style={st.avatarCol}>
                     <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
                   </Pressable>
                 )}
-                {isMe ? (
-                  <LinearGradient
-                    colors={[C.primary, C.secondary]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={st.bubbleMe}
-                  >
-                    <Text style={st.textMe}>{msg.content}</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={st.bubbleThem}>
-                    <View style={st.rimLight} />
-                    <Text style={st.textThem}>{msg.content}</Text>
-                  </View>
-                )}
-                <Text style={[st.time, isMe ? st.timeMe : st.timeThem]}>
-                  {formatMessageTime(msg.sent_at)}
-                </Text>
+                <View style={st.bubbleCol}>
+                  {isMe ? (
+                    <LinearGradient
+                      colors={[C.primary, C.secondary]}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={st.bubbleMe}
+                    >
+                      <Text style={st.textMe}>{msg.content}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={st.bubbleThem}>
+                      <Text style={st.textThem}>{msg.content}</Text>
+                    </View>
+                  )}
+                  <Text style={[st.time, isMe ? st.timeMe : st.timeThem]}>
+                    {formatMessageTime(msg.sent_at)}
+                  </Text>
+                </View>
               </View>
             );
           })}
           {isTyping && (
-            <View style={[st.msgRow, st.msgThem]}>
-              <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
+            <View style={[st.msgRow, st.msgRowThem]}>
+              <View style={st.avatarCol}>
+                <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
+              </View>
               <View style={[st.bubbleThem, st.typingBubble]}>
                 <TypingPulse />
               </View>
@@ -594,7 +910,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
               placeholderTextColor={C.onSurfaceMuted}
               multiline
             />
-            {isFan && (
+            {canBook && (
               <Pressable
                 onPress={() => setShowGigModal(true)}
                 style={({ pressed }) => [st.gigBtn, pressed && { opacity: 0.7 }]}
@@ -620,8 +936,16 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
         </View>
       </KeyboardAvoidingView>
 
+      {/* ═══ MORE OPTIONS MODAL ═══ */}
+      <MoreOptionsModal
+        visible={showMoreModal}
+        onClose={() => setShowMoreModal(false)}
+        onDelete={handleDeleteChat}
+        onReport={handleReportUser}
+      />
+
       {/* ═══ GIG BOOKING MODAL ═══ */}
-      {isFan && (
+      {canBook && (
         <GigBookingModal
           visible={showGigModal}
           artist={artist}
@@ -663,10 +987,12 @@ const st = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60, opacity: 0.4 },
   emptyText: { color: C.onSurface, fontSize: 14, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 40 },
 
-  msgRow: { marginBottom: 24, position: 'relative' },
-  msgMe: { alignItems: 'flex-end', marginLeft: 60 },
-  msgThem: { alignItems: 'flex-start', marginRight: 60, paddingLeft: 46 },
-  itemAvatar: { position: 'absolute', left: 0, bottom: 0, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.glassBorder },
+  msgRow: { marginBottom: 20 },
+  msgRowMe: { flexDirection: 'row', justifyContent: 'flex-end', marginLeft: 70 },
+  msgRowThem: { flexDirection: 'row', alignItems: 'flex-end', marginRight: 70 },
+  avatarCol: { width: 32, marginRight: 8, flexShrink: 0 },
+  itemAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.glassBorder },
+  bubbleCol: { flexShrink: 1 },
 
   bubbleMe: {
     paddingHorizontal: 18, paddingVertical: 12,
@@ -684,17 +1010,12 @@ const st = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.glassBorder,
   },
-  rimLight: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderTopLeftRadius: 26, borderTopRightRadius: 26,
-  },
   textMe: { color: '#fff', fontSize: 15, fontWeight: '500', lineHeight: 21 },
   textThem: { color: C.onSurface, fontSize: 15, fontWeight: '400', lineHeight: 21 },
 
-  time: { position: 'absolute', bottom: -18, fontSize: 10, fontWeight: '600', color: C.onSurfaceMuted, opacity: 0.6 },
-  timeMe: { right: 4 },
-  timeThem: { left: 50 },
+  time: { fontSize: 10, fontWeight: '600', color: C.onSurfaceMuted, opacity: 0.6, marginTop: 4 },
+  timeMe: { textAlign: 'right' },
+  timeThem: { textAlign: 'left' },
 
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typingLine: { width: 12, height: 2, backgroundColor: C.online, borderRadius: 1 },
@@ -705,8 +1026,6 @@ const st = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     backgroundColor: 'rgba(2, 6, 23, 0.95)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: C.glassBorder,
   },
   inputPill: {
     flexDirection: 'row',
@@ -714,7 +1033,7 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 30,
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: C.glassBorder,
     shadowColor: '#000',
@@ -722,8 +1041,11 @@ const st = StyleSheet.create({
     shadowOpacity: 0.4, shadowRadius: 20, elevation: 10,
   },
   textInput: {
-    flex: 1, color: C.onSurface, fontSize: 15, minHeight: 40,
-    paddingTop: Platform.OS === 'ios' ? 10 : 0,
+    flex: 1, color: C.onSurface, fontSize: 15,
+    maxHeight: 120,
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: 'center',
   },
   sendBtn: { marginLeft: 8, padding: 4 },
   gigBtn: { marginLeft: 8 },
@@ -828,4 +1150,91 @@ const gm = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   submitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+});
+
+// ─── More Modal Styles ────────────────────────────────────────────────────────
+const mo = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: '#0f172a',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  handle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center', marginBottom: 20,
+  },
+  title: {
+    color: '#fff', fontSize: 18, fontWeight: '800',
+    marginBottom: 20, textAlign: 'center',
+  },
+  item: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, borderRadius: 16,
+    paddingHorizontal: 12, marginBottom: 8,
+  },
+  itemPressed: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  iconBox: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 16,
+  },
+  itemText: {
+    fontSize: 16, fontWeight: '600',
+  },
+  spacing: { height: 12 },
+  cancelBtn: {
+    paddingVertical: 16, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  cancelText: { color: C.onSurface, fontSize: 16, fontWeight: '700' },
+
+  // Report Mode Additions
+  reportHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  titleCentered: {
+    color: '#fff', fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center',
+  },
+  reportSub: {
+    color: C.onSurfaceMuted, fontSize: 14, fontWeight: '500',
+    lineHeight: 20, marginBottom: 20, textAlign: 'center',
+  },
+  reportInput: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
+    color: C.onSurface, fontSize: 15, fontWeight: '400',
+    minHeight: 100, textAlignVertical: 'top', marginBottom: 24,
+  },
+  submitBtn: {
+    borderRadius: 18, overflow: 'hidden',
+  },
+  submitGrad: {
+    paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
+  },
+  submitText: {
+    color: '#fff', fontSize: 16, fontWeight: '800',
+  },
+  cancelTiny: {
+    marginTop: 16, alignItems: 'center',
+  },
+  cancelTinyText: {
+    color: C.onSurfaceMuted, fontSize: 14, fontWeight: '600',
+  },
 });
