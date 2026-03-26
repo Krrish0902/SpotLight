@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Upload, Play, X, Image as ImageIcon, Music2, Guitar } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -78,30 +77,51 @@ export default function UploadVideo({ navigate }: Props) {
   };
 
   const uploadFile = async (uri: string, folder: string) => {
-    const fileExt = uri.split('.').pop();
+    const fileExt = uri.split('.').pop() || (folder === 'videos' ? 'mp4' : 'jpg');
     const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
     // Restoring user_id folder for both 'videos' and 'thumbnails'
     const filePath = `${appUser?.id}/${fileName}`;
 
-    let fileData;
+    const contentType =
+      folder === 'videos'
+        ? (videoFile?.mimeType ?? 'video/mp4')
+        : 'image/jpeg';
+
     if (Platform.OS === 'web') {
       const response = await fetch(uri);
-      fileData = await response.blob();
+      const fileData = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from(folder)
+        .upload(filePath, fileData, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
     } else {
-      fileData = await FileSystem.readAsStringAsync(uri, {
-        encoding: 'base64',
-      });
-      fileData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0)).buffer;
+      // On native, avoid loading the entire file into memory.
+      // Use Supabase's signed upload URL + multipart FormData referencing the local file URI.
+      const { data: signedData, error: signedErr } = await supabase.storage
+        .from(folder)
+        .createSignedUploadUrl(filePath, { upsert: false });
+
+      if (signedErr) throw signedErr;
+      if (!signedData?.token) throw new Error('Missing signed upload token');
+
+      const formData = new FormData();
+      // storage-js expects the file part under an empty field name: `""`
+      formData.append('', { uri, type: contentType, name: fileName } as any);
+
+      const { error: uploadError } = await (supabase.storage as any)
+        .from(folder)
+        .uploadToSignedUrl(filePath, signedData.token, formData, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
     }
-
-    const { error: uploadError } = await supabase.storage
-      .from(folder)
-      .upload(filePath, fileData, {
-        contentType: folder === 'videos' ? (videoFile?.mimeType ?? 'video/mp4') : 'image/jpeg',
-        upsert: false,
-      });
-
-    if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
       .from(folder)
