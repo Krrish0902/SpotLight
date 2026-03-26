@@ -116,7 +116,7 @@ export default function RoleSelection({ navigate, setRole }: Props) {
                 <Star size={32} color="#fff" />
               </View>
               <View style={styles.cardText}>
-                <Text style={styles.cardTitle}>I'm a Fan</Text>
+                <Text style={styles.cardTitle}>I'm here to explore</Text>
                 <Text style={styles.cardDesc}>Discover artists, book tickets, and leave reviews</Text>
               </View>
             </View>
