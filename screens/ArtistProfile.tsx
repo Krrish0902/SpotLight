@@ -20,6 +20,7 @@ import { supabase } from '../lib/supabase';
 import { isUserEffectivelySuspended } from '../lib/suspension';
 import { track } from '../lib/analytics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -37,7 +38,7 @@ interface ScheduleEvent {
   time: string | null;
   title: string;
   venue: string | null;
-  source: 'schedule' | 'booking' | 'organizer_event';
+  source: 'schedule' | 'booking' | 'organizer_event' | 'unavailable';
   status?: string;
 }
 
@@ -51,10 +52,13 @@ interface Props {
 export default function ArtistProfile({ navigate, artist, userRole = 'public', returnTo }: Props) {
   const insets = useSafeAreaInsets();
   const { profile, appUser, fetchProfile, signOut } = useAuth();
-  const isOwnProfile = artist?.id === 'me' || (appUser && artist?.user_id === appUser.id);
+  const artistUserId = artist?.user_id || artist?.id;
+  const isOwnProfile =
+    artist?.id === 'me' ||
+    (appUser && artistUserId === appUser.id);
 
   // Determine the ID to fetch videos for
-  const targetArtistId = isOwnProfile ? appUser?.id : artist?.user_id;
+  const targetArtistId = isOwnProfile ? appUser?.id : artistUserId;
 
   const [videos, setVideos] = useState<Video[]>([]);
   const [viewedProfile, setViewedProfile] = useState<any>(null);
@@ -79,6 +83,18 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
   const [reportReason, setReportReason] = useState('impersonation');
   const [reportNote, setReportNote] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+  const [unavailableStartDate, setUnavailableStartDate] = useState<Date>(new Date());
+  const [unavailableEndDate, setUnavailableEndDate] = useState<Date>(new Date());
+  const [unavailableReason, setUnavailableReason] = useState('');
+  const [showUnavailableStartPicker, setShowUnavailableStartPicker] = useState(false);
+  const [showUnavailableEndPicker, setShowUnavailableEndPicker] = useState(false);
+  const [savingUnavailable, setSavingUnavailable] = useState(false);
+  const [isUnavailableToday, setIsUnavailableToday] = useState(false);
+  const [hasUnavailableWindow, setHasUnavailableWindow] = useState(false);
+  const [unavailableTodayReason, setUnavailableTodayReason] = useState<string | null>(null);
+  const [unavailableRangeStart, setUnavailableRangeStart] = useState<string | null>(null);
+  const [unavailableRangeEnd, setUnavailableRangeEnd] = useState<string | null>(null);
   const videoListRef = useRef<FlatList>(null);
   const onViewableVideosChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -239,6 +255,35 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
         });
       }
 
+      const { data: availabilityWindow, error: availabilityErr } = await supabase.rpc(
+        'get_public_availability_window',
+        {
+          p_artist_id: targetArtistId,
+          p_today: today,
+        }
+      );
+      if (availabilityErr) throw availabilityErr;
+
+      const availabilityRow = Array.isArray(availabilityWindow)
+        ? availabilityWindow[0]
+        : availabilityWindow;
+
+      const hasWindow = !!(availabilityRow as any)?.has_unavailable_window;
+      const isTodayBlocked = !!(availabilityRow as any)?.is_unavailable_today;
+      const winStart = (availabilityRow as any)?.window_start
+        ? String((availabilityRow as any).window_start)
+        : null;
+      const winEnd = (availabilityRow as any)?.window_end
+        ? String((availabilityRow as any).window_end)
+        : null;
+      const winReason = ((availabilityRow as any)?.window_reason as string | null) || null;
+
+      setHasUnavailableWindow(hasWindow);
+      setIsUnavailableToday(isTodayBlocked);
+      setUnavailableRangeStart(winStart);
+      setUnavailableRangeEnd(winEnd);
+      setUnavailableTodayReason(winReason);
+
       events.sort((a, b) => {
         const cmp = a.date.localeCompare(b.date);
         if (cmp !== 0) return cmp;
@@ -248,8 +293,80 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
     } catch (e) {
       console.error('Error fetching events:', e);
       setUpcomingEvents([]);
+      setIsUnavailableToday(false);
+      setHasUnavailableWindow(false);
+      setUnavailableTodayReason(null);
+      setUnavailableRangeStart(null);
+      setUnavailableRangeEnd(null);
     } finally {
       setLoadingEvents(false);
+    }
+  };
+
+  const formatDateOnly = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const formatDateLabel = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const buildDateRange = (start: Date, end: Date) => {
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    const out: string[] = [];
+    const cursor = new Date(startDate);
+    while (cursor.getTime() <= endDate.getTime()) {
+      out.push(formatDateOnly(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return out;
+  };
+
+  const saveUnavailableRange = async () => {
+    if (!appUser?.id || !targetArtistId || !isOwnProfile) return;
+    const start = new Date(unavailableStartDate.getFullYear(), unavailableStartDate.getMonth(), unavailableStartDate.getDate());
+    const end = new Date(unavailableEndDate.getFullYear(), unavailableEndDate.getMonth(), unavailableEndDate.getDate());
+    if (end.getTime() < start.getTime()) {
+      Alert.alert('Invalid range', 'End date must be on or after start date.');
+      return;
+    }
+
+    setSavingUnavailable(true);
+    try {
+      const dates = buildDateRange(start, end);
+      if (!dates.length) return;
+
+      await supabase
+        .from('availability')
+        .delete()
+        .eq('artist_id', targetArtistId)
+        .in('unavailable_date', dates as any);
+
+      const rows = dates.map((d) => ({
+        artist_id: targetArtistId,
+        unavailable_date: d,
+        reason: unavailableReason.trim() ? unavailableReason.trim().slice(0, 100) : null,
+      }));
+
+      const { error } = await supabase.from('availability').insert(rows as any);
+      if (error) throw error;
+
+      setShowUnavailableModal(false);
+      setUnavailableReason('');
+      await fetchUpcomingEvents();
+      Alert.alert('Saved', 'Your unavailable dates were updated.');
+    } catch (e: any) {
+      console.error('Failed to save unavailable dates:', e);
+      Alert.alert('Error', e?.message || 'Could not save unavailable dates.');
+    } finally {
+      setSavingUnavailable(false);
     }
   };
 
@@ -653,7 +770,32 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                 <Text style={styles.metaText}>{cityStr}</Text>
               </View>
             ) : null}
-            <Badge style={styles.availableBadge}>Available for Booking</Badge>
+            {isOwnProfile ? (
+              <Pressable
+                onPress={() => {
+                  const today = new Date();
+                  setUnavailableStartDate(today);
+                  setUnavailableEndDate(today);
+                  setUnavailableReason('');
+                  setShowUnavailableModal(true);
+                }}
+                hitSlop={10}
+              >
+                <Badge style={[styles.availableBadge, hasUnavailableWindow && styles.availableBadgeBlocked]}>
+                  {hasUnavailableWindow
+                    ? `Unavailable ${formatDateLabel(unavailableRangeStart)} - ${formatDateLabel(unavailableRangeEnd)} (tap to change)`
+                    : 'Available for Booking (tap to change)'}
+                </Badge>
+              </Pressable>
+            ) : (
+              <Badge style={[styles.availableBadge, hasUnavailableWindow && styles.availableBadgeBlocked]}>
+                {hasUnavailableWindow
+                  ? unavailableTodayReason
+                    ? `Unavailable ${formatDateLabel(unavailableRangeStart)} - ${formatDateLabel(unavailableRangeEnd)} • ${unavailableTodayReason}`
+                    : `Unavailable ${formatDateLabel(unavailableRangeStart)} - ${formatDateLabel(unavailableRangeEnd)}`
+                  : 'Available for Booking'}
+              </Badge>
+            )}
           </View>
 
           <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.actionRow}>
@@ -802,6 +944,9 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
                         </Text>
                         {ev.source === 'booking' && ev.status && (
                           <Badge style={styles.scheduleBadge}>{ev.status}</Badge>
+                        )}
+                        {ev.source === 'unavailable' && (
+                          <Badge style={styles.unavailableBadge}>Blocked</Badge>
                         )}
                       </View>
                     </Pressable>
@@ -986,6 +1131,91 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showUnavailableModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowUnavailableModal(false)}
+      >
+        <View style={styles.reportModalBackdrop}>
+          <View style={styles.reportModalCard}>
+            <Text style={styles.reportModalTitle}>Set Unavailable Dates</Text>
+            <Text style={styles.reportModalSubtitle}>Block a date range for bookings.</Text>
+
+            <Text style={styles.reportLabel}>Start date</Text>
+            <Pressable
+              style={styles.datePickerBtn}
+              onPress={() => setShowUnavailableStartPicker(true)}
+              disabled={savingUnavailable}
+            >
+              <Text style={styles.datePickerText}>{unavailableStartDate.toLocaleDateString()}</Text>
+            </Pressable>
+            {showUnavailableStartPicker && (
+              <DateTimePicker
+                value={unavailableStartDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date()}
+                onChange={(_event, selected) => {
+                  setShowUnavailableStartPicker(Platform.OS === 'ios');
+                  if (selected) {
+                    setUnavailableStartDate(selected);
+                    if (selected.getTime() > unavailableEndDate.getTime()) {
+                      setUnavailableEndDate(selected);
+                    }
+                  }
+                }}
+              />
+            )}
+
+            <Text style={styles.reportLabel}>End date</Text>
+            <Pressable
+              style={styles.datePickerBtn}
+              onPress={() => setShowUnavailableEndPicker(true)}
+              disabled={savingUnavailable}
+            >
+              <Text style={styles.datePickerText}>{unavailableEndDate.toLocaleDateString()}</Text>
+            </Pressable>
+            {showUnavailableEndPicker && (
+              <DateTimePicker
+                value={unavailableEndDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={unavailableStartDate}
+                onChange={(_event, selected) => {
+                  setShowUnavailableEndPicker(Platform.OS === 'ios');
+                  if (selected) setUnavailableEndDate(selected);
+                }}
+              />
+            )}
+
+            <Text style={styles.reportLabel}>Reason (optional)</Text>
+            <Textarea
+              placeholder="Vacation, travel, personal commitments..."
+              value={unavailableReason}
+              onChangeText={setUnavailableReason}
+              style={styles.reportModalNoteInput}
+            />
+
+            <View style={styles.reportModalActions}>
+              <Button
+                variant="outline"
+                style={styles.reportModalCancelBtn}
+                onPress={() => setShowUnavailableModal(false)}
+                disabled={savingUnavailable}
+              >
+                <Text style={styles.reportModalCancelText}>Cancel</Text>
+              </Button>
+              <Button style={styles.reportModalSubmitBtn} onPress={saveUnavailableRange} disabled={savingUnavailable}>
+                <Text style={styles.reportModalSubmitText}>
+                  {savingUnavailable ? 'Saving...' : 'Save'}
+                </Text>
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1010,6 +1240,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   metaText: { color: '#8E8E93', fontSize: 16, fontWeight: '600' },
   availableBadge: { backgroundColor: 'rgba(253,242,255,0.15)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(253,242,255,0.3)' },
+  availableBadgeBlocked: { backgroundColor: 'rgba(239,68,68,0.18)', borderColor: 'rgba(239,68,68,0.35)' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24, paddingHorizontal: 16 },
   bookBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
   dashboardBtn: { flex: 1, minWidth: 200, backgroundColor: '#FDF2FF', flexDirection: 'row', gap: 8, borderRadius: 100, paddingVertical: 20, justifyContent: 'center', alignItems: 'center' },
@@ -1042,8 +1273,20 @@ const styles = StyleSheet.create({
   scheduleTitle: { color: '#ffffff', fontWeight: '700', fontSize: 18 },
   scheduleMeta: { color: '#8E8E93', fontSize: 15, marginTop: 6, fontWeight: '500' },
   scheduleBadge: { marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  unavailableBadge: { marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(34,211,238,0.16)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   emptySchedule: { alignItems: 'center', padding: 48 },
   emptyScheduleText: { color: '#8E8E93', fontSize: 16, marginTop: 16, fontWeight: '600' },
+  reportLabel: { color: '#fff', fontWeight: '700', marginBottom: 8, marginTop: 4 },
+  datePickerBtn: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  datePickerText: { color: '#fff', fontWeight: '700' },
   reviewCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 40, marginTop: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 },
   reviewAvatar: { width: 44, height: 44, borderRadius: 22 },

@@ -27,7 +27,7 @@ export function FollowAttributionCard({ data }: { data: AttributionItem[] }) {
 
         <View style={styles.list}>
           {data.map((item, idx) => (
-            <View key={item.content_id} style={styles.row}>
+            <View key={`${item.content_id}-${idx}`} style={styles.row}>
               <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>{idx + 1}</Text>
               </View>
