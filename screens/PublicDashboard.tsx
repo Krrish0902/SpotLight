@@ -208,20 +208,20 @@ export default function PublicDashboard({ navigate }: Props) {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22D3EE" />
         }
       >
-        {/* Immersive Header matching ArtistProfile */}
-        <Animated.View entering={FadeIn.duration(800)} style={[styles.coverWrap, { height: 240 + insets.top, paddingTop: insets.top }]}>
+        {/* ── Cover card — bento style matching ArtistProfile ── */}
+        <Animated.View entering={FadeIn.duration(800)} style={styles.coverWrap}>
           <Image source={{ uri: displayCoverUrl }} style={styles.coverImg} contentFit="cover" />
-          <LinearGradient colors={['rgba(5,10,24,0.4)', 'rgba(5,10,24,0.8)']} style={StyleSheet.absoluteFill} />
-          
+          <LinearGradient colors={['rgba(5,10,24,0.1)', 'rgba(5,10,24,0.55)']} style={StyleSheet.absoluteFill} />
+
           <Button variant="ghost" size="icon" style={styles.backBtn} onPress={() => navigate('public-home')}>
             <ChevronLeft size={24} color="#ffffff" />
           </Button>
-          
+
           <View style={styles.headerRight}>
             <Button variant="ghost" size="icon" style={styles.iconBtn} onPress={() => navigate('edit-profile')}>
               <Pencil size={20} color="#ffffff" />
@@ -235,11 +235,12 @@ export default function PublicDashboard({ navigate }: Props) {
           </View>
         </Animated.View>
 
-        {/* Profile Details Overlay */}
+        {/* ── Profile section ── */}
         <Animated.View entering={SlideInDown.duration(600).springify()} style={styles.profileContainer}>
-          <View style={styles.profileImgContainer}>
+          {/* Avatar — centered, large, with fan badge */}
+          <Pressable style={styles.profileImgContainer} disabled>
             {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.profileImg} />
+              <Image source={{ uri: profile.avatar_url }} style={styles.profileImg} contentFit="cover" />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <User size={44} color="rgba(255,255,255,0.4)" />
@@ -248,14 +249,14 @@ export default function PublicDashboard({ navigate }: Props) {
             <View style={styles.fanBadge}>
               <Star size={10} color="#000" fill="#000" />
             </View>
-          </View>
+          </Pressable>
 
+          {/* Name + meta — centered */}
           <View style={styles.profileHeader}>
             <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.nameRow}>
               <Text style={styles.name}>{displayName}</Text>
-              <Badge variant="outline" style={styles.roleBadge}>Fan</Badge>
             </Animated.View>
-            
+
             {profile?.username ? (
               <View style={styles.usernameWrap}>
                 <Badge style={styles.usernamePill}>@{profile.username}</Badge>
@@ -264,13 +265,15 @@ export default function PublicDashboard({ navigate }: Props) {
 
             {profile?.city ? (
               <View style={styles.meta}>
-                <MapPin size={16} color="rgba(255,255,255,0.6)" />
+                <MapPin size={16} color="#8E8E93" />
                 <Text style={styles.metaText}>{profile.city}</Text>
               </View>
             ) : null}
+
+            <Badge style={styles.roleBadge}>Fan</Badge>
           </View>
 
-          {/* Premium stats Row matching ArtistProfile layout */}
+          {/* Stats row */}
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statNum}>{followingCount}</Text>
@@ -286,13 +289,13 @@ export default function PublicDashboard({ navigate }: Props) {
             </View>
           </View>
 
-          {/* Standard Project Tabs Component */}
-          <Tabs 
-            defaultValue="events" 
-            fullWidth 
+          {/* Tabs */}
+          <Tabs
+            defaultValue="events"
+            fullWidth
             tabs={[
-              { value: 'events', label: 'My Tickets' }, 
-              { value: 'reviews', label: 'My Reviews' }
+              { value: 'events', label: 'My Tickets' },
+              { value: 'reviews', label: 'My Reviews' },
             ]}
           >
             {(tab) => tab === 'events' ? (
@@ -317,7 +320,7 @@ export default function PublicDashboard({ navigate }: Props) {
                       <View style={styles.cardBody}>
                         <Text style={styles.cardTitle} numberOfLines={1}>{item.events?.title}</Text>
                         <View style={styles.cardRow}>
-                          <CalendarDays size={12} color="rgba(255,255,255,0.4)" />
+                          <CalendarDays size={12} color="#8E8E93" />
                           <Text style={styles.cardMeta}>{item.events ? formatDate(item.events.event_date) : ''}</Text>
                         </View>
                         <View style={styles.ticketPill}>
@@ -330,10 +333,12 @@ export default function PublicDashboard({ navigate }: Props) {
                   ))
                 ) : (
                   <View style={styles.emptyBento}>
-                    <Ticket size={32} color="rgba(255,255,255,0.2)" />
-                    <Text style={styles.emptyTitle}>No tickets found</Text>
+                    <View style={styles.emptyIconCircle}>
+                      <Ticket size={36} color="#FDF2FF" />
+                    </View>
+                    <Text style={styles.emptyTitle}>No tickets yet</Text>
                     <Text style={styles.emptyDesc}>Discover events and book your spot to see them here.</Text>
-                    <Button variant="outline" size="sm" onPress={() => navigate('events-grid')} style={{ marginTop: 12 }}>
+                    <Button variant="outline" size="sm" onPress={() => navigate('events-grid')} style={{ marginTop: 16 }}>
                       Find Events
                     </Button>
                   </View>
@@ -368,10 +373,12 @@ export default function PublicDashboard({ navigate }: Props) {
                   ))
                 ) : (
                   <View style={styles.emptyBento}>
-                    <Star size={32} color="rgba(255,255,255,0.2)" />
+                    <View style={styles.emptyIconCircle}>
+                      <Star size={36} color="#FDF2FF" />
+                    </View>
                     <Text style={styles.emptyTitle}>No reviews yet</Text>
                     <Text style={styles.emptyDesc}>Share your feedback after attending an artist's event.</Text>
-                    <Button variant="outline" size="sm" onPress={() => navigate('search-discover')} style={{ marginTop: 12 }}>
+                    <Button variant="outline" size="sm" onPress={() => navigate('search-discover')} style={{ marginTop: 16 }}>
                       Find Artists
                     </Button>
                   </View>
@@ -388,246 +395,53 @@ export default function PublicDashboard({ navigate }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#050A18' },
-  
-  // Header matching ArtistProfile
-  coverWrap: {
-    width: '100%',
-    position: 'relative',
-  },
-  coverImg: {
-    width: '100%',
-    height: '100%',
-  },
-  backBtn: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    height: 40,
-    width: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  headerRight: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconBtn: {
-    height: 40,
-    width: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
 
-  // Profile Overlap
-  profileContainer: {
-    marginTop: -40,
-    backgroundColor: '#050A18',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    minHeight: 500,
-  },
-  profileImgContainer: {
-    marginTop: -44,
-    alignSelf: 'flex-start',
-    position: 'relative',
-  },
-  profileImg: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 4,
-    borderColor: '#050A18',
-  },
-  avatarPlaceholder: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 4,
-    borderColor: '#050A18',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fanBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#22D3EE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#050A18',
-  },
+  // ── Cover: bento card matching ArtistProfile ──
+  coverWrap: { height: 320, backgroundColor: '#0d141d', borderRadius: 40, marginHorizontal: 16, marginTop: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  coverImg: { width: '100%', height: '100%' },
+  backBtn: { position: 'absolute', top: 32, left: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, padding: 8, zIndex: 50, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
+  headerRight: { position: 'absolute', top: 32, right: 16, flexDirection: 'row', gap: 12, zIndex: 50 },
+  iconBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, padding: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
 
-  profileHeader: {
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  name: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  roleBadge: {
-    backgroundColor: 'rgba(34,211,238,0.1)',
-    borderColor: 'rgba(34,211,238,0.3)',
-    color: '#22D3EE',
-  },
-  usernameWrap: {
-    marginTop: 6,
-  },
-  usernamePill: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    color: 'rgba(255,255,255,0.6)',
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  metaText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  // ── Profile section ──
+  profileContainer: { paddingHorizontal: 16, marginTop: -40, zIndex: 10 },
+  profileImgContainer: { alignSelf: 'center', width: 120, height: 120, borderRadius: 60, borderWidth: 6, borderColor: '#050A18', backgroundColor: '#0d141d', zIndex: 10 },
+  profileImg: { width: '100%', height: '100%', borderRadius: 60 },
+  avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  fanBadge: { position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#22D3EE', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#050A18' },
 
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 32,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    padding: 16,
-    alignItems: 'center',
-    gap: 2,
-  },
-  statNum: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  statLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  profileHeader: { alignItems: 'center', marginTop: 16, marginBottom: 24, paddingHorizontal: 16 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  name: { fontSize: 44, fontWeight: '800', color: '#ffffff', letterSpacing: -1.5 },
+  roleBadge: { backgroundColor: 'rgba(34,211,238,0.15)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(34,211,238,0.3)', marginTop: 8 },
+  usernameWrap: { width: '100%', alignItems: 'center', marginBottom: 8 },
+  usernamePill: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  metaText: { color: '#8E8E93', fontSize: 16, fontWeight: '600' },
 
-  // Tab Content
-  tabContent: {
-    marginTop: 20,
-    gap: 14,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    padding: 12,
-  },
-  eventPoster: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-  },
-  reviewAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  posterPlaceholder: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBody: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cardMeta: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  ticketPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(34,211,238,0.1)',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  ticketPillText: {
-    color: '#22D3EE',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  reviewComment: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    lineHeight: 18,
-  },
+  // ── Stats ──
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 24 },
+  statCard: { flex: 1, minWidth: 80, paddingVertical: 32, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 40, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  statNum: { fontSize: 32, fontWeight: '800', color: '#ffffff', letterSpacing: -1 },
+  statLabel: { color: '#8E8E93', fontSize: 12, marginTop: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // Empty State
-  emptyBento: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  emptyDesc: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  // ── Tab content ──
+  tabContent: { marginTop: 16, gap: 16 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 40, padding: 20, overflow: 'hidden' },
+  eventPoster: { width: 72, height: 72, borderRadius: 20 },
+  reviewAvatar: { width: 72, height: 72, borderRadius: 36 },
+  posterPlaceholder: { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+  cardBody: { flex: 1, gap: 6 },
+  cardTitle: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardMeta: { color: '#8E8E93', fontSize: 14, fontWeight: '500' },
+  ticketPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(34,211,238,0.1)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, alignSelf: 'flex-start', marginTop: 2 },
+  ticketPillText: { color: '#22D3EE', fontSize: 12, fontWeight: '700' },
+  reviewComment: { color: '#8E8E93', fontSize: 14, lineHeight: 20, fontWeight: '500' },
+
+  // ── Empty state ──
+  emptyBento: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 40, padding: 48, alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.06)', gap: 8, marginTop: 8 },
+  emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(253,242,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  emptyTitle: { color: '#ffffff', fontSize: 22, fontWeight: '800', marginTop: 4 },
+  emptyDesc: { color: '#8E8E93', fontSize: 15, textAlign: 'center', lineHeight: 22, fontWeight: '500' },
 });
