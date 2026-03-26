@@ -17,6 +17,7 @@ export interface ArtistAnalyticsData {
   avgRetentionCurve: any[];
   benchmarks: any;
   audienceDemographics: any[];
+  platformAgeData: any[];
   newFollowerDemographics: any[];
   anomalies: any[];
   churnRiskCount: number;
@@ -36,33 +37,35 @@ export function useArtistAnalytics(artistId: string) {
     if (!artistId) return
     setIsLoading(true); setError(null)
     try {
+      const safe = (p: Promise<any>) => p.catch(() => ({ data: null }))
       const [
         reachTrend, dailyTrend, heatmap, geo, funnel,
         content, followerSplit, followAttr, repeatRate,
         retentionCurve, engBench, convBench,
-        audienceDemog, newFollowerDemog, anomalies,
+        audienceDemog, platformAge, newFollowerDemog, anomalies,
         churnRisk, reviewTrend, searchDiscovery, likeTiming, contestPerf
       ] = await Promise.all([
-        supabase.rpc('get_artist_reach_trend',           { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_daily_trend',           { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_activity_heatmap',      { p_artist_id: artistId }),
-        supabase.rpc('get_artist_geo_breakdown',         { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_funnel',                { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_content_performance',   { p_artist_id: artistId }),
-        supabase.rpc('get_artist_follower_reach_split',  { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_follow_attribution',    { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_repeat_viewer_rate',    { p_artist_id: artistId }),
-        supabase.rpc('get_artist_avg_retention_curve',   { p_artist_id: artistId }),
-        supabase.rpc('get_artist_benchmark_comparison',  { p_artist_id: artistId, p_metric: 'engagement_rate' }),
-        supabase.rpc('get_artist_benchmark_comparison',  { p_artist_id: artistId, p_metric: 'booking_conversion_rate' }),
-        supabase.rpc('get_artist_audience_demographics', { p_artist_id: artistId }),
-        supabase.rpc('get_artist_new_follower_demographics', { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_anomalies',             { p_artist_id: artistId }),
-        supabase.rpc('get_artist_churn_risk_count',      { p_artist_id: artistId }),
-        supabase.rpc('get_artist_review_trend',          { p_artist_id: artistId }),
-        supabase.rpc('get_artist_search_discovery',      { p_artist_id: artistId, p_days: period }),
-        supabase.rpc('get_artist_like_timing',           { p_artist_id: artistId }),
-        supabase.rpc('get_artist_contest_performance',   { p_artist_id: artistId }),
+        safe(supabase.rpc('get_artist_reach_trend',           { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_daily_trend',           { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_activity_heatmap',      { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_geo_breakdown',         { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_funnel',                { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_content_performance',   { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_follower_reach_split',  { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_follow_attribution',    { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_repeat_viewer_rate',    { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_avg_retention_curve',   { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_benchmark_comparison',  { p_artist_id: artistId, p_metric: 'engagement_rate' })),
+        safe(supabase.rpc('get_artist_benchmark_comparison',  { p_artist_id: artistId, p_metric: 'booking_conversion_rate' })),
+        safe(supabase.rpc('get_artist_audience_demographics', { p_artist_id: artistId })),
+        safe(supabase.rpc('get_platform_audience_age_split')),
+        safe(supabase.rpc('get_artist_new_follower_demographics', { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_anomalies',             { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_churn_risk_count',      { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_review_trend',          { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_search_discovery',      { p_artist_id: artistId, p_days: period })),
+        safe(supabase.rpc('get_artist_like_timing',           { p_artist_id: artistId })),
+        safe(supabase.rpc('get_artist_contest_performance',   { p_artist_id: artistId })),
       ])
       setData({
         reachTrend: reachTrend.data?.[0] ?? null,
@@ -80,6 +83,7 @@ export function useArtistAnalytics(artistId: string) {
           booking_conversion_rate: convBench.data?.[0] ?? null,
         },
         audienceDemographics: audienceDemog.data ?? [],
+        platformAgeData: platformAge.data ?? [],
         newFollowerDemographics: newFollowerDemog.data ?? [],
         anomalies: anomalies.data ?? [],
         churnRiskCount: churnRisk.data?.[0]?.at_risk_count ?? 0,

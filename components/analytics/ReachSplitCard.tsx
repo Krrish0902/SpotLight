@@ -5,15 +5,42 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Users } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-interface Props {
-  followerReach: number;
-  nonFollowerReach: number;
-  totalReach: number;
+interface AgeSegment {
+  value: string;   // e.g. "18-24"
+  count: number;
+  pct: number;
 }
 
-export function ReachSplitCard({ followerReach, nonFollowerReach, totalReach }: Props) {
-  const followerPct = totalReach > 0 ? (followerReach / totalReach) * 100 : 0;
-  const nonFollowerPct = totalReach > 0 ? (nonFollowerReach / totalReach) * 100 : 0;
+interface Props {
+  ageData: AgeSegment[];
+}
+
+const AGE_COLORS: Record<string, [string, string]> = {
+  '13-17': ['#06B6D4', '#0891B2'],
+  '18-24': ['#6366F1', '#4F46E5'],
+  '25-34': ['#A855F7', '#9333EA'],
+  '35-44': ['#EC4899', '#DB2777'],
+  '45+':   ['#F59E0B', '#D97706'],
+};
+
+const FALLBACK_COLORS: [string, string][] = [
+  ['#6366F1', '#4F46E5'],
+  ['#A855F7', '#9333EA'],
+  ['#EC4899', '#DB2777'],
+  ['#06B6D4', '#0891B2'],
+  ['#F59E0B', '#D97706'],
+];
+
+export function ReachSplitCard({ ageData }: Props) {
+  if (!ageData || ageData.length === 0) return null;
+
+  const totalCount = ageData.reduce((sum, d) => sum + d.count, 0);
+  const sorted = [...ageData].sort((a, b) => {
+    const order = ['13-17', '18-24', '25-34', '35-44', '45+'];
+    return order.indexOf(a.value) - order.indexOf(b.value);
+  });
+
+  const topSegment = sorted.reduce((a, b) => (a.pct > b.pct ? a : b), sorted[0]);
 
   return (
     <Animated.View entering={FadeInUp.delay(120).springify()}>
@@ -29,43 +56,44 @@ export function ReachSplitCard({ followerReach, nonFollowerReach, totalReach }: 
             <View style={styles.iconBox}>
               <Users size={14} color="#A855F7" />
             </View>
-            <Text style={styles.label}>Audience Reach Split</Text>
+            <Text style={styles.label}>Audience Age Split</Text>
           </View>
 
-          <Text style={styles.total}>{totalReach.toLocaleString()}</Text>
-          <Text style={styles.totalSub}>unique accounts reached</Text>
+          <Text style={styles.total}>{totalCount.toLocaleString()}</Text>
+          <Text style={styles.totalSub}>viewers with age data</Text>
 
+          {/* Multi-segment bar */}
           <View style={styles.barTrack}>
-            <LinearGradient
-              colors={['#6366F1', '#818CF8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.barSeg, { flex: Math.max(followerPct, 0.5) }]}
-            />
-            <LinearGradient
-              colors={['#A855F7', '#EC4899']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.barSeg, { flex: Math.max(nonFollowerPct, 0.5) }]}
-            />
+            {sorted.map((seg, i) => {
+              const colors = AGE_COLORS[seg.value] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+              return (
+                <LinearGradient
+                  key={seg.value}
+                  colors={colors}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.barSeg, { flex: Math.max(seg.pct, 1) }]}
+                />
+              );
+            })}
           </View>
 
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.dot, { backgroundColor: '#6366F1' }]} />
-              <View>
-                <Text style={styles.legendPct}>{followerPct.toFixed(1)}%</Text>
-                <Text style={styles.legendSub}>Followers</Text>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.legendItem}>
-              <View style={[styles.dot, { backgroundColor: '#EC4899' }]} />
-              <View>
-                <Text style={styles.legendPct}>{nonFollowerPct.toFixed(1)}%</Text>
-                <Text style={styles.legendSub}>Non-Followers</Text>
-              </View>
-            </View>
+          {/* Legend grid */}
+          <View style={styles.legendGrid}>
+            {sorted.map((seg, i) => {
+              const colors = AGE_COLORS[seg.value] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+              const isTop = seg.value === topSegment.value;
+              return (
+                <View key={seg.value} style={[styles.legendItem, isTop && styles.legendItemTop]}>
+                  <View style={[styles.dot, { backgroundColor: colors[0] }]} />
+                  <View>
+                    <Text style={styles.legendPct}>{seg.pct.toFixed(1)}%</Text>
+                    <Text style={styles.legendSub}>{seg.value}</Text>
+                  </View>
+                  {isTop && <View style={styles.topBadge}><Text style={styles.topBadgeText}>top</Text></View>}
+                </View>
+              );
+            })}
           </View>
         </View>
       </View>
@@ -129,16 +157,19 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 5,
   },
-  legendRow: {
+  legendGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+    flexWrap: 'wrap',
+    gap: 12,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    gap: 8,
+    minWidth: '28%',
+  },
+  legendItemTop: {
+    // subtle highlight on the dominant group
   },
   dot: {
     width: 10,
@@ -147,9 +178,9 @@ const styles = StyleSheet.create({
   },
   legendPct: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   legendSub: {
     color: 'rgba(255,255,255,0.32)',
@@ -158,9 +189,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
-  divider: {
-    width: 1,
-    height: 36,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+  topBadge: {
+    backgroundColor: 'rgba(168,85,247,0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 2,
+  },
+  topBadgeText: {
+    color: '#A855F7',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

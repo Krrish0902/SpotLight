@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpotLight — Artist Discovery & Booking Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+
+/* =====================================================
+   THEME — Style B: Clean Canvas
+   Change CSS variables here to restyle everything
+   ===================================================== */
+:root {
+  --bg:          #f7f4ef;
+  --card-bg:     #ffffff;
+  --teal:        #1a7a6e;
+  --teal-dark:   #0d4f47;
+  --teal-mid:    #2a9d8f;
+  --teal-pale:   rgba(26,122,110,0.07);
+  --teal-border: rgba(26,122,110,0.18);
+  --text:        #111111;
+  --text-muted:  #565656;
+  --text-light:  #aaaaaa;
+  --border:      #e0dbd3;
+  --strip-w:     clamp(6px,1.2vw,10px);
+
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+
+  --h2-size:       clamp(1.2rem,3.2vw,2.4rem);
+  --body-size:     clamp(0.72rem,1.35vw,1.05rem);
+  --small-size:    clamp(0.6rem,0.9vw,0.78rem);
+  --slide-padding: clamp(1.2rem,4vw,4rem);
+
+  --ease-expo: cubic-bezier(0.16,1,0.3,1);
+}
+
+/* =====================================================
+   VIEWPORT BASE — mandatory
+   ===================================================== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow-x:hidden}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text)}
+
+.slide{
+  width:100vw;height:100vh;height:100dvh;
+  overflow:hidden;scroll-snap-align:start;
+  display:flex;flex-direction:row;position:relative;
+}
+
+@media(max-height:700px){
+  :root{--slide-padding:clamp(0.5rem,2.5vw,1.6rem);--h2-size:clamp(1rem,2.8vw,1.8rem);--body-size:clamp(0.62rem,1.1vw,0.88rem)}
+}
+@media(max-height:600px){
+  :root{--slide-padding:clamp(0.4rem,2vw,1.1rem);--h2-size:clamp(0.9rem,2.4vw,1.5rem);--body-size:clamp(0.58rem,1vw,0.8rem)}
+  .nav-dots{display:none}
+}
+@media(max-height:500px){
+  :root{--slide-padding:clamp(0.3rem,1.5vw,0.7rem);--h2-size:clamp(0.85rem,2vw,1.25rem)}
+}
+@media(max-width:600px){
+  :root{--h2-size:clamp(1.1rem,6.5vw,2rem)}
+  .grid-3,.grid-4{grid-template-columns:1fr 1fr!important}
+  .grid-2,.two-col{grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+  html{scroll-behavior:auto}
+}
+
+/* Faint grid on every slide */
+.slide::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,0.022) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0;
+}
+
+/* =====================================================
+   LEFT STRIP
+   ===================================================== */
+.slide-strip{
+  width:var(--strip-w);
+  background:linear-gradient(to bottom,var(--teal),var(--teal-dark));
+  flex-shrink:0;z-index:1;
+}
+
+/* =====================================================
+   SLIDE INNER
+   ===================================================== */
+.slide-inner{
+  flex:1;display:flex;flex-direction:column;
+  justify-content:center;
+  padding:var(--slide-padding);
+  position:relative;z-index:1;
+  max-height:100%;overflow:hidden;
+}
+
+/* =====================================================
+   DECORATIVE BG CHARACTER
+   ===================================================== */
+.bg-deco{
+  position:absolute;right:-0.05em;bottom:-0.15em;
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(7rem,24vw,18rem);
+  color:rgba(26,122,110,0.045);
+  line-height:1;pointer-events:none;user-select:none;
+  letter-spacing:-0.06em;z-index:0;
+}
+
+/* =====================================================
+   TYPOGRAPHY
+   ===================================================== */
+.eyebrow{
+  font-family:var(--font-body);font-size:var(--small-size);
+  font-weight:500;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:clamp(0.4rem,1.2vw,0.9rem);
+}
+.slide-title{
+  font-family:var(--font-display);font-size:var(--h2-size);
+  font-weight:800;letter-spacing:-0.03em;line-height:1.05;
+  color:var(--text);position:relative;z-index:1;
+}
+.slide-title .accent{color:var(--teal)}
+.slide-divider{
+  width:clamp(28px,3.5vw,48px);height:3px;background:var(--teal);
+  margin:clamp(0.4rem,1vw,0.9rem) 0;
+}
+.body-text{
+  font-family:var(--font-body);font-size:var(--body-size);
+  color:var(--text-muted);line-height:1.6;
+}
+
+/* =====================================================
+   REVEAL ANIMATIONS
+   ===================================================== */
+.reveal{
+  opacity:0;transform:translateX(-18px);
+  transition:opacity .6s var(--ease-expo),transform .6s var(--ease-expo);
+}
+.slide.visible .reveal{opacity:1;transform:translateX(0)}
+.reveal-up{
+  opacity:0;transform:translateY(16px);
+  transition:opacity .6s var(--ease-expo),transform .6s var(--ease-expo);
+}
+.slide.visible .reveal-up{opacity:1;transform:translateY(0)}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
+.d4{transition-delay:.32s}.d5{transition-delay:.40s}.d6{transition-delay:.48s}
+.d7{transition-delay:.56s}.d8{transition-delay:.64s}.d9{transition-delay:.72s}
+
+/* =====================================================
+   CARDS
+   ===================================================== */
+.card{
+  background:var(--card-bg);border:1px solid var(--border);
+  border-left:3px solid var(--teal);border-radius:0 8px 8px 0;
+  padding:clamp(0.5rem,1.1vw,0.9rem) clamp(0.6rem,1.3vw,1.1rem);
+  position:relative;z-index:1;
+}
+.card.teal{background:var(--teal-pale);border-color:var(--teal-border);border-left-color:var(--teal)}
+.card-title{
+  font-family:var(--font-display);font-size:clamp(0.7rem,1.25vw,0.92rem);
+  font-weight:700;color:var(--text);margin-bottom:.22em;
+}
+.card-body{
+  font-family:var(--font-body);font-size:clamp(0.62rem,1.05vw,0.8rem);
+  color:var(--text-muted);line-height:1.5;
+}
+
+/* =====================================================
+   GRIDS
+   ===================================================== */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(0.38rem,1.1vw,0.85rem)}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(0.35rem,1vw,0.8rem)}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:clamp(0.3rem,.9vw,.7rem)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:clamp(0.7rem,2.2vw,1.8rem);align-items:start}
+
+/* =====================================================
+   TAGS
+   ===================================================== */
+.tag{
+  display:inline-flex;align-items:center;gap:.35em;
+  background:var(--teal-pale);color:var(--teal);
+  border:1px solid var(--teal-border);border-radius:100px;
+  padding:.2em .7em;font-size:clamp(0.56rem,0.88vw,0.7rem);
+  font-weight:500;font-family:var(--font-body);letter-spacing:.04em;
+}
+
+/* =====================================================
+   BULLET LIST
+   ===================================================== */
+.bullet-list{list-style:none;display:flex;flex-direction:column;gap:clamp(0.28rem,0.7vh,0.62rem)}
+.bullet-list li{
+  font-size:var(--body-size);color:var(--text-muted);
+  line-height:1.5;padding-left:1.3em;position:relative;
+}
+.bullet-list li::before{
+  content:'';position:absolute;left:0;top:.57em;
+  width:6px;height:6px;border-radius:50%;background:var(--teal);
+}
+
+/* =====================================================
+   FLOW DIAGRAM
+   ===================================================== */
+.flow{display:flex;align-items:center;gap:clamp(.22rem,.7vw,.45rem);flex-wrap:wrap}
+.flow-step{
+  background:var(--card-bg);border:1px solid var(--border);
+  border-top:3px solid var(--teal);border-radius:6px;
+  padding:clamp(.38rem,.75vw,.65rem) clamp(.45rem,.9vw,.8rem);
+  font-family:var(--font-body);font-size:clamp(.58rem,.95vw,.75rem);
+  font-weight:500;color:var(--text);text-align:center;
+  min-width:clamp(55px,8vw,95px);
+}
+.flow-step .step-label{
+  font-size:clamp(.48rem,.7vw,.58rem);color:var(--teal);
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  display:block;margin-bottom:.18em;
+}
+.flow-arrow{color:var(--teal);font-size:clamp(.85rem,1.4vw,1.1rem);flex-shrink:0}
+
+/* =====================================================
+   COMPARE TABLE
+   ===================================================== */
+.compare-row{
+  display:grid;grid-template-columns:clamp(70px,15%,115px) 1fr 1fr;
+  gap:clamp(.3rem,.85vw,.65rem);align-items:center;
+  padding:clamp(.3rem,.65vw,.5rem) 0;border-bottom:1px solid var(--border);
+  font-size:clamp(.6rem,.95vw,.75rem);
+}
+.compare-row:last-child{border-bottom:none}
+.compare-row .pl{font-weight:700;color:var(--text);font-family:var(--font-display)}
+.compare-row .has{color:var(--teal);font-weight:500}
+.compare-row .lacks{color:#c0392b}
+
+/* =====================================================
+   ROLE CARD
+   ===================================================== */
+.role-card{
+  background:var(--card-bg);border:1px solid var(--border);
+  border-radius:10px;padding:clamp(.65rem,1.6vw,1.3rem);
+  display:flex;flex-direction:column;gap:.4em;
+  position:relative;z-index:1;
+}
+.role-icon{font-size:clamp(1.3rem,2.6vw,1.9rem);margin-bottom:.1em}
+.role-name{font-family:var(--font-display);font-size:clamp(.82rem,1.7vw,1.15rem);font-weight:800;color:var(--text)}
+.role-desc{font-size:clamp(.6rem,.97vw,.76rem);color:var(--text-muted);line-height:1.5}
+
+/* =====================================================
+   PROGRESS BAR
+   ===================================================== */
+.progress-bar{
+  position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(to right,var(--teal),var(--teal-mid));
+  z-index:1000;width:0%;transition:width .3s ease;
+}
+
+/* =====================================================
+   NAV DOTS
+   ===================================================== */
+.nav-dots{
+  position:fixed;right:clamp(.6rem,1.4vw,1.1rem);top:50%;
+  transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:5px;z-index:100;
+}
+.nav-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(26,122,110,0.22);
+  cursor:pointer;transition:all .3s ease;border:none;
+}
+.nav-dot.active{background:var(--teal);transform:scale(1.6)}
+
+/* =====================================================
+   SLIDE NUMBER
+   ===================================================== */
+.slide-num{
+  position:absolute;bottom:clamp(.7rem,1.3vw,1.1rem);right:clamp(.9rem,1.8vw,1.6rem);
+  font-family:var(--font-body);font-size:clamp(.48rem,.75vw,.62rem);
+  color:var(--text-light);letter-spacing:.1em;z-index:2;
+}
+
+/* =====================================================
+   TITLE SLIDE
+   ===================================================== */
+.main-title{
+  font-family:var(--font-display);
+  font-size:clamp(3.5rem,11vw,9rem);
+  font-weight:800;letter-spacing:-.04em;line-height:.88;
+  color:var(--text);position:relative;z-index:1;
+}
+.main-title .accent{color:var(--teal)}
+.title-tagline{
+  font-family:var(--font-body);font-style:italic;
+  font-size:clamp(.82rem,1.9vw,1.45rem);font-weight:300;
+  color:var(--text-muted);
+  margin-top:clamp(.5rem,1.3vw,1.1rem);position:relative;z-index:1;
+}
+.title-meta{
+  margin-top:clamp(1rem,2.2vw,1.8rem);
+  display:flex;flex-wrap:wrap;gap:.45em;position:relative;z-index:1;
+}
+
+/* THANK YOU SLIDE */
+.thankyou-slide .slide-inner{align-items:center;text-align:center}
+
+/* Stat */
+.stat-val{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(1.5rem,4.2vw,3rem);color:var(--teal);line-height:1;
+}
+
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- ==================================================
+     SLIDE 01 — TITLE
+     ================================================== -->
+<section class="slide" id="slide-1">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">S</div>
+    <p class="eyebrow reveal d1">Final Year Major Project &nbsp;·&nbsp; CSE &nbsp;·&nbsp; 2026</p>
+    <div class="slide-divider reveal d2"></div>
+    <h1 class="main-title reveal d3">Spot<span class="accent">Light</span></h1>
+    <p class="title-tagline reveal d4">Discover · Connect · Perform</p>
+    <div class="title-meta reveal d5">
+      <span class="tag">Artist Discovery</span>
+      <span class="tag">Booking Platform</span>
+      <span class="tag">React Native · Supabase</span>
+    </div>
+  </div>
+  <span class="slide-num">01 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 02 — TEAM
+     ================================================== -->
+<section class="slide" id="slide-2">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">T</div>
+    <p class="eyebrow reveal d1">The Team</p>
+    <h2 class="slide-title reveal d2">People Behind <span class="accent">SpotLight</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="grid-2" style="margin-top:clamp(.7rem,1.8vw,1.4rem);max-width:min(90vw,660px)">
+      <div class="card reveal-up d3">
+        <div class="card-title">Anantha Krishnan</div>
+        <div class="card-body">Backend architecture, Supabase setup, analytics engine &amp; database RPCs</div>
+      </div>
+      <div class="card reveal-up d4">
+        <div class="card-title">Evin John</div>
+        <div class="card-body">Mobile frontend, React Native screens, UI/UX design system</div>
+      </div>
+      <div class="card reveal-up d5">
+        <div class="card-title">Govardhan</div>
+        <div class="card-body">Database schema design, SQL migrations, security policies</div>
+      </div>
+      <div class="card reveal-up d6">
+        <div class="card-title">Karthika</div>
+        <div class="card-body">Feature development, testing, documentation &amp; QA</div>
+      </div>
+    </div>
+    <p class="body-text reveal d7" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
+      Department of Computer Science &amp; Engineering &nbsp;·&nbsp; Final Year B.Tech
+    </p>
+  </div>
+  <span class="slide-num">02 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 03 — THE PROBLEM
+     ================================================== -->
+<section class="slide" id="slide-3">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">P</div>
+    <p class="eyebrow reveal d1">The Problem</p>
+    <h2 class="slide-title reveal d2">A Market With <span class="accent">No Right Tool</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div style="display:flex;flex-direction:column;gap:clamp(.45rem,1.2vw,.9rem);margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,700px)">
+      <div class="card reveal-up d3">
+        <div class="card-title">🎸 Artists have talent — but no dedicated stage to get booked</div>
+        <div class="card-body">Independent musicians, dancers, and performers rely on word-of-mouth. There is no structured way to attract event organizers.</div>
+      </div>
+      <div class="card reveal-up d4">
+        <div class="card-title">📋 Organizers waste hours manually searching for performers</div>
+        <div class="card-body">Event planners scroll through social media and make calls to vet artists — slow, inconsistent, and unreliable.</div>
+      </div>
+      <div class="card reveal-up d5">
+        <div class="card-title">👥 Fans cannot easily discover local talent</div>
+        <div class="card-body">There is no single feed where fans can explore local artists, follow them, and stay updated on upcoming events near them.</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">03 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 04 — EXISTING PLATFORMS
+     ================================================== -->
+<section class="slide" id="slide-4">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">?</div>
+    <p class="eyebrow reveal d1">Gap Analysis</p>
+    <h2 class="slide-title reveal d2">What's Out There — <span class="accent">And What's Missing</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div style="margin-top:clamp(.4rem,1.1vw,.9rem);max-width:min(90vw,760px)">
+      <div class="compare-row reveal d3" style="color:var(--text-light);font-size:clamp(.54rem,.8vw,.66rem);font-weight:600;text-transform:uppercase;letter-spacing:.1em">
+        <span>Platform</span><span>Does well</span><span>Missing</span>
+      </div>
+      <div class="compare-row reveal-up d4"><span class="pl">Instagram / TikTok</span><span class="has">Video sharing, large audience</span><span class="lacks">No booking system or organizer tools</span></div>
+      <div class="compare-row reveal-up d5"><span class="pl">Eventbrite</span><span class="has">Ticket sales, event pages</span><span class="lacks">No artist discovery or profiles</span></div>
+      <div class="compare-row reveal-up d6"><span class="pl">LinkedIn</span><span class="has">Professional networking</span><span class="lacks">No video showcase, no performance context</span></div>
+      <div class="compare-row reveal-up d7"><span class="pl">YouTube</span><span class="has">Video hosting, analytics</span><span class="lacks">No booking workflow, no organizer features</span></div>
+    </div>
+    <p class="body-text reveal d8" style="margin-top:clamp(.45rem,1.1vw,.9rem);font-style:italic;font-weight:600;color:var(--teal)">
+      No platform combines: video discovery + booking requests + real-time chat
+    </p>
+  </div>
+  <span class="slide-num">04 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 05 — OUR SOLUTION
+     ================================================== -->
+<section class="slide" id="slide-5">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">S</div>
+    <p class="eyebrow reveal d1">Proposed Solution</p>
+    <h2 class="slide-title reveal d2">Introducing <span class="accent">SpotLight</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.6vw,1.3rem)">
+      A mobile app for iOS, Android, and Web that brings three communities together in one place.
+    </p>
+    <div class="grid-3 reveal-up d4" style="max-width:min(90vw,820px)">
+      <div class="role-card">
+        <div class="role-icon">🎤</div>
+        <div class="role-name">Artist</div>
+        <div class="role-desc">Showcase performance videos, receive bookings, and track your audience with a dedicated analytics dashboard.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🎪</div>
+        <div class="role-name">Organizer</div>
+        <div class="role-desc">Discover talent, create events, send booking requests, manage your lineup and ticket sales.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🎧</div>
+        <div class="role-name">Fan</div>
+        <div class="role-desc">Explore a local talent feed, follow favourite artists, send gig suggestions, and discover events.</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">05 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 06 — KEY FEATURES
+     ================================================== -->
+<section class="slide" id="slide-6">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">F</div>
+    <p class="eyebrow reveal d1">Overview</p>
+    <h2 class="slide-title reveal d2">Six Core <span class="accent">Capabilities</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="grid-3" style="margin-top:clamp(.6rem,1.6vw,1.3rem);max-width:min(90vw,880px)">
+      <div class="card reveal-up d3"><div class="card-title">🎬 Video Feed</div><div class="card-body">TikTok-style scrolling feed to discover artists by genre, location, or search</div></div>
+      <div class="card reveal-up d4"><div class="card-title">📩 Gig Booking</div><div class="card-body">Send and accept gig offers with full event details — directly inside chat</div></div>
+      <div class="card reveal-up d5"><div class="card-title">💬 Live Messaging</div><div class="card-body">Real-time chat with typing indicators, read receipts, and online presence</div></div>
+      <div class="card reveal-up d6"><div class="card-title">📊 Analytics</div><div class="card-body">Reach trends, activity heatmaps, audience demographics, and conversion funnels</div></div>
+      <div class="card reveal-up d7"><div class="card-title">🤖 AI Insights</div><div class="card-body">Google Gemini reads your metrics and writes plain-language tips on your dashboard</div></div>
+      <div class="card reveal-up d8"><div class="card-title">🛡️ Moderation</div><div class="card-body">Report content, admin review, account suspension, contests, and visibility boosts</div></div>
+    </div>
+  </div>
+  <span class="slide-num">06 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 07 — ARTIST EXPERIENCE
+     ================================================== -->
+<section class="slide" id="slide-7">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">A</div>
+    <p class="eyebrow reveal d1">User Role: Artist</p>
+    <h2 class="slide-title reveal d2">What Can an <span class="accent">Artist</span> Do?</h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,800px)">
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d3"><div class="card-title">Upload Performance Videos</div><div class="card-body">Post videos with auto-generated thumbnails — tagged with genre and instruments</div></div>
+        <div class="card reveal-up d4"><div class="card-title">Manage Availability</div><div class="card-body">Set a schedule so organizers know which dates you are free to perform</div></div>
+        <div class="card reveal-up d5"><div class="card-title">Receive Booking Requests</div><div class="card-body">Accept or decline formal booking invitations from event organizers</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d4"><div class="card-title">Track Analytics</div><div class="card-body">Monitor views, followers, engagement rate, and audience age breakdown</div></div>
+        <div class="card reveal-up d5"><div class="card-title">Enter Contests</div><div class="card-body">Submit videos to platform-run competitions for visibility and recognition</div></div>
+        <div class="card reveal-up d6"><div class="card-title">Buy Visibility Boosts</div><div class="card-body">Purchase a profile boost to appear higher in organizer search results</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">07 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 08 — ORGANIZER EXPERIENCE
+     ================================================== -->
+<section class="slide" id="slide-8">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">O</div>
+    <p class="eyebrow reveal d1">User Role: Organizer</p>
+    <h2 class="slide-title reveal d2">What Can an <span class="accent">Organizer</span> Do?</h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,800px)">
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d3"><div class="card-title">Discover Artists</div><div class="card-body">Browse and search artists by genre, instrument, or city</div></div>
+        <div class="card reveal-up d4"><div class="card-title">Send Booking Requests</div><div class="card-body">Formally invite artists to events with price, date, and a message</div></div>
+        <div class="card reveal-up d5"><div class="card-title">Create Event Pages</div><div class="card-body">Build event listings with poster, lineup, date, and location — submitted for admin approval</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d4"><div class="card-title">Manage Ticket Sales</div><div class="card-body">Track tickets sold, revenue, and booking history per event</div></div>
+        <div class="card reveal-up d5"><div class="card-title">View Event Analytics</div><div class="card-body">See reach, profile views, and booking conversion rates for your events</div></div>
+        <div class="card reveal-up d6"><div class="card-title">Message &amp; Gig-Offer Artists</div><div class="card-body">Chat directly and send in-chat gig proposals with structured details</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">08 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 09 — TECH STACK
+     ================================================== -->
+<section class="slide" id="slide-9">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">⚙</div>
+    <p class="eyebrow reveal d1">Technology</p>
+    <h2 class="slide-title reveal d2">How It's <span class="accent">Built</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="grid-3" style="margin-top:clamp(.6rem,1.6vw,1.3rem);max-width:min(90vw,860px)">
+      <div class="card teal reveal-up d3" style="border-radius:0 12px 12px 0">
+        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">📱 Frontend</div>
+        <div class="card-body"><strong>React Native + Expo</strong><br>One codebase runs on iOS, Android, and Web. TypeScript throughout.</div>
+        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+          <span class="tag">React Native</span><span class="tag">TypeScript</span><span class="tag">Expo SDK 54</span>
+        </div>
+      </div>
+      <div class="card teal reveal-up d4" style="border-radius:0 12px 12px 0">
+        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">🗄️ Backend</div>
+        <div class="card-body"><strong>Supabase</strong> (hosted PostgreSQL)<br>Handles auth, file storage, real-time messaging, and serverless functions.</div>
+        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+          <span class="tag">PostgreSQL</span><span class="tag">Supabase Auth</span><span class="tag">Edge Functions</span>
+        </div>
+      </div>
+      <div class="card teal reveal-up d5" style="border-radius:0 12px 12px 0">
+        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">🤖 AI &amp; Analytics</div>
+        <div class="card-body"><strong>Google Gemini</strong> generates smart insights. PostHog tracks user behaviour. Cloudflare headers provide geo-location.</div>
+        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+          <span class="tag">Gemini API</span><span class="tag">PostHog</span><span class="tag">Cloudflare Geo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">09 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 10 — SYSTEM ARCHITECTURE
+     ================================================== -->
+<section class="slide" id="slide-10">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">Σ</div>
+    <p class="eyebrow reveal d1">Architecture</p>
+    <h2 class="slide-title reveal d2">How the Pieces <span class="accent">Connect</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.6vw,1.3rem)">
+      The app communicates with one cloud backend — Supabase. Every feature — auth, storage, messaging, AI — goes through it.
+    </p>
+    <div class="reveal-up d4" style="max-width:min(90vw,840px)">
+      <div class="flow" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
+        <div class="flow-step"><span class="step-label">User</span>Mobile / Web App</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><span class="step-label">Auth</span>Supabase Auth</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><span class="step-label">Data</span>PostgreSQL DB</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><span class="step-label">Security</span>RLS Policies</div>
+      </div>
+      <div class="flow">
+        <div class="flow-step"><span class="step-label">Files</span>Storage Buckets</div>
+        <div class="flow-arrow">↔</div>
+        <div class="flow-step"><span class="step-label">Logic</span>Edge Functions</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><span class="step-label">AI</span>Google Gemini</div>
+        <div class="flow-arrow">↔</div>
+        <div class="flow-step"><span class="step-label">Live</span>Realtime Channels</div>
+      </div>
+    </div>
+    <div class="reveal d5" style="margin-top:clamp(.6rem,1.5vw,1.2rem);display:flex;flex-wrap:wrap;gap:.4em">
+      <span class="tag">5 Storage Buckets</span>
+      <span class="tag">2 Edge Functions</span>
+      <span class="tag">25+ Analytics RPCs</span>
+      <span class="tag">WebSocket Realtime</span>
+      <span class="tag">Row-Level Security on all tables</span>
+    </div>
+  </div>
+  <span class="slide-num">10 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 11 — ONBOARDING
+     ================================================== -->
+<section class="slide" id="slide-11">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">👤</div>
+    <p class="eyebrow reveal d1">Onboarding</p>
+    <h2 class="slide-title reveal d2">Signing Up &amp; <span class="accent">Getting Started</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="flow reveal-up d3" style="margin-bottom:clamp(.6rem,1.5vw,1.2rem);max-width:min(90vw,680px)">
+      <div class="flow-step"><span class="step-label">Step 1</span>Email &amp; Password</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Step 2</span>Pick a Role</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Step 3</span>Build Profile</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Step 4</span>Use the App</div>
+    </div>
+    <div class="two-col" style="max-width:min(90vw,740px)">
+      <div class="card reveal-up d4">
+        <div class="card-title">Profile Fields Collected</div>
+        <div class="card-body">Username, display name, bio, city (auto-detected via GPS), genres, instruments, date of birth, gender, and profile photo</div>
+      </div>
+      <div class="card reveal-up d5">
+        <div class="card-title">Role Shapes Everything</div>
+        <div class="card-body">The role you pick at sign-up determines your home dashboard, navigation, and every feature available to you. Artists, Organizers, and Fans see a completely different app.</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">11 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 12 — VIDEO FEED
+     ================================================== -->
+<section class="slide" id="slide-12">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">▶</div>
+    <p class="eyebrow reveal d1">Discovery</p>
+    <h2 class="slide-title reveal d2">The <span class="accent">Video Feed</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div>
+        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
+          Fans open the app to a full-screen, scrolling video feed — similar to TikTok. Videos play automatically as you scroll.
+        </p>
+        <ul class="bullet-list">
+          <li class="reveal-up d4">Filter by genre — Carnatic, Hip-Hop, Classical Dance, and more</li>
+          <li class="reveal-up d5">Search artists by name, username, or genre</li>
+          <li class="reveal-up d6">Videos auto-tagged with genre and instruments by the artist</li>
+          <li class="reveal-up d7">Contest-entry videos highlighted in the feed</li>
+          <li class="reveal-up d8">Suspended accounts automatically filtered before the feed loads</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(.35rem,.9vw,.7rem)">
+        <div class="card reveal-up d4">
+          <div class="card-title">How Artists Upload</div>
+          <div class="card-body">Artists pick a video from their gallery. A thumbnail is auto-generated at the 1-second mark. Custom thumbnails are also supported.</div>
+        </div>
+        <div class="card reveal-up d5">
+          <div class="card-title">expo-video Player</div>
+          <div class="card-body">Uses the Expo video player with auto-play on scroll-into-view for a smooth, native-feeling experience on both iOS and Android.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">12 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 13 — MESSAGING
+     ================================================== -->
+<section class="slide" id="slide-13">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">💬</div>
+    <p class="eyebrow reveal d1">Communication</p>
+    <h2 class="slide-title reveal d2">Real-Time <span class="accent">Messaging</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div>
+        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
+          Any two users can chat in real time. Messages appear instantly — powered by a live WebSocket connection, not polling.
+        </p>
+        <ul class="bullet-list">
+          <li class="reveal-up d4">Message requests — must be accepted before a chat opens (prevents spam)</li>
+          <li class="reveal-up d5">Typing indicator — shows when the other person is writing</li>
+          <li class="reveal-up d6">Read receipts — see exactly when your message was seen</li>
+          <li class="reveal-up d7">Online presence — shows if someone is currently active in the app</li>
+          <li class="reveal-up d8">Unread badge counts update live on the conversation list</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(.35rem,.9vw,.7rem)">
+        <div class="card reveal-up d4">
+          <div class="card-title">Powered by Supabase Realtime</div>
+          <div class="card-body">The app subscribes to database changes on the messages table. When a new message is inserted, all relevant open chats update immediately.</div>
+        </div>
+        <div class="card reveal-up d5">
+          <div class="card-title">ChatHub Screen</div>
+          <div class="card-body">A central inbox lists all conversations sorted by latest message, with unread counts and last-message previews.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">13 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 14 — GIG BOOKING
+     ================================================== -->
+<section class="slide" id="slide-14">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">🎫</div>
+    <p class="eyebrow reveal d1">Novel Feature</p>
+    <h2 class="slide-title reveal d2">In-Chat <span class="accent">Gig Booking</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
+      Anyone — fan, organizer, or fellow artist — can send a structured gig offer to an artist directly inside a conversation.
+    </p>
+    <div class="flow reveal-up d4" style="margin-bottom:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,820px)">
+      <div class="flow-step"><span class="step-label">1</span>Tap 🎫 in chat</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">2</span>Fill event form</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">3</span>Card sent in chat</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">4</span>Artist taps Accept</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">5</span>Booking confirmed</div>
+    </div>
+    <div class="grid-2" style="max-width:min(90vw,700px)">
+      <div class="card reveal-up d5">
+        <div class="card-title">Form Fields</div>
+        <div class="card-body">Event name, date, location, budget, and notes — captured in a clean modal before being sent</div>
+      </div>
+      <div class="card reveal-up d6">
+        <div class="card-title">Rich Booking Card in Chat</div>
+        <div class="card-body">The offer renders as a formatted card inside the conversation. The artist taps Accept or Decline right on the chat bubble — no separate screen needed</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">14 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 15 — EVENTS & FORMAL BOOKING
+     ================================================== -->
+<section class="slide" id="slide-15">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">📅</div>
+    <p class="eyebrow reveal d1">Events Module</p>
+    <h2 class="slide-title reveal d2">Events &amp; <span class="accent">Formal Bookings</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div>
+        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d3">Organizer → Artist Booking</p>
+        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+          <div class="card reveal-up d3"><div class="card-title">1. Organizer sends booking request</div><div class="card-body">Specifies event date, venue, price, and a personal message</div></div>
+          <div class="card reveal-up d4"><div class="card-title">2. Artist accepts or declines</div><div class="card-body">Booking status updates to accepted / declined / cancelled</div></div>
+          <div class="card reveal-up d5"><div class="card-title">3. Booking tracked &amp; analysed</div><div class="card-body">Stored in the database and counted in both parties' analytics dashboards</div></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d4">Events &amp; Tickets</p>
+        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+          <div class="card reveal-up d4"><div class="card-title">Event Creation</div><div class="card-body">Organizer creates an event with poster, lineup, and date — held for admin approval before going public</div></div>
+          <div class="card reveal-up d5"><div class="card-title">Lineup Invites</div><div class="card-body">Artists on the lineup receive an in-app invite to accept or decline</div></div>
+          <div class="card reveal-up d6"><div class="card-title">Ticket Tracking</div><div class="card-body">Quantity sold, total revenue, and booking timestamps all tracked per event</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">15 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 16 — ANALYTICS OVERVIEW
+     ================================================== -->
+<section class="slide" id="slide-16">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">📊</div>
+    <p class="eyebrow reveal d1">Analytics</p>
+    <h2 class="slide-title reveal d2">Your Performance, <span class="accent">In Numbers</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+      Artists and organizers each get a dedicated dashboard with role-specific metrics — all pulling from real user data.
+    </p>
+    <div class="grid-3" style="max-width:min(90vw,880px)">
+      <div class="card reveal-up d3"><div class="card-title">📈 Reach Trend</div><div class="card-body">Profile and video views over 7 / 30 / 90 days, with period-over-period comparison</div></div>
+      <div class="card reveal-up d4"><div class="card-title">🔥 Activity Heatmap</div><div class="card-body">Best times and days to post, based on when your audience is most active</div></div>
+      <div class="card reveal-up d5"><div class="card-title">🎯 Conversion Funnel</div><div class="card-body">Viewer → follower → booking request conversion rates in one chart</div></div>
+      <div class="card reveal-up d6"><div class="card-title">👥 Audience Ages</div><div class="card-body">Age breakdown of your followers — teens, 20s, 30s, and beyond</div></div>
+      <div class="card reveal-up d7"><div class="card-title">🏆 Benchmark</div><div class="card-body">How your engagement compares to other artists — P25, P50, P75, and P90 percentiles</div></div>
+      <div class="card reveal-up d8"><div class="card-title">📹 Video Performance</div><div class="card-body">Which videos drove the most views, likes, saves, and new followers</div></div>
+    </div>
+  </div>
+  <span class="slide-num">16 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 17 — ANALYTICS PIPELINE
+     ================================================== -->
+<section class="slide" id="slide-17">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">⚡</div>
+    <p class="eyebrow reveal d1">Under the Hood</p>
+    <h2 class="slide-title reveal d2">How Analytics <span class="accent">Actually Works</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+      Every action a user takes — watching a video, following an artist, sending a booking — is recorded and processed into dashboard metrics.
+    </p>
+    <div class="flow reveal-up d4" style="flex-wrap:wrap;max-width:min(90vw,860px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
+      <div class="flow-step"><span class="step-label">Trigger</span>User action</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Ingest</span>Edge Function</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Enrich</span>Add geo + session</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Store</span>analytics_events</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Aggregate</span>Hourly view</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">Serve</span>25+ RPCs → Charts</div>
+    </div>
+    <div class="grid-2" style="max-width:min(90vw,700px)">
+      <div class="card reveal-up d5">
+        <div class="card-title">10 Tracked Event Types</div>
+        <div class="card-body">Video views, profile views, likes, follows, shares, saves, booking requests, event views, and booking confirmations</div>
+      </div>
+      <div class="card reveal-up d6">
+        <div class="card-title">Auto Geo-Enrichment</div>
+        <div class="card-body">Each event is tagged with the viewer's city and country using Cloudflare request headers — no extra API or cost</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">17 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 18 — AI INSIGHTS
+     ================================================== -->
+<section class="slide" id="slide-18">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">🤖</div>
+    <p class="eyebrow reveal d1">Artificial Intelligence</p>
+    <h2 class="slide-title reveal d2">AI-Powered <span class="accent">Insights</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div>
+        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
+          When an artist opens their dashboard, Google Gemini reads their metrics and generates plain-language advice — no technical jargon.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+          <div class="card reveal-up d4"><div class="card-title">1. Metrics are gathered</div><div class="card-body">Reach, engagement rate, follower growth, and conversion bundled into one object</div></div>
+          <div class="card reveal-up d5"><div class="card-title">2. Sent to Gemini securely</div><div class="card-body">Via a Supabase Edge Function — the API key lives only on the server, never in the app</div></div>
+          <div class="card reveal-up d6"><div class="card-title">3. Insights displayed</div><div class="card-body">2–3 short tips, each labelled positive / warning / suggestion with distinct colours</div></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.6em" class="reveal d3">Example insight cards</p>
+        <div style="display:flex;flex-direction:column;gap:.45em">
+          <div class="card teal reveal-up d4">
+            <div class="card-title" style="color:var(--teal)">✅ Strong reach this week</div>
+            <div class="card-body">Your profile was seen 40% more than last week — your recent video is driving new visitors.</div>
+          </div>
+          <div class="card teal reveal-up d5">
+            <div class="card-title" style="color:#c0392b">⚠️ Low engagement rate</div>
+            <div class="card-body">Only 2% of viewers follow you. Try adding a call-to-action at the end of your videos.</div>
+          </div>
+          <div class="card teal reveal-up d6">
+            <div class="card-title" style="color:#7d3c98">💡 Best time to post</div>
+            <div class="card-body">Your audience is most active on Friday evenings. Schedule uploads between 7–9 PM.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">18 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 19 — CONTENT MODERATION
+     ================================================== -->
+<section class="slide" id="slide-19">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">🛡</div>
+    <p class="eyebrow reveal d1">Platform Safety</p>
+    <h2 class="slide-title reveal d2">Content <span class="accent">Moderation</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="flow reveal-up d4" style="max-width:min(90vw,760px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="flow-step"><span class="step-label">1</span>User reports content</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">2</span>Admin reviews</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">3</span>Account suspended</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-label">4</span>Filtered from feed</div>
+    </div>
+    <div class="grid-3" style="max-width:min(90vw,860px)">
+      <div class="card reveal-up d4">
+        <div class="card-title">Report System</div>
+        <div class="card-body">Users flag videos or profiles. Reports queue in the admin panel with status: pending / resolved</div>
+      </div>
+      <div class="card reveal-up d5">
+        <div class="card-title">Admin Actions</div>
+        <div class="card-body">Admin can suspend an account or dismiss the report. Suspension takes effect immediately across the entire platform</div>
+      </div>
+      <div class="card reveal-up d6">
+        <div class="card-title">Automatic Feed Filter</div>
+        <div class="card-body">Before loading the video feed, the app fetches all suspended accounts and removes their videos — users never encounter flagged content</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">19 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 20 — CONTESTS & BOOSTS
+     ================================================== -->
+<section class="slide" id="slide-20">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">🏆</div>
+    <p class="eyebrow reveal d1">Engagement Features</p>
+    <h2 class="slide-title reveal d2">Contests &amp; <span class="accent">Visibility Boosts</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div>
+        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d3">Contests</p>
+        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+          <div class="card reveal-up d3"><div class="card-title">1. Admin creates contest</div><div class="card-body">Sets a theme, submission deadline, and prize details</div></div>
+          <div class="card reveal-up d4"><div class="card-title">2. Artists submit videos</div><div class="card-body">Entry is flagged and highlighted in the public feed for all users</div></div>
+          <div class="card reveal-up d5"><div class="card-title">3. Admin announces winner</div><div class="card-body">Winner receives an in-app notification and badge on their profile</div></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d4">Profile Boosts</p>
+        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+          <div class="card reveal-up d4"><div class="card-title">1. Artist requests boost</div><div class="card-body">Chooses boost duration — e.g. 7 or 30 days</div></div>
+          <div class="card reveal-up d5"><div class="card-title">2. Admin approves</div><div class="card-body">Profile is marked boosted and surfaces higher in organizer discovery results</div></div>
+          <div class="card reveal-up d6"><div class="card-title">3. Boost expires automatically</div><div class="card-body">Countdown timer shown on profile; ranking returns to normal after expiry</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">20 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 21 — ADMIN LAYER
+     ================================================== -->
+<section class="slide" id="slide-21">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">⚙</div>
+    <p class="eyebrow reveal d1">Platform Management</p>
+    <h2 class="slide-title reveal d2">The <span class="accent">Admin</span> Layer</h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+      A fourth hidden role — Admin — oversees the entire platform with tools invisible to regular users.
+    </p>
+    <div class="grid-2" style="max-width:min(90vw,720px)">
+      <div class="card reveal-up d4">
+        <div class="card-title">Content Moderation Queue</div>
+        <div class="card-body">Review all reported videos and profiles. Approve or dismiss with one tap. See full resolution history.</div>
+      </div>
+      <div class="card reveal-up d5">
+        <div class="card-title">Event Approvals</div>
+        <div class="card-body">Events created by organizers stay pending until an admin approves them for public listing on the platform</div>
+      </div>
+      <div class="card reveal-up d6">
+        <div class="card-title">Contest Management</div>
+        <div class="card-body">Create and manage contests, review all submissions, select and notify winners in-app</div>
+      </div>
+      <div class="card reveal-up d7">
+        <div class="card-title">Platform KPIs</div>
+        <div class="card-body">Total users by role, videos uploaded, active bookings, boost requests, and platform-wide engagement metrics</div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">21 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 22 — DATABASE OVERVIEW
+     ================================================== -->
+<section class="slide" id="slide-22">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">🗄</div>
+    <p class="eyebrow reveal d1">Database Design</p>
+    <h2 class="slide-title reveal d2">Key <span class="accent">Data Tables</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
+      All data lives in PostgreSQL on Supabase. Row-Level Security ensures users can only read and write data they are authorised to access.
+    </p>
+    <div class="grid-4" style="max-width:min(90vw,900px)">
+      <div class="card reveal-up d3"><div class="card-title">users</div><div class="card-body">Role, email, account status (active / suspended)</div></div>
+      <div class="card reveal-up d4"><div class="card-title">profiles</div><div class="card-body">Username, bio, genres[ ], city, DOB, avatar URL</div></div>
+      <div class="card reveal-up d4"><div class="card-title">videos</div><div class="card-body">Title, URL, view / like counts, contest entry flag</div></div>
+      <div class="card reveal-up d5"><div class="card-title">messages</div><div class="card-body">Chat messages with sender, read status, timestamp</div></div>
+      <div class="card reveal-up d5"><div class="card-title">gig_bookings</div><div class="card-body">In-chat gig offers with event details and accept / decline status</div></div>
+      <div class="card reveal-up d6"><div class="card-title">bookings</div><div class="card-body">Formal booking requests from organizer to artist</div></div>
+      <div class="card reveal-up d6"><div class="card-title">events</div><div class="card-body">Event pages with lineup JSON and admin approval status</div></div>
+      <div class="card reveal-up d7"><div class="card-title">analytics_events</div><div class="card-body">Every user action with geo, session, and demographic data</div></div>
+    </div>
+  </div>
+  <span class="slide-num">22 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 23 — RESULTS
+     ================================================== -->
+<section class="slide" id="slide-23">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">✓</div>
+    <p class="eyebrow reveal d1">Results</p>
+    <h2 class="slide-title reveal d2">What We <span class="accent">Built</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d3">
+          <div style="display:flex;align-items:center;gap:.55em">
+            <div class="stat-val">3</div>
+            <div><div class="card-title">Distinct User Roles</div><div class="card-body">Artist, Organizer, Fan — each with a unique dashboard and feature set</div></div>
+          </div>
+        </div>
+        <div class="card reveal-up d4">
+          <div style="display:flex;align-items:center;gap:.55em">
+            <div class="stat-val">25+</div>
+            <div><div class="card-title">Analytics Metrics</div><div class="card-body">Reach, heatmaps, funnels, benchmarks — all computed from real user data</div></div>
+          </div>
+        </div>
+        <div class="card reveal-up d5">
+          <div style="display:flex;align-items:center;gap:.55em">
+            <div class="stat-val">2</div>
+            <div><div class="card-title">Booking Pathways</div><div class="card-body">Formal booking requests + in-chat gig offers — both end-to-end functional</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
+        <div class="card reveal-up d4"><div class="card-title">✅ Cross-Platform App</div><div class="card-body">Tested and running on iOS and Android via Expo Go</div></div>
+        <div class="card reveal-up d5"><div class="card-title">✅ Live Messaging</div><div class="card-body">Real-time chat with typing indicators, online presence, and read receipts</div></div>
+        <div class="card reveal-up d6"><div class="card-title">✅ AI Insights Live</div><div class="card-body">Gemini-generated tips based on actual artist analytics data</div></div>
+        <div class="card reveal-up d7"><div class="card-title">✅ Moderation Pipeline</div><div class="card-body">Report → admin review → suspend → auto-filter from feed — fully functional</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">23 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 24 — FUTURE SCOPE
+     ================================================== -->
+<section class="slide" id="slide-24">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">→</div>
+    <p class="eyebrow reveal d1">What's Next</p>
+    <h2 class="slide-title reveal d2">Future <span class="accent">Scope</span></h2>
+    <div class="slide-divider reveal d3"></div>
+    <div class="grid-3" style="margin-top:clamp(.6rem,1.5vw,1.2rem);max-width:min(90vw,860px)">
+      <div class="card reveal-up d3"><div class="card-title">📡 Live Streaming</div><div class="card-body">Artists broadcast live performances within the app using WebRTC</div></div>
+      <div class="card reveal-up d4"><div class="card-title">💳 Payment Integration</div><div class="card-body">Stripe for booking deposits and in-app ticket purchases</div></div>
+      <div class="card reveal-up d5"><div class="card-title">🔔 Push Notifications</div><div class="card-body">Alerts for new bookings, messages, and contest results when the app is closed</div></div>
+      <div class="card reveal-up d6"><div class="card-title">🗺️ Map Discovery</div><div class="card-body">"Artists near me" using the city coordinates captured during sign-up</div></div>
+      <div class="card reveal-up d7"><div class="card-title">🎯 Smart Recommendations</div><div class="card-body">Personalised feed based on watch history and favourite genres</div></div>
+      <div class="card reveal-up d8"><div class="card-title">⭐ Fan Subscriptions</div><div class="card-body">Paid tiers for exclusive content — a direct monetisation path for artists</div></div>
+    </div>
+  </div>
+  <span class="slide-num">24 / 25</span>
+</section>
+
+<!-- ==================================================
+     SLIDE 25 — THANK YOU
+     ================================================== -->
+<section class="slide thankyou-slide" id="slide-25">
+  <div class="slide-strip"></div>
+  <div class="slide-inner">
+    <div class="bg-deco">S</div>
+    <p class="eyebrow reveal d1" style="text-align:center">Department of Computer Science &amp; Engineering &nbsp;·&nbsp; 2026</p>
+    <div class="slide-divider reveal d2" style="margin:clamp(.35rem,1vw,.85rem) auto"></div>
+    <h1 class="main-title reveal d3">Spot<span class="accent">Light</span></h1>
+    <p class="title-tagline reveal d4">Discover · Connect · Perform</p>
+    <div class="reveal d5" style="margin-top:clamp(1rem,2.5vw,2rem);display:flex;flex-wrap:wrap;gap:.45em">
+      <span class="tag">Anantha Krishnan</span>
+      <span class="tag">Evin John</span>
+      <span class="tag">Govardhan</span>
+      <span class="tag">Karthika</span>
+    </div>
+    <p class="body-text reveal d6" style="margin-top:clamp(.7rem,1.8vw,1.5rem);font-style:italic">
+      Thank you for your time and attention.
+    </p>
+  </div>
+  <span class="slide-num">25 / 25</span>
+</section>
+
+<script>
+/* =====================================================
+   SLIDE PRESENTATION CONTROLLER
+   Keyboard nav, wheel nav, touch swipe,
+   IntersectionObserver for reveal animations,
+   progress bar, navigation dots.
+   ===================================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.total   = this.slides.length;
+    this.current = 0;
+    this.pb      = document.getElementById('progressBar');
+    this.dots    = document.getElementById('navDots');
+
+    this.buildDots();
+    this.setupObserver();
+    this.setupKeyboard();
+    this.setupWheel();
+    this.setupTouch();
+
+    setTimeout(() => {
+      this.slides[0].classList.add('visible');
+      this.sync();
+    }, 80);
+  }
+
+  goTo(i) {
+    if (i < 0 || i >= this.total) return;
+    this.current = i;
+    this.slides[i].scrollIntoView({ behavior: 'smooth' });
+    this.sync();
+  }
+
+  next() { this.goTo(this.current + 1); }
+  prev() { this.goTo(this.current - 1); }
+
+  sync() {
+    // Progress bar
+    if (this.pb) {
+      this.pb.style.width = (this.total > 1
+        ? (this.current / (this.total - 1)) * 100
+        : 100) + '%';
+    }
+    // Nav dots
+    this.dots?.querySelectorAll('.nav-dot')
+      .forEach((d, i) => d.classList.toggle('active', i === this.current));
+  }
+
+  buildDots() {
+    if (!this.dots) return;
+    this.slides.forEach((_, i) => {
+      const b = document.createElement('button');
+      b.className = 'nav-dot' + (i === 0 ? ' active' : '');
+      b.setAttribute('aria-label', `Slide ${i + 1}`);
+      b.addEventListener('click', () => this.goTo(i));
+      this.dots.appendChild(b);
+    });
+  }
+
+  setupObserver() {
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          en.target.classList.add('visible');
+          this.current = this.slides.indexOf(en.target);
+          this.sync();
+        }
+      });
+    }, { threshold: 0.5 });
+    this.slides.forEach(s => obs.observe(s));
+  }
+
+  setupKeyboard() {
+    document.addEventListener('keydown', e => {
+      if (['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.next(); }
+      if (['ArrowUp','ArrowLeft','PageUp'].includes(e.key))          { e.preventDefault(); this.prev(); }
+      if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
+      if (e.key === 'End')  { e.preventDefault(); this.goTo(this.total - 1); }
+    });
+  }
+
+  setupWheel() {
+    let lock = false;
+    document.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (lock) return;
+      lock = true;
+      if      (e.deltaY >  25) this.next();
+      else if (e.deltaY < -25) this.prev();
+      setTimeout(() => { lock = false; }, 750);
+    }, { passive: false });
+  }
+
+  setupTouch() {
+    let sy = 0;
+    document.addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchend',   e => {
+      const d = sy - e.changedTouches[0].clientY;
+      if (Math.abs(d) > 45) d > 0 ? this.next() : this.prev();
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => new SlidePresentation());
+</script>
+</body>
+</html>
