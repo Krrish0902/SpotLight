@@ -35,6 +35,7 @@ import CreateEventScreen from './screens/CreateEventScreen';
 import EventsGridScreen from './screens/EventsGridScreen';
 import ChatHub from './screens/ChatHub';
 import ContestDetails from './screens/ContestDetails';
+import PublicDashboard from './screens/PublicDashboard';
 
 export type { UserRole };
 
@@ -237,7 +238,7 @@ function AppContent() {
       case 'profile-setup':
         return <ProfileSetup navigate={navigate} userRole={userRole} />;
       case 'edit-profile':
-        return <ProfileSetup navigate={navigate} userRole={userRole} mode="edit" returnTo="artist-profile" />;
+        return <ProfileSetup navigate={navigate} userRole={userRole} mode="edit" returnTo={userRole === 'public' ? 'public-dashboard' : 'artist-profile'} />;
       case 'artist-dashboard':
         return <ArtistDashboard navigate={navigate} />;
       case 'artist-profile':
@@ -278,6 +279,8 @@ function AppContent() {
         return <ChatHub navigate={navigate} />;
       case 'contest-details':
         return <ContestDetails navigate={navigate} contestId={appState.contestId} />;
+      case 'public-dashboard':
+        return <PublicDashboard navigate={navigate} />;
       default:
         return <PublicHome navigate={navigate} />;
     }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Music, Briefcase } from 'lucide-react-native';
+import { Music, Briefcase, Star } from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useAuth, UserRole } from '../lib/auth-context';
@@ -30,13 +30,18 @@ export default function RoleSelection({ navigate, setRole }: Props) {
       navigate('public-home');
       return;
     }
+    if (appUser.role === 'public') {
+      setRole('public');
+      navigate('public-home');
+      return;
+    }
     if (appUser.role === 'admin') {
       setRole('admin');
       navigate('admin-dashboard');
     }
   }, [appUser?.role]);
 
-  const handleRoleSelect = async (role: 'artist' | 'organizer') => {
+  const handleRoleSelect = async (role: 'artist' | 'organizer' | 'public') => {
     setError(null);
     setLoading(true);
     const { error: err } = await updateRole(role);
@@ -99,15 +104,26 @@ export default function RoleSelection({ navigate, setRole }: Props) {
             </View>
           </LinearGradient>
         </Card>
+
+        <Card onPress={() => !loading && handleRoleSelect('public')} style={styles.fanCard}>
+          <LinearGradient colors={['#0ea5e9', '#06b6d4']} style={styles.cardGradient}>
+            <View style={styles.cardContent}>
+              <View style={styles.iconCircle}>
+                <Star size={32} color="#fff" />
+              </View>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>I'm a Fan</Text>
+                <Text style={styles.cardDesc}>Discover artists, book tickets, and leave reviews</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </Card>
       </View>
 
       {loading ? <ActivityIndicator size="small" color="#a855f7" style={{ marginVertical: 8 }} /> : null}
       <Button variant="ghost" onPress={() => !loading && handleAdmin()} style={styles.adminBtn}>
         <Text style={styles.adminText}>Admin Access</Text>
       </Button>
-      <Text style={styles.skip} onPress={() => navigate('public-home')}>
-        Skip for now
-      </Text>
     </LinearGradient>
   );
 }
@@ -143,6 +159,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   organizerCard: {
+    borderWidth: 0,
+    overflow: 'hidden',
+  },
+  fanCard: {
     borderWidth: 0,
     overflow: 'hidden',
   },
@@ -182,10 +202,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     textAlign: 'center',
-  },
-  skip: {
-    marginTop: 16,
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 16,
   },
 });

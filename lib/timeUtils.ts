@@ -61,14 +61,18 @@ export const formatRelativeTime = (dateString: string | Date | null | undefined)
 };
 
 /**
- * Formats a date string property to a local time like '03:04 PM' or '3:04 PM'.
+ * Formats a date string to IST (Asia/Kolkata) time like '3:04 PM'.
  */
 export const formatMessageTime = (dateString: string | Date | null | undefined): string => {
   try {
     if (!dateString) return '';
     const date = parseSupabaseDate(dateString);
-    // Returns equivalent to 'toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })', format: 3:04 PM
-    return format(date, 'h:mm a');
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date);
   } catch (err) {
     return '';
   }
