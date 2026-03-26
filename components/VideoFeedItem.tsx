@@ -541,7 +541,7 @@ export function VideoFeedItem({
                 )}
                 <Text style={styles.username}>@{profile?.username ?? 'artist'}</Text>
               </Pressable>
-              {profile?.is_boosted && <Badge style={styles.boostBadge}>Boosted</Badge>}
+              
             </View>
             <View style={styles.metaRow}>
               {genresStr ? (

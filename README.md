@@ -1,4 +1,4 @@
-# ArtistHub - React Native App
+# SpotLight - React Native App
 
 A React Native (Expo) conversion of the Artist Discovery Booking App, designed to look **exactly like** the original web app.
 
@@ -31,7 +31,7 @@ A React Native (Expo) conversion of the Artist Discovery Booking App, designed t
 ## Run the App
 
 ```bash
-cd ArtistHubApp
+cd SpotLight
 npm install
 npx expo start
 ```

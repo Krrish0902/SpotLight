@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ArtistHubApp",
-    "slug": "ArtistHubApp",
+    "name": "SpotLight",
+    "slug": "SpotLight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ArtistHubApp"
+      "bundleIdentifier": "com.anonymous.SpotLight"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.ArtistHubApp"
+      "package": "com.anonymous.SpotLight"
     },
     "web": {
       "favicon": "./assets/favicon.png"
