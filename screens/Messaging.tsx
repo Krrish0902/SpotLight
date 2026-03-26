@@ -590,7 +590,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
               style={st.textInput}
               value={message}
               onChangeText={handleTyping}
-              placeholder="Sonic vibrations..."
+              placeholder="Please type a message..."
               placeholderTextColor={C.onSurfaceMuted}
               multiline
             />
