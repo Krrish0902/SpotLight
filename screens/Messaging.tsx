@@ -314,23 +314,56 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
     if (!appUser?.id || !artist?.id) return;
     fetchMessages();
 
+    const channelName = `dm:${chatId ?? [appUser.id, artist.id].sort().join('_')}`;
+
     const ch = supabase
-      .channel(`dm:${chatId ?? [appUser.id, artist.id].sort().join('_')}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${appUser.id}` }, p => {
-        if (p.new.sender_id !== artist.id) return;
-        setMessages(prev => [...prev, p.new]);
-        supabase.from('messages').update({ is_read: true }).eq('message_id', p.new.message_id).then();
+      .channel(channelName)
+      // ── New messages (no server-side filter — avoids REPLICA IDENTITY requirement)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
+        const msg = p.new as any;
+        // Only care about messages in this conversation
+        const inConvo =
+          (msg.sender_id === artist.id && msg.receiver_id === appUser.id) ||
+          (msg.sender_id === appUser.id && msg.receiver_id === artist.id);
+        if (!inConvo) return;
+        // Deduplicate: skip if we already have it (optimistic insert)
+        setMessages(prev => {
+          if (prev.some(m => m.message_id === msg.message_id)) return prev;
+          // Replace any matching temp message (same content, sender, within 5s)
+          const tempIdx = prev.findIndex(
+            m => String(m.message_id).startsWith('temp') &&
+                 m.sender_id === msg.sender_id &&
+                 m.content === msg.content
+          );
+          const next = tempIdx >= 0
+            ? [...prev.slice(0, tempIdx), msg, ...prev.slice(tempIdx + 1)]
+            : [...prev, msg];
+          return next;
+        });
+        if (msg.receiver_id === appUser.id) {
+          supabase.from('messages').update({ is_read: true }).eq('message_id', msg.message_id).then();
+        }
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
       })
+      // ── Typing indicator via broadcast (reliable, no REPLICA IDENTITY needed)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload?.user_id !== artist.id) return;
+        setIsTyping(!!payload.typing);
+      })
+      // ── Online presence
       .on('presence', { event: 'sync' }, () => {
         const state = ch.presenceState<any>();
-        const users = Object.values(state).flat();
-        const them = users.find(u => u.user_id === artist.id);
-        setIsOnline(!!them);
-        setIsTyping(!!them?.typing);
+        const online = Object.values(state).flat().some((u: any) => u.user_id === artist.id);
+        setIsOnline(online);
+      })
+      .on('presence', { event: 'join' }, ({ newPresences }) => {
+        if (newPresences.some((u: any) => u.user_id === artist.id)) setIsOnline(true);
+      })
+      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        if (leftPresences.some((u: any) => u.user_id === artist.id)) setIsOnline(false);
       })
       .subscribe(async (s) => {
-        if (s === 'SUBSCRIBED') await ch.track({ user_id: appUser.id, typing: false });
+        if (s === 'SUBSCRIBED') await ch.track({ user_id: appUser.id });
       });
 
     channelRef.current = ch;
@@ -351,9 +384,12 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
 
   const handleTyping = (text: string) => {
     setMessage(text);
-    channelRef.current?.track({ user_id: appUser?.id, typing: text.length > 0 });
+    // Broadcast typing state — more reliable than presence for transient signals
+    channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { user_id: appUser?.id, typing: text.length > 0 } });
     if (typingRef.current) clearTimeout(typingRef.current);
-    typingRef.current = setTimeout(() => channelRef.current?.track({ user_id: appUser?.id, typing: false }), 3000);
+    typingRef.current = setTimeout(() => {
+      channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { user_id: appUser?.id, typing: false } });
+    }, 3000);
   };
 
   const handleSend = async () => {
