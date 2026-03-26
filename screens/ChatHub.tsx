@@ -40,7 +40,7 @@ export default function ChatHub({ navigate }: Props) {
         table: 'message_requests',
         filter: `receiver_id=eq.${currentUserId}`,
       }, () => {
-        fetchData(); // Refetch on any change to our received requests
+        fetchData();
       })
       .on('postgres_changes', {
         event: '*',
@@ -48,7 +48,24 @@ export default function ChatHub({ navigate }: Props) {
         table: 'message_requests',
         filter: `sender_id=eq.${currentUserId}`,
       }, () => {
-        fetchData(); // Refetch on any change to our sent requests
+        fetchData();
+      })
+      // Re-fetch unread counts when any message is inserted or marked as read
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${currentUserId}`,
+      }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${currentUserId}`,
+      }, () => {
+        fetchData();
       })
       .subscribe();
 
