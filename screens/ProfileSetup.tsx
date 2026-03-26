@@ -203,6 +203,8 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
   const goBack = () => {
     if (isEdit && returnTo) {
       navigate(returnTo, { selectedArtist: { id: 'me' } });
+    } else if (userRole === 'public') {
+      navigate('public-home');
     } else {
       navigate('role-selection');
     }
@@ -214,7 +216,7 @@ export default function ProfileSetup({ navigate, userRole, mode = 'setup', retur
         <Button variant="ghost" size="icon" onPress={goBack}>
           <ChevronLeft size={24} color="#fff" />
         </Button>
-        <Text style={styles.title} numberOfLines={1}>{isEdit ? 'Edit Profile' : 'Setup Your Profile'}</Text>
+        <Text style={styles.title} numberOfLines={1}>{isEdit ? 'Edit Profile' : userRole === 'public' ? 'Fan Profile Setup' : 'Setup Your Profile'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

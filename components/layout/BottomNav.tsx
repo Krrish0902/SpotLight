@@ -93,6 +93,8 @@ export default function BottomNav({ activeTab, navigate, userRole, isAuthenticat
     if (tabId === 'profile') {
       if (effectiveIsAuthenticated && effectiveUserRole === 'admin') {
         navigate('admin-dashboard');
+      } else if (effectiveIsAuthenticated && effectiveUserRole === 'public') {
+        navigate('public-dashboard');
       } else if (effectiveIsAuthenticated) {
         navigate('artist-profile', { selectedArtist: { id: 'me' } });
       } else {
