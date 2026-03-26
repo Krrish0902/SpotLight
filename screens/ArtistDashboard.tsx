@@ -23,7 +23,6 @@ import { BenchmarkGauge } from '../components/analytics/BenchmarkGauge';
 import { AIInsightCard } from '../components/analytics/AIInsightCard';
 import { AnomalyBanner } from '../components/analytics/AnomalyBanner';
 import { ReachSplitCard } from '../components/analytics/ReachSplitCard';
-import { FollowAttributionCard } from '../components/analytics/FollowAttributionCard';
 import { AudienceDemographicsCard } from '../components/analytics/AudienceDemographicsCard';
 import { RetentionCurveChart } from '../components/analytics/RetentionCurveChart';
 
@@ -273,7 +272,7 @@ export default function ArtistDashboard({ navigate }: Props) {
   const {
     isLoading, error, period, setPeriod, refresh, reachTrend, dailyTrend, heatmap, geo, funnel,
     contentPerformance, benchmarks, anomalies, repeatViewerRate, churnRiskCount,
-    followerReachSplit, followAttribution, audienceDemographics, avgRetentionCurve
+    followerReachSplit, audienceDemographics, platformAgeData, avgRetentionCurve
   } = useArtistAnalytics(appUser?.id || '');
 
   // Calculate Engagement Rate across 30d
@@ -535,13 +534,11 @@ export default function ArtistDashboard({ navigate }: Props) {
           <MetricCard index={3} label="Booking Conv." value={conversionRate} format="percent" />
         </ScrollView>
 
-        {followerReachSplit && followerReachSplit.total_reach > 0 && (
-          <ReachSplitCard
-            followerReach={Number(followerReachSplit.follower_reach)}
-            nonFollowerReach={Number(followerReachSplit.non_follower_reach)}
-            totalReach={Number(followerReachSplit.total_reach)}
-          />
-        )}
+        {(() => {
+          const ageFromDemog = audienceDemographics?.filter((d: any) => d.dimension === 'age_range').map((d: any) => ({ value: d.value, count: Number(d.count), pct: Number(d.pct) }));
+          const ageData = (ageFromDemog && ageFromDemog.length > 0) ? ageFromDemog : (platformAgeData || []);
+          return ageData.length > 0 ? <ReachSplitCard ageData={ageData} /> : null;
+        })()}
 
         <SectionTitle label="AI Insights" accentColor="#A78BFA" />
         <AIInsightCard artistId={appUser?.id || ''} metrics={{ ...reachTrend, totalViews, engagementRate, conversionRate }} />
@@ -609,12 +606,6 @@ export default function ArtistDashboard({ navigate }: Props) {
         {avgRetentionCurve && avgRetentionCurve.length > 0 && (
           <View style={{ marginTop: 8 }}>
             <RetentionCurveChart data={avgRetentionCurve.map((r: any) => ({ checkpoint: r.checkpoint, avg_retention: r.avg_retention }))} />
-          </View>
-        )}
-
-        {followAttribution && followAttribution.length > 0 && (
-          <View style={{ marginTop: 8 }}>
-            <FollowAttributionCard data={followAttribution} />
           </View>
         )}
 
