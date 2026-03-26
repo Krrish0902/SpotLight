@@ -480,7 +480,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Report',
-          onPress: async (reason) => {
+          onPress: async (reason: string | undefined) => {
             const { error } = await supabase.from('reports').insert({
               reported_by: appUser?.id,
               target_id: artist?.id,
@@ -526,61 +526,64 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
         </View>
       </View>
 
-      {/* ═══ MESSAGES ═══ */}
-      <ScrollView
-        ref={scrollRef}
-        style={st.scroll}
-        contentContainerStyle={st.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      {/* ═══ MESSAGES + INPUT (wrapped together so keyboard pushes both) ═══ */}
+      <KeyboardAvoidingView
+        style={st.kavFlex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {loading ? (
-          <View style={st.loading}><ActivityIndicator color={C.primary} /></View>
-        ) : messages.length === 0 ? (
-          <View style={st.emptyContainer}>
-            <Text style={st.emptyText}>Start a sonic conversation with {artist?.name || 'this artist'}.</Text>
-          </View>
-        ) : messages.map((msg, idx) => {
-          const isMe = msg.sender_id === appUser?.id;
-          return (
-            <View key={msg.message_id} style={[st.msgRow, isMe ? st.msgMe : st.msgThem]}>
-              {!isMe && (
-                <Pressable onPress={handleProfileNav}>
-                  <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
-                </Pressable>
-              )}
-              {isMe ? (
-                <LinearGradient
-                  colors={[C.primary, C.secondary]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={st.bubbleMe}
-                >
-                  <Text style={st.textMe}>{msg.content}</Text>
-                </LinearGradient>
-              ) : (
-                <View style={st.bubbleThem}>
-                  <View style={st.rimLight} />
-                  <Text style={st.textThem}>{msg.content}</Text>
-                </View>
-              )}
-              <Text style={[st.time, isMe ? st.timeMe : st.timeThem]}>
-                {formatMessageTime(msg.sent_at)}
-              </Text>
+        <ScrollView
+          ref={scrollRef}
+          style={st.scroll}
+          contentContainerStyle={st.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {loading ? (
+            <View style={st.loading}><ActivityIndicator color={C.primary} /></View>
+          ) : messages.length === 0 ? (
+            <View style={st.emptyContainer}>
+              <Text style={st.emptyText}>Start a sonic conversation with {artist?.name || 'this artist'}.</Text>
             </View>
-          );
-        })}
-        {isTyping && (
-           <View style={[st.msgRow, st.msgThem]}>
-             <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
-             <View style={[st.bubbleThem, st.typingBubble]}>
-               <TypingPulse />
-             </View>
-           </View>
-        )}
-      </ScrollView>
+          ) : messages.map((msg) => {
+            const isMe = msg.sender_id === appUser?.id;
+            return (
+              <View key={msg.message_id} style={[st.msgRow, isMe ? st.msgMe : st.msgThem]}>
+                {!isMe && (
+                  <Pressable onPress={handleProfileNav}>
+                    <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
+                  </Pressable>
+                )}
+                {isMe ? (
+                  <LinearGradient
+                    colors={[C.primary, C.secondary]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={st.bubbleMe}
+                  >
+                    <Text style={st.textMe}>{msg.content}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={st.bubbleThem}>
+                    <View style={st.rimLight} />
+                    <Text style={st.textThem}>{msg.content}</Text>
+                  </View>
+                )}
+                <Text style={[st.time, isMe ? st.timeMe : st.timeThem]}>
+                  {formatMessageTime(msg.sent_at)}
+                </Text>
+              </View>
+            );
+          })}
+          {isTyping && (
+            <View style={[st.msgRow, st.msgThem]}>
+              <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
+              <View style={[st.bubbleThem, st.typingBubble]}>
+                <TypingPulse />
+              </View>
+            </View>
+          )}
+        </ScrollView>
 
-      {/* ═══ INPUT ═══ */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={8}>
         <View style={[st.inputArea, { paddingBottom: insets.bottom + 12 }]}>
           <View style={st.inputPill}>
             <TextInput
@@ -653,8 +656,9 @@ const st = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   hIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
+  kavFlex: { flex: 1 },
   scroll: { flex: 1 },
-  contentContainer: { padding: 16, flexGrow: 1, paddingBottom: 100 },
+  contentContainer: { padding: 16, flexGrow: 1, paddingBottom: 16 },
   loading: { flex: 1, justifyContent: 'center', paddingVertical: 40 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60, opacity: 0.4 },
   emptyText: { color: C.onSurface, fontSize: 14, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 40 },
@@ -698,9 +702,11 @@ const st = StyleSheet.create({
   typingBubble: { paddingVertical: 10, paddingHorizontal: 16 },
 
   inputArea: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 20,
-    backgroundColor: 'transparent',
+    paddingTop: 8,
+    backgroundColor: 'rgba(2, 6, 23, 0.95)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.glassBorder,
   },
   inputPill: {
     flexDirection: 'row',
