@@ -294,15 +294,17 @@ function AppContent() {
 }
 
 export default function App() {
+  const content = (
+    <AuthProvider>
+      <StatusBar style="light" />
+      <AppContent />
+    </AuthProvider>
+  );
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <PostHogProvider client={posthog}>
-          <AuthProvider>
-            <StatusBar style="light" />
-            <AppContent />
-          </AuthProvider>
-        </PostHogProvider>
+        {posthog ? <PostHogProvider client={posthog}>{content}</PostHogProvider> : content}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

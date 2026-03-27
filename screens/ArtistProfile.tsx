@@ -687,6 +687,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: isOwnProfile ? 140 : 180 }]}
         showsVerticalScrollIndicator={false}
+        directionalLockEnabled
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >

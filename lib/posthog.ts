@@ -1,5 +1,9 @@
 import PostHog from 'posthog-react-native';
 
-export const posthog = new PostHog(process.env.EXPO_PUBLIC_POSTHOG_KEY!, {
-  host: 'https://app.posthog.com',
-});
+const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
+
+export const posthog = posthogKey
+  ? new PostHog(posthogKey, {
+      host: 'https://app.posthog.com',
+    })
+  : null;

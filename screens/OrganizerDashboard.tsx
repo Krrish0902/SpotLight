@@ -121,7 +121,13 @@ export default function OrganizerDashboard({ navigate }: Props) {
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#0A0F1E', '#0A0F1E']} style={StyleSheet.absoluteFill} />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         
         <View style={styles.header}>
           <View>
@@ -171,7 +177,12 @@ export default function OrganizerDashboard({ navigate }: Props) {
         </View>
 
         {/* Global Stats */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 16 }}
+          nestedScrollEnabled
+        >
            <MetricCard label="Active Events" value={activeEventsCount} />
            <MetricCard label="Total Tickets Sold" value={totalTickets} />
            <MetricCard label="Total Revenue" value={(salesVelocity?.total_revenue_cents || 0) / 100} format="currency" />

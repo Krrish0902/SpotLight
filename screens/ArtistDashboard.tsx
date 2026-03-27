@@ -433,7 +433,13 @@ export default function ArtistDashboard({ navigate }: Props) {
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#050A14', '#0C1120']} style={StyleSheet.absoluteFill} />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
 
         {/* Header */}
         <View style={styles.header}>
@@ -527,7 +533,12 @@ export default function ArtistDashboard({ navigate }: Props) {
 
         <SectionTitle label="Overview" />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.metricsRow}
+          nestedScrollEnabled
+        >
           <MetricCard index={0} label="Accounts Reached" value={Number(reachTrend?.current_reach || 0)} previousValue={reachTrend?.previous_reach != null ? Number(reachTrend.previous_reach) : undefined} />
           <MetricCard index={1} label="Total Views" value={totalViews} />
           <MetricCard index={2} label="Engagement Rate" value={engagementRate} format="percent" />
@@ -654,7 +665,14 @@ export default function ArtistDashboard({ navigate }: Props) {
               </Button>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 12 }}
+              directionalLockEnabled
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              canCancelContentTouches
+            >
               {loadingActivity ? (
                 <ActivityIndicator color="#6366F1" style={{ marginTop: 20 }} />
               ) : (

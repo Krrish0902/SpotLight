@@ -352,7 +352,7 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        
+        directionalLockEnabled
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         ListHeaderComponent={
@@ -397,6 +397,7 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.contestsScroll}
+                    directionalLockEnabled
                   >
                     {contestsLoading ? null : contests.length === 0 ? (
                       <View style={styles.contestsEmpty}>
@@ -444,6 +445,7 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.winnersScroll}
+                    directionalLockEnabled
                   >
                     {winnersLoading ? null : contestWinners.length === 0 ? (
                       <View style={styles.winnersEmpty}>
@@ -499,6 +501,7 @@ export default function SearchDiscover({ navigate, blurOnPopNonce = 0 }: Props) 
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.picksScroll}
+                    directionalLockEnabled
                   >
                     {picksLoading ? null : picks.length === 0 ? (
                       <View style={styles.picksEmpty}>

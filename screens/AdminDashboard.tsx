@@ -159,7 +159,13 @@ export default function AdminDashboard({ navigate }: Props) {
 
   return (
     <LinearGradient colors={['#050A18', '#070B1A', '#050A18']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Admin Dashboard</Text>
           <Text style={styles.subtitle}>Manage your platform</Text>
