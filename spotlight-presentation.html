@@ -8,8 +8,7 @@
 <style>
 
 /* =====================================================
-   THEME — Style B: Clean Canvas
-   Change CSS variables here to restyle everything
+   THEME — Clean Canvas (Style B)
    ===================================================== */
 :root {
   --bg:          #f7f4ef;
@@ -20,24 +19,28 @@
   --teal-pale:   rgba(26,122,110,0.07);
   --teal-border: rgba(26,122,110,0.18);
   --text:        #111111;
-  --text-muted:  #565656;
-  --text-light:  #aaaaaa;
-  --border:      #e0dbd3;
-  --strip-w:     clamp(6px,1.2vw,10px);
+  --text-muted:  #515151;
+  --text-light:  #a8a8a8;
+  --border:      #ddd8d0;
+  --strip-w:     clamp(8px,1.4vw,14px);
 
   --font-display: 'Syne', sans-serif;
   --font-body:    'Barlow', sans-serif;
 
-  --h2-size:       clamp(1.2rem,3.2vw,2.4rem);
-  --body-size:     clamp(0.72rem,1.35vw,1.05rem);
-  --small-size:    clamp(0.6rem,0.9vw,0.78rem);
-  --slide-padding: clamp(1.2rem,4vw,4rem);
-
-  --ease-expo: cubic-bezier(0.16,1,0.3,1);
+  /* Scale tokens — bump everything up */
+  --eyebrow-size: clamp(0.62rem,1.05vw,0.82rem);
+  --h2-size:      clamp(1.6rem,4.2vw,3.4rem);
+  --card-title:   clamp(0.9rem,1.65vw,1.2rem);
+  --card-body:    clamp(0.78rem,1.4vw,1.04rem);
+  --body-size:    clamp(0.84rem,1.6vw,1.2rem);
+  --small-size:   clamp(0.64rem,1.05vw,0.82rem);
+  --pad:          clamp(1.4rem,4.5vw,4.5rem);
+  --gap-grid:     clamp(0.55rem,1.4vw,1.1rem);
+  --ease:         cubic-bezier(0.16,1,0.3,1);
 }
 
 /* =====================================================
-   VIEWPORT BASE — mandatory
+   RESET + VIEWPORT BASE
    ===================================================== */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow-x:hidden}
@@ -50,18 +53,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text)}
   display:flex;flex-direction:row;position:relative;
 }
 
+/* Responsive scaling */
 @media(max-height:700px){
-  :root{--slide-padding:clamp(0.5rem,2.5vw,1.6rem);--h2-size:clamp(1rem,2.8vw,1.8rem);--body-size:clamp(0.62rem,1.1vw,0.88rem)}
+  :root{--pad:clamp(.7rem,3vw,2rem);--h2-size:clamp(1.2rem,3.5vw,2.2rem);--card-title:clamp(.78rem,1.4vw,1rem);--card-body:clamp(.68rem,1.2vw,.88rem)}
 }
 @media(max-height:600px){
-  :root{--slide-padding:clamp(0.4rem,2vw,1.1rem);--h2-size:clamp(0.9rem,2.4vw,1.5rem);--body-size:clamp(0.58rem,1vw,0.8rem)}
+  :root{--pad:clamp(.5rem,2.5vw,1.4rem);--h2-size:clamp(1rem,3vw,1.8rem)}
   .nav-dots{display:none}
 }
 @media(max-height:500px){
-  :root{--slide-padding:clamp(0.3rem,1.5vw,0.7rem);--h2-size:clamp(0.85rem,2vw,1.25rem)}
+  :root{--pad:clamp(.4rem,2vw,.9rem);--h2-size:clamp(.9rem,2.5vw,1.4rem)}
 }
-@media(max-width:600px){
-  :root{--h2-size:clamp(1.1rem,6.5vw,2rem)}
+@media(max-width:768px){
   .grid-3,.grid-4{grid-template-columns:1fr 1fr!important}
   .grid-2,.two-col{grid-template-columns:1fr!important}
 }
@@ -70,188 +73,301 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text)}
   html{scroll-behavior:auto}
 }
 
-/* Faint grid on every slide */
+/* Faint grid overlay */
 .slide::before{
   content:'';position:absolute;inset:0;
   background-image:
-    linear-gradient(rgba(0,0,0,0.022) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,0,0,0.022) 1px,transparent 1px);
-  background-size:48px 48px;pointer-events:none;z-index:0;
+    linear-gradient(rgba(0,0,0,0.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,0.02) 1px,transparent 1px);
+  background-size:52px 52px;pointer-events:none;z-index:0;
 }
 
 /* =====================================================
    LEFT STRIP
    ===================================================== */
-.slide-strip{
+.strip{
   width:var(--strip-w);
   background:linear-gradient(to bottom,var(--teal),var(--teal-dark));
-  flex-shrink:0;z-index:1;
+  flex-shrink:0;z-index:2;
 }
 
 /* =====================================================
    SLIDE INNER
    ===================================================== */
-.slide-inner{
+.inn{
   flex:1;display:flex;flex-direction:column;
   justify-content:center;
-  padding:var(--slide-padding);
+  padding:var(--pad);
   position:relative;z-index:1;
   max-height:100%;overflow:hidden;
 }
 
 /* =====================================================
-   DECORATIVE BG CHARACTER
+   DECORATIVE BG LETTER
    ===================================================== */
-.bg-deco{
-  position:absolute;right:-0.05em;bottom:-0.15em;
+.bg-d{
+  position:absolute;right:-.05em;bottom:-.15em;
   font-family:var(--font-display);font-weight:800;
-  font-size:clamp(7rem,24vw,18rem);
-  color:rgba(26,122,110,0.045);
+  font-size:clamp(8rem,26vw,20rem);
+  color:rgba(26,122,110,.042);
   line-height:1;pointer-events:none;user-select:none;
-  letter-spacing:-0.06em;z-index:0;
+  letter-spacing:-.06em;z-index:0;
 }
 
 /* =====================================================
-   TYPOGRAPHY
+   HEADER ELEMENTS
    ===================================================== */
 .eyebrow{
-  font-family:var(--font-body);font-size:var(--small-size);
-  font-weight:500;letter-spacing:0.2em;text-transform:uppercase;
-  color:var(--teal);margin-bottom:clamp(0.4rem,1.2vw,0.9rem);
+  font-family:var(--font-body);font-size:var(--eyebrow-size);
+  font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:clamp(.4rem,1vw,.8rem);
+  position:relative;z-index:1;
 }
-.slide-title{
+.h2{
   font-family:var(--font-display);font-size:var(--h2-size);
-  font-weight:800;letter-spacing:-0.03em;line-height:1.05;
+  font-weight:800;letter-spacing:-.03em;line-height:1.02;
   color:var(--text);position:relative;z-index:1;
 }
-.slide-title .accent{color:var(--teal)}
-.slide-divider{
-  width:clamp(28px,3.5vw,48px);height:3px;background:var(--teal);
-  margin:clamp(0.4rem,1vw,0.9rem) 0;
+.h2 .a{color:var(--teal)}
+.divider{
+  width:clamp(32px,4vw,56px);height:3px;background:var(--teal);
+  margin:clamp(.45rem,1.1vw,1rem) 0;position:relative;z-index:1;
 }
-.body-text{
+.lead{
   font-family:var(--font-body);font-size:var(--body-size);
-  color:var(--text-muted);line-height:1.6;
+  color:var(--text-muted);line-height:1.65;
+  position:relative;z-index:1;
 }
 
 /* =====================================================
    REVEAL ANIMATIONS
    ===================================================== */
-.reveal{
-  opacity:0;transform:translateX(-18px);
-  transition:opacity .6s var(--ease-expo),transform .6s var(--ease-expo);
-}
-.slide.visible .reveal{opacity:1;transform:translateX(0)}
-.reveal-up{
-  opacity:0;transform:translateY(16px);
-  transition:opacity .6s var(--ease-expo),transform .6s var(--ease-expo);
-}
-.slide.visible .reveal-up{opacity:1;transform:translateY(0)}
-.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
-.d4{transition-delay:.32s}.d5{transition-delay:.40s}.d6{transition-delay:.48s}
-.d7{transition-delay:.56s}.d8{transition-delay:.64s}.d9{transition-delay:.72s}
+.rv{opacity:0;transform:translateX(-20px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.slide.visible .rv{opacity:1;transform:none}
+.ru{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.slide.visible .ru{opacity:1;transform:none}
+.d1{transition-delay:.07s}.d2{transition-delay:.14s}.d3{transition-delay:.21s}
+.d4{transition-delay:.28s}.d5{transition-delay:.35s}.d6{transition-delay:.42s}
+.d7{transition-delay:.49s}.d8{transition-delay:.56s}.d9{transition-delay:.63s}
 
 /* =====================================================
-   CARDS
+   ICON SYSTEM  (all SVG icons via <use>)
+   ===================================================== */
+.ico{display:inline-block;flex-shrink:0;color:var(--teal)}
+.ico-sm{width:clamp(18px,2.4vw,24px);height:clamp(18px,2.4vw,24px)}
+.ico-md{width:clamp(24px,3.2vw,32px);height:clamp(24px,3.2vw,32px)}
+.ico-lg{width:clamp(32px,4.5vw,44px);height:clamp(32px,4.5vw,44px)}
+.ico-xl{width:clamp(42px,5.5vw,56px);height:clamp(42px,5.5vw,56px)}
+
+/* =====================================================
+   CARD SYSTEM
    ===================================================== */
 .card{
-  background:var(--card-bg);border:1px solid var(--border);
-  border-left:3px solid var(--teal);border-radius:0 8px 8px 0;
-  padding:clamp(0.5rem,1.1vw,0.9rem) clamp(0.6rem,1.3vw,1.1rem);
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-left:3px solid var(--teal);
+  border-radius:0 10px 10px 0;
+  padding:clamp(.85rem,1.9vw,1.6rem) clamp(1rem,2.1vw,1.75rem);
   position:relative;z-index:1;
+  display:flex;flex-direction:column;gap:.3em;
 }
 .card.teal{background:var(--teal-pale);border-color:var(--teal-border);border-left-color:var(--teal)}
-.card-title{
-  font-family:var(--font-display);font-size:clamp(0.7rem,1.25vw,0.92rem);
-  font-weight:700;color:var(--text);margin-bottom:.22em;
+.ct{/* card title */
+  font-family:var(--font-display);font-size:var(--card-title);
+  font-weight:700;color:var(--text);line-height:1.2;
 }
-.card-body{
-  font-family:var(--font-body);font-size:clamp(0.62rem,1.05vw,0.8rem);
-  color:var(--text-muted);line-height:1.5;
+.cb{/* card body */
+  font-family:var(--font-body);font-size:var(--card-body);
+  color:var(--text-muted);line-height:1.55;
 }
 
+/* Horizontal card: icon + text side-by-side */
+.card-h{flex-direction:row;align-items:flex-start;gap:clamp(.7rem,1.4vw,1.1rem)}
+.card-h .card-text{display:flex;flex-direction:column;gap:.25em}
+
+/* Vertical card: icon on top */
+.card-v{align-items:flex-start}
+.card-v .ico{margin-bottom:clamp(.35rem,.7vw,.55rem)}
+
 /* =====================================================
-   GRIDS
+   GRID SYSTEM  (always stretch cells)
    ===================================================== */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(0.38rem,1.1vw,0.85rem)}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(0.35rem,1vw,0.8rem)}
-.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:clamp(0.3rem,.9vw,.7rem)}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:clamp(0.7rem,2.2vw,1.8rem);align-items:start}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap-grid);align-items:stretch}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap-grid);align-items:stretch}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--gap-grid);align-items:stretch}
+.gcol{display:flex;flex-direction:column;gap:var(--gap-grid)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(.9rem,2.5vw,2.2rem);align-items:start}
+/* stretch grid to fill remaining height */
+.gfill{flex:1;align-content:stretch}
+.gfill>.card,.gfill .card{height:100%}
 
 /* =====================================================
-   TAGS
+   TAG PILLS
    ===================================================== */
 .tag{
   display:inline-flex;align-items:center;gap:.35em;
   background:var(--teal-pale);color:var(--teal);
   border:1px solid var(--teal-border);border-radius:100px;
-  padding:.2em .7em;font-size:clamp(0.56rem,0.88vw,0.7rem);
-  font-weight:500;font-family:var(--font-body);letter-spacing:.04em;
+  padding:.22em .78em;
+  font-size:clamp(.58rem,.95vw,.75rem);font-weight:500;
+  font-family:var(--font-body);letter-spacing:.04em;
 }
+.tags{display:flex;flex-wrap:wrap;gap:.4em;position:relative;z-index:1}
 
 /* =====================================================
    BULLET LIST
    ===================================================== */
-.bullet-list{list-style:none;display:flex;flex-direction:column;gap:clamp(0.28rem,0.7vh,0.62rem)}
-.bullet-list li{
+.blist{list-style:none;display:flex;flex-direction:column;gap:clamp(.32rem,.75vh,.68rem);position:relative;z-index:1}
+.blist li{
   font-size:var(--body-size);color:var(--text-muted);
-  line-height:1.5;padding-left:1.3em;position:relative;
+  line-height:1.55;padding-left:1.4em;position:relative;
 }
-.bullet-list li::before{
-  content:'';position:absolute;left:0;top:.57em;
-  width:6px;height:6px;border-radius:50%;background:var(--teal);
+.blist li::before{
+  content:'';position:absolute;left:0;top:.6em;
+  width:7px;height:7px;border-radius:50%;background:var(--teal);
 }
 
 /* =====================================================
-   FLOW DIAGRAM
+   FLOW / PIPELINE DIAGRAM
    ===================================================== */
-.flow{display:flex;align-items:center;gap:clamp(.22rem,.7vw,.45rem);flex-wrap:wrap}
-.flow-step{
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:clamp(.22rem,.6vw,.42rem)}
+.fs{/* flow step */
   background:var(--card-bg);border:1px solid var(--border);
-  border-top:3px solid var(--teal);border-radius:6px;
-  padding:clamp(.38rem,.75vw,.65rem) clamp(.45rem,.9vw,.8rem);
-  font-family:var(--font-body);font-size:clamp(.58rem,.95vw,.75rem);
+  border-top:3px solid var(--teal);border-radius:7px;
+  padding:clamp(.45rem,.95vw,.8rem) clamp(.55rem,1.1vw,.95rem);
+  font-family:var(--font-body);font-size:clamp(.65rem,1.1vw,.85rem);
   font-weight:500;color:var(--text);text-align:center;
-  min-width:clamp(55px,8vw,95px);
+  min-width:clamp(65px,9.5vw,110px);
 }
-.flow-step .step-label{
-  font-size:clamp(.48rem,.7vw,.58rem);color:var(--teal);
+.fs .lbl{
+  font-size:clamp(.52rem,.8vw,.65rem);color:var(--teal);
   font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-  display:block;margin-bottom:.18em;
+  display:block;margin-bottom:.2em;
 }
-.flow-arrow{color:var(--teal);font-size:clamp(.85rem,1.4vw,1.1rem);flex-shrink:0}
+.fa{color:var(--teal);font-size:clamp(.9rem,1.6vw,1.2rem);flex-shrink:0}
 
 /* =====================================================
    COMPARE TABLE
    ===================================================== */
-.compare-row{
-  display:grid;grid-template-columns:clamp(70px,15%,115px) 1fr 1fr;
-  gap:clamp(.3rem,.85vw,.65rem);align-items:center;
-  padding:clamp(.3rem,.65vw,.5rem) 0;border-bottom:1px solid var(--border);
-  font-size:clamp(.6rem,.95vw,.75rem);
+.cmp{display:flex;flex-direction:column;position:relative;z-index:1}
+.cmp-hd,.cmp-row{
+  display:grid;grid-template-columns:clamp(90px,18%,145px) 1fr 1fr;
+  gap:clamp(.4rem,1vw,.8rem);
+  padding:clamp(.38rem,.75vw,.6rem) 0;
+  font-size:clamp(.68rem,1.2vw,.92rem);
 }
-.compare-row:last-child{border-bottom:none}
-.compare-row .pl{font-weight:700;color:var(--text);font-family:var(--font-display)}
-.compare-row .has{color:var(--teal);font-weight:500}
-.compare-row .lacks{color:#c0392b}
+.cmp-hd{
+  color:var(--text-light);font-size:clamp(.58rem,.88vw,.7rem);
+  font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+}
+.cmp-row{border-top:1px solid var(--border)}
+.cmp-row .pl{font-weight:700;color:var(--text);font-family:var(--font-display)}
+.cmp-row .has{color:var(--teal);font-weight:500}
+.cmp-row .no{color:#c0392b}
 
 /* =====================================================
    ROLE CARD
    ===================================================== */
-.role-card{
+.rc{
   background:var(--card-bg);border:1px solid var(--border);
-  border-radius:10px;padding:clamp(.65rem,1.6vw,1.3rem);
-  display:flex;flex-direction:column;gap:.4em;
-  position:relative;z-index:1;
+  border-radius:12px;
+  padding:clamp(.9rem,2.2vw,1.8rem);
+  display:flex;flex-direction:column;gap:.5em;
+  position:relative;z-index:1;height:100%;
 }
-.role-icon{font-size:clamp(1.3rem,2.6vw,1.9rem);margin-bottom:.1em}
-.role-name{font-family:var(--font-display);font-size:clamp(.82rem,1.7vw,1.15rem);font-weight:800;color:var(--text)}
-.role-desc{font-size:clamp(.6rem,.97vw,.76rem);color:var(--text-muted);line-height:1.5}
+.rc-name{font-family:var(--font-display);font-size:clamp(1rem,2vw,1.45rem);font-weight:800;color:var(--text)}
+.rc-desc{font-size:clamp(.72rem,1.3vw,.98rem);color:var(--text-muted);line-height:1.55}
+
+/* =====================================================
+   STAT HIGHLIGHT
+   ===================================================== */
+.stat{font-family:var(--font-display);font-weight:800;font-size:clamp(1.8rem,5vw,4rem);color:var(--teal);line-height:1}
+
+/* =====================================================
+   SLIDE NUMBER
+   ===================================================== */
+.snum{
+  position:absolute;bottom:clamp(.8rem,1.5vw,1.2rem);right:clamp(1rem,2vw,1.8rem);
+  font-family:var(--font-body);font-size:clamp(.5rem,.8vw,.65rem);
+  color:var(--text-light);letter-spacing:.1em;z-index:2;
+}
+
+/* =====================================================
+   TITLE SLIDE SPECIFICS
+   ===================================================== */
+.big-title{
+  font-family:var(--font-display);
+  font-size:clamp(4rem,13vw,11rem);
+  font-weight:800;letter-spacing:-.04em;line-height:.86;
+  color:var(--text);position:relative;z-index:1;
+}
+.big-title .a{color:var(--teal)}
+.tagline{
+  font-family:var(--font-body);font-style:italic;
+  font-size:clamp(.9rem,2.2vw,1.7rem);font-weight:300;
+  color:var(--text-muted);
+  margin-top:clamp(.6rem,1.5vw,1.3rem);position:relative;z-index:1;
+}
+
+/* =====================================================
+   TITLE SLIDE — SPLIT PANEL REDESIGN
+   ===================================================== */
+#s1{flex-direction:row}
+.t1-left{
+  width:clamp(220px,36%,420px);
+  background:linear-gradient(155deg,var(--teal-dark) 0%,var(--teal) 60%,var(--teal-mid) 100%);
+  display:flex;flex-direction:column;
+  align-items:flex-start;justify-content:center;
+  padding:var(--pad);
+  position:relative;overflow:hidden;flex-shrink:0;
+}
+.t1-left::before{
+  content:'';position:absolute;
+  top:-18%;right:-18%;
+  width:70%;height:70%;border-radius:50%;
+  background:rgba(255,255,255,.06);pointer-events:none;
+}
+.t1-left::after{
+  content:'';position:absolute;
+  bottom:-20%;left:-20%;
+  width:65%;height:65%;border-radius:50%;
+  background:rgba(0,0,0,.12);pointer-events:none;
+}
+.t1-mono{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(8rem,20vw,17rem);letter-spacing:-.06em;line-height:1;
+  color:rgba(255,255,255,.08);
+  position:absolute;bottom:-.1em;right:-.05em;
+  z-index:0;pointer-events:none;user-select:none;
+}
+.t1-badge{
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;
+  padding:clamp(.55rem,1.3vw,1rem) clamp(.8rem,1.8vw,1.4rem);
+  position:relative;z-index:1;width:100%;
+}
+.t1-badge-lbl{
+  font-family:var(--font-body);font-size:clamp(.5rem,.82vw,.65rem);
+  font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.55);margin-bottom:.28em;
+}
+.t1-badge-val{
+  font-family:var(--font-display);font-size:clamp(.78rem,1.5vw,1.05rem);
+  font-weight:700;color:rgba(255,255,255,.95);line-height:1.3;
+}
+.t1-right{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:var(--pad);position:relative;z-index:1;overflow:hidden;
+}
+
+/* THANK YOU — centered */
+.ty .inn{align-items:center;text-align:center}
 
 /* =====================================================
    PROGRESS BAR
    ===================================================== */
-.progress-bar{
+.pb{
   position:fixed;top:0;left:0;height:3px;
   background:linear-gradient(to right,var(--teal),var(--teal-mid));
   z-index:1000;width:0%;transition:width .3s ease;
@@ -260,963 +376,1401 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text)}
 /* =====================================================
    NAV DOTS
    ===================================================== */
-.nav-dots{
+.navd{
   position:fixed;right:clamp(.6rem,1.4vw,1.1rem);top:50%;
   transform:translateY(-50%);
   display:flex;flex-direction:column;gap:5px;z-index:100;
 }
-.nav-dot{
-  width:6px;height:6px;border-radius:50%;
-  background:rgba(26,122,110,0.22);
-  cursor:pointer;transition:all .3s ease;border:none;
-}
-.nav-dot.active{background:var(--teal);transform:scale(1.6)}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(26,122,110,.22);cursor:pointer;transition:all .3s ease;border:none}
+.dot.on{background:var(--teal);transform:scale(1.6)}
 
-/* =====================================================
-   SLIDE NUMBER
-   ===================================================== */
-.slide-num{
-  position:absolute;bottom:clamp(.7rem,1.3vw,1.1rem);right:clamp(.9rem,1.8vw,1.6rem);
-  font-family:var(--font-body);font-size:clamp(.48rem,.75vw,.62rem);
-  color:var(--text-light);letter-spacing:.1em;z-index:2;
-}
-
-/* =====================================================
-   TITLE SLIDE
-   ===================================================== */
-.main-title{
-  font-family:var(--font-display);
-  font-size:clamp(3.5rem,11vw,9rem);
-  font-weight:800;letter-spacing:-.04em;line-height:.88;
-  color:var(--text);position:relative;z-index:1;
-}
-.main-title .accent{color:var(--teal)}
-.title-tagline{
-  font-family:var(--font-body);font-style:italic;
-  font-size:clamp(.82rem,1.9vw,1.45rem);font-weight:300;
-  color:var(--text-muted);
-  margin-top:clamp(.5rem,1.3vw,1.1rem);position:relative;z-index:1;
-}
-.title-meta{
-  margin-top:clamp(1rem,2.2vw,1.8rem);
-  display:flex;flex-wrap:wrap;gap:.45em;position:relative;z-index:1;
-}
-
-/* THANK YOU SLIDE */
-.thankyou-slide .slide-inner{align-items:center;text-align:center}
-
-/* Stat */
-.stat-val{
-  font-family:var(--font-display);font-weight:800;
-  font-size:clamp(1.5rem,4.2vw,3rem);color:var(--teal);line-height:1;
-}
+/* Teal highlight text (used in insight cards) */
+.c-ok{color:var(--teal)}
+.c-warn{color:#c0392b}
+.c-tip{color:#7d3c98}
 
 </style>
 </head>
 <body>
 
-<div class="progress-bar" id="progressBar"></div>
-<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+<!-- =====================================================
+     SVG ICON SPRITE
+     ===================================================== -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+
+<!-- Microphone -->
+<symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="9" y="2" width="6" height="11" rx="3"/>
+  <path d="M5 10a7 7 0 0 0 14 0"/>
+  <line x1="12" y1="19" x2="12" y2="22"/>
+  <line x1="8" y1="22" x2="16" y2="22"/>
+</symbol>
+
+<!-- Building / Stage (Organizer) -->
+<symbol id="i-stage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+  <polyline points="9 22 9 12 15 12 15 22"/>
+</symbol>
+
+<!-- Headphones (Fan) -->
+<symbol id="i-head" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/>
+  <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+</symbol>
+
+<!-- Film / Video play -->
+<symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="2" y="2" width="20" height="20" rx="3"/>
+  <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+</symbol>
+
+<!-- Ticket -->
+<symbol id="i-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 9a1 1 0 0 1 0-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a1 1 0 0 1 0 2v2a1 1 0 0 1 0 2v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a1 1 0 0 1 0-2V9z"/>
+  <line x1="9" y1="3" x2="9" y2="21" stroke-dasharray="3 2"/>
+</symbol>
+
+<!-- Chat bubble -->
+<symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+</symbol>
+
+<!-- Bar chart -->
+<symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="18" y1="20" x2="18" y2="10"/>
+  <line x1="12" y1="20" x2="12" y2="4"/>
+  <line x1="6" y1="20" x2="6" y2="14"/>
+  <line x1="2" y1="20" x2="22" y2="20"/>
+</symbol>
+
+<!-- Sparkle / AI -->
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+</symbol>
+
+<!-- Shield check -->
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  <polyline points="9 12 11 14 15 10"/>
+</symbol>
+
+<!-- Calendar -->
+<symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="4" width="18" height="18" rx="2"/>
+  <line x1="16" y1="2" x2="16" y2="6"/>
+  <line x1="8" y1="2" x2="8" y2="6"/>
+  <line x1="3" y1="10" x2="21" y2="10"/>
+  <line x1="8" y1="14" x2="8" y2="14" stroke-width="2" stroke-linecap="round"/>
+  <line x1="12" y1="14" x2="12" y2="14" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="14" x2="16" y2="14" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+
+<!-- Trophy -->
+<symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 4h10l-1 7a5 5 0 0 1-8 0L7 4z"/>
+  <path d="M7 5H5a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3"/>
+  <path d="M17 5h2a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3"/>
+  <line x1="12" y1="17" x2="12" y2="21"/>
+  <line x1="8" y1="21" x2="16" y2="21"/>
+</symbol>
+
+<!-- Star (boost) -->
+<symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+</symbol>
+
+<!-- Search / discover -->
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="11" cy="11" r="8"/>
+  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+</symbol>
+
+<!-- Clipboard (organizer problem) -->
+<symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+  <rect x="8" y="2" width="8" height="4" rx="1"/>
+  <line x1="9" y1="12" x2="15" y2="12"/>
+  <line x1="9" y1="16" x2="13" y2="16"/>
+</symbol>
+
+<!-- People / users -->
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+  <circle cx="9" cy="7" r="4"/>
+  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+</symbol>
+
+<!-- Smartphone -->
+<symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="5" y="2" width="14" height="20" rx="2"/>
+  <line x1="12" y1="18" x2="12" y2="18" stroke-width="2.5" stroke-linecap="round"/>
+</symbol>
+
+<!-- Database -->
+<symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <ellipse cx="12" cy="5" rx="9" ry="3"/>
+  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+</symbol>
+
+<!-- CPU / processor -->
+<symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="4" width="16" height="16" rx="2"/>
+  <rect x="9" y="9" width="6" height="6"/>
+  <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+  <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+  <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+  <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+</symbol>
+
+<!-- Gear / admin -->
+<symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+</symbol>
+
+<!-- Lightning bolt -->
+<symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+</symbol>
+
+<!-- Check circle -->
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+  <polyline points="22 4 12 14.01 9 11.01"/>
+</symbol>
+
+<!-- Trend / line up -->
+<symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+  <polyline points="17 6 23 6 23 12"/>
+</symbol>
+
+<!-- Funnel -->
+<symbol id="i-funnel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+</symbol>
+
+<!-- Send -->
+<symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="22" y1="2" x2="11" y2="13"/>
+  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+</symbol>
+
+<!-- Layers (stack/tech) -->
+<symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+  <polyline points="2 17 12 22 22 17"/>
+  <polyline points="2 12 12 17 22 12"/>
+</symbol>
+
+<!-- Eye (discovery) -->
+<symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+  <circle cx="12" cy="12" r="3"/>
+</symbol>
+
+<!-- Signal / broadcast -->
+<symbol id="i-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+  <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+  <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+  <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="2.5"/>
+</symbol>
+
+<!-- Credit card -->
+<symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="1" y="4" width="22" height="16" rx="2"/>
+  <line x1="1" y1="10" x2="23" y2="10"/>
+</symbol>
+
+<!-- Bell -->
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+</symbol>
+
+<!-- Map pin -->
+<symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+  <circle cx="12" cy="10" r="3"/>
+</symbol>
+
+<!-- Heart (fan subs) -->
+<symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+</symbol>
+
+<!-- Key / auth -->
+<symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+</symbol>
+
+</defs>
+</svg>
+
+<!-- Progress bar -->
+<div class="pb" id="pb"></div>
+<!-- Nav dots -->
+<nav class="navd" id="navd" aria-label="Slide navigation"></nav>
 
 <!-- ==================================================
-     SLIDE 01 — TITLE
+     01 — TITLE
      ================================================== -->
-<section class="slide" id="slide-1">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">S</div>
-    <p class="eyebrow reveal d1">Final Year Major Project &nbsp;·&nbsp; CSE &nbsp;·&nbsp; 2026</p>
-    <div class="slide-divider reveal d2"></div>
-    <h1 class="main-title reveal d3">Spot<span class="accent">Light</span></h1>
-    <p class="title-tagline reveal d4">Discover · Connect · Perform</p>
-    <div class="title-meta reveal d5">
+<section class="slide" id="s1">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">S</div>
+    <p class="eyebrow rv d1">Final Year Major Project &nbsp;·&nbsp; CSE &nbsp;·&nbsp; 2026</p>
+    <div class="divider rv d2"></div>
+    <h1 class="big-title rv d3">Spot<span class="a">Light</span></h1>
+    <p class="tagline rv d4">Discover · Connect · Perform</p>
+    <div class="tags rv d5" style="margin-top:clamp(1rem,2.5vw,2rem)">
       <span class="tag">Artist Discovery</span>
       <span class="tag">Booking Platform</span>
       <span class="tag">React Native · Supabase</span>
     </div>
+    <p class="lead rv d6" style="margin-top:clamp(.8rem,2vw,1.6rem);font-style:italic;color:var(--teal)">
+      Guided by Professor Dr. Sheena Mathew
+    </p>
   </div>
-  <span class="slide-num">01 / 25</span>
+  <span class="snum">01 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 02 — TEAM
+     02 — TEAM
      ================================================== -->
-<section class="slide" id="slide-2">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">T</div>
-    <p class="eyebrow reveal d1">The Team</p>
-    <h2 class="slide-title reveal d2">People Behind <span class="accent">SpotLight</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="grid-2" style="margin-top:clamp(.7rem,1.8vw,1.4rem);max-width:min(90vw,660px)">
-      <div class="card reveal-up d3">
-        <div class="card-title">Anantha Krishnan</div>
-        <div class="card-body">Backend architecture, Supabase setup, analytics engine &amp; database RPCs</div>
+<section class="slide" id="s2">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">T</div>
+    <p class="eyebrow rv d1">The Team</p>
+    <h2 class="h2 rv d2">People Behind <span class="a">SpotLight</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="g2 gfill ru d3" style="margin-top:clamp(.7rem,1.8vw,1.5rem)">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-users"/></svg>
+        <div class="ct">Anantha Krishnan S</div>
+        <div class="cb">(20222019)</div>
       </div>
-      <div class="card reveal-up d4">
-        <div class="card-title">Evin John</div>
-        <div class="card-body">Mobile frontend, React Native screens, UI/UX design system</div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-phone"/></svg>
+        <div class="ct">Evin John</div>
+        <div class="cb">(20222043)</div>
       </div>
-      <div class="card reveal-up d5">
-        <div class="card-title">Govardhan</div>
-        <div class="card-body">Database schema design, SQL migrations, security policies</div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-db"/></svg>
+        <div class="ct">Govardhan</div>
+        <div class="cb">(20222048)</div>
       </div>
-      <div class="card reveal-up d6">
-        <div class="card-title">Karthika</div>
-        <div class="card-body">Feature development, testing, documentation &amp; QA</div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-check"/></svg>
+        <div class="ct">Karthika Shankar</div>
+        <div class="cb">(20222057)</div>
       </div>
     </div>
-    <p class="body-text reveal d7" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
+    <p class="lead rv d7" style="margin-top:clamp(.5rem,1.2vw,1rem)">
       Department of Computer Science &amp; Engineering &nbsp;·&nbsp; Final Year B.Tech
     </p>
-  </div>
-  <span class="slide-num">02 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 03 — THE PROBLEM
-     ================================================== -->
-<section class="slide" id="slide-3">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">P</div>
-    <p class="eyebrow reveal d1">The Problem</p>
-    <h2 class="slide-title reveal d2">A Market With <span class="accent">No Right Tool</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div style="display:flex;flex-direction:column;gap:clamp(.45rem,1.2vw,.9rem);margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,700px)">
-      <div class="card reveal-up d3">
-        <div class="card-title">🎸 Artists have talent — but no dedicated stage to get booked</div>
-        <div class="card-body">Independent musicians, dancers, and performers rely on word-of-mouth. There is no structured way to attract event organizers.</div>
-      </div>
-      <div class="card reveal-up d4">
-        <div class="card-title">📋 Organizers waste hours manually searching for performers</div>
-        <div class="card-body">Event planners scroll through social media and make calls to vet artists — slow, inconsistent, and unreliable.</div>
-      </div>
-      <div class="card reveal-up d5">
-        <div class="card-title">👥 Fans cannot easily discover local talent</div>
-        <div class="card-body">There is no single feed where fans can explore local artists, follow them, and stay updated on upcoming events near them.</div>
-      </div>
-    </div>
-  </div>
-  <span class="slide-num">03 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 04 — EXISTING PLATFORMS
-     ================================================== -->
-<section class="slide" id="slide-4">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">?</div>
-    <p class="eyebrow reveal d1">Gap Analysis</p>
-    <h2 class="slide-title reveal d2">What's Out There — <span class="accent">And What's Missing</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div style="margin-top:clamp(.4rem,1.1vw,.9rem);max-width:min(90vw,760px)">
-      <div class="compare-row reveal d3" style="color:var(--text-light);font-size:clamp(.54rem,.8vw,.66rem);font-weight:600;text-transform:uppercase;letter-spacing:.1em">
-        <span>Platform</span><span>Does well</span><span>Missing</span>
-      </div>
-      <div class="compare-row reveal-up d4"><span class="pl">Instagram / TikTok</span><span class="has">Video sharing, large audience</span><span class="lacks">No booking system or organizer tools</span></div>
-      <div class="compare-row reveal-up d5"><span class="pl">Eventbrite</span><span class="has">Ticket sales, event pages</span><span class="lacks">No artist discovery or profiles</span></div>
-      <div class="compare-row reveal-up d6"><span class="pl">LinkedIn</span><span class="has">Professional networking</span><span class="lacks">No video showcase, no performance context</span></div>
-      <div class="compare-row reveal-up d7"><span class="pl">YouTube</span><span class="has">Video hosting, analytics</span><span class="lacks">No booking workflow, no organizer features</span></div>
-    </div>
-    <p class="body-text reveal d8" style="margin-top:clamp(.45rem,1.1vw,.9rem);font-style:italic;font-weight:600;color:var(--teal)">
-      No platform combines: video discovery + booking requests + real-time chat
+    <p class="lead rv d8" style="margin-top:clamp(.3rem,.7vw,.6rem);font-style:italic;color:var(--teal)">
+      Guided by Professor Dr. Sheena Mathew
     </p>
   </div>
-  <span class="slide-num">04 / 25</span>
+  <span class="snum">02 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 05 — OUR SOLUTION
+     03 — THE PROBLEM
      ================================================== -->
-<section class="slide" id="slide-5">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">S</div>
-    <p class="eyebrow reveal d1">Proposed Solution</p>
-    <h2 class="slide-title reveal d2">Introducing <span class="accent">SpotLight</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.6vw,1.3rem)">
-      A mobile app for iOS, Android, and Web that brings three communities together in one place.
+<section class="slide" id="s3">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">P</div>
+    <p class="eyebrow rv d1">The Problem</p>
+    <h2 class="h2 rv d2">A Market With <span class="a">No Right Tool</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="g3 gfill ru d3" style="margin-top:clamp(.7rem,1.8vw,1.5rem)">
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-mic"/></svg>
+        <div class="ct">Artists have talent — but no dedicated stage to get booked</div>
+        <div class="cb">Independent musicians and performers rely on word-of-mouth. There is no structured way to attract event organizers.</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-clip"/></svg>
+        <div class="ct">Organizers waste hours manually searching for performers</div>
+        <div class="cb">Event planners scroll through social media and make calls to vet artists — slow, inconsistent, and unreliable.</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-search"/></svg>
+        <div class="ct">General public cannot easily discover local talent</div>
+        <div class="cb">There is no single feed where the general public can explore local artists, follow them, and stay updated on events near them.</div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">03 / 25</span>
+</section>
+
+<!-- ==================================================
+     04 — EXISTING PLATFORMS
+     ================================================== -->
+<section class="slide" id="s4">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">?</div>
+    <p class="eyebrow rv d1">Gap Analysis</p>
+    <h2 class="h2 rv d2">What's Out There — <span class="a">And What's Missing</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="cmp ru d4" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="cmp-hd"><span>Platform</span><span>Does well</span><span>Missing</span></div>
+      <div class="cmp-row"><span class="pl">Instagram / TikTok</span><span class="has">Video sharing, massive audience reach</span><span class="no">No booking system or organizer tools</span></div>
+      <div class="cmp-row"><span class="pl">Eventbrite</span><span class="has">Ticket sales &amp; event management</span><span class="no">No artist discovery or profile system</span></div>
+      <div class="cmp-row"><span class="pl">LinkedIn</span><span class="has">Professional networking</span><span class="no">No video showcase, no performance context</span></div>
+      <div class="cmp-row"><span class="pl">YouTube</span><span class="has">Video hosting with analytics</span><span class="no">No booking workflow, no organizer features</span></div>
+      <div class="cmp-row"><span class="pl">BookMyShow</span><span class="has">Event tickets, movie bookings</span><span class="no">No artist profiles or direct booking requests</span></div>
+    </div>
+    <p class="lead rv d8" style="margin-top:clamp(.6rem,1.5vw,1.2rem);font-style:italic;font-weight:600;color:var(--teal)">
+      No platform combines: video discovery + booking requests + real-time chat + analytics
     </p>
-    <div class="grid-3 reveal-up d4" style="max-width:min(90vw,820px)">
-      <div class="role-card">
-        <div class="role-icon">🎤</div>
-        <div class="role-name">Artist</div>
-        <div class="role-desc">Showcase performance videos, receive bookings, and track your audience with a dedicated analytics dashboard.</div>
-      </div>
-      <div class="role-card">
-        <div class="role-icon">🎪</div>
-        <div class="role-name">Organizer</div>
-        <div class="role-desc">Discover talent, create events, send booking requests, manage your lineup and ticket sales.</div>
-      </div>
-      <div class="role-card">
-        <div class="role-icon">🎧</div>
-        <div class="role-name">Fan</div>
-        <div class="role-desc">Explore a local talent feed, follow favourite artists, send gig suggestions, and discover events.</div>
-      </div>
-    </div>
   </div>
-  <span class="slide-num">05 / 25</span>
+  <span class="snum">04 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 06 — KEY FEATURES
+     05 — OUR SOLUTION
      ================================================== -->
-<section class="slide" id="slide-6">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">F</div>
-    <p class="eyebrow reveal d1">Overview</p>
-    <h2 class="slide-title reveal d2">Six Core <span class="accent">Capabilities</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="grid-3" style="margin-top:clamp(.6rem,1.6vw,1.3rem);max-width:min(90vw,880px)">
-      <div class="card reveal-up d3"><div class="card-title">🎬 Video Feed</div><div class="card-body">TikTok-style scrolling feed to discover artists by genre, location, or search</div></div>
-      <div class="card reveal-up d4"><div class="card-title">📩 Gig Booking</div><div class="card-body">Send and accept gig offers with full event details — directly inside chat</div></div>
-      <div class="card reveal-up d5"><div class="card-title">💬 Live Messaging</div><div class="card-body">Real-time chat with typing indicators, read receipts, and online presence</div></div>
-      <div class="card reveal-up d6"><div class="card-title">📊 Analytics</div><div class="card-body">Reach trends, activity heatmaps, audience demographics, and conversion funnels</div></div>
-      <div class="card reveal-up d7"><div class="card-title">🤖 AI Insights</div><div class="card-body">Google Gemini reads your metrics and writes plain-language tips on your dashboard</div></div>
-      <div class="card reveal-up d8"><div class="card-title">🛡️ Moderation</div><div class="card-body">Report content, admin review, account suspension, contests, and visibility boosts</div></div>
-    </div>
-  </div>
-  <span class="slide-num">06 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 07 — ARTIST EXPERIENCE
-     ================================================== -->
-<section class="slide" id="slide-7">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">A</div>
-    <p class="eyebrow reveal d1">User Role: Artist</p>
-    <h2 class="slide-title reveal d2">What Can an <span class="accent">Artist</span> Do?</h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,800px)">
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d3"><div class="card-title">Upload Performance Videos</div><div class="card-body">Post videos with auto-generated thumbnails — tagged with genre and instruments</div></div>
-        <div class="card reveal-up d4"><div class="card-title">Manage Availability</div><div class="card-body">Set a schedule so organizers know which dates you are free to perform</div></div>
-        <div class="card reveal-up d5"><div class="card-title">Receive Booking Requests</div><div class="card-body">Accept or decline formal booking invitations from event organizers</div></div>
+<section class="slide" id="s5">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">S</div>
+    <p class="eyebrow rv d1">Proposed Solution</p>
+    <h2 class="h2 rv d2">Introducing <span class="a">SpotLight</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      A mobile app for iOS, Android, and Web — one platform, three communities.
+    </p>
+    <div class="g3 gfill ru d4">
+      <div class="rc">
+        <svg class="ico ico-xl"><use href="#i-mic"/></svg>
+        <div class="rc-name">Artist</div>
+        <div class="rc-desc">Showcase performance videos, receive bookings, and track your audience with a full analytics dashboard.</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d4"><div class="card-title">Track Analytics</div><div class="card-body">Monitor views, followers, engagement rate, and audience age breakdown</div></div>
-        <div class="card reveal-up d5"><div class="card-title">Enter Contests</div><div class="card-body">Submit videos to platform-run competitions for visibility and recognition</div></div>
-        <div class="card reveal-up d6"><div class="card-title">Buy Visibility Boosts</div><div class="card-body">Purchase a profile boost to appear higher in organizer search results</div></div>
+      <div class="rc">
+        <svg class="ico ico-xl"><use href="#i-stage"/></svg>
+        <div class="rc-name">Organizer</div>
+        <div class="rc-desc">Discover talent, create events, send booking requests, manage your lineup and ticket sales.</div>
+      </div>
+      <div class="rc">
+        <svg class="ico ico-xl"><use href="#i-head"/></svg>
+        <div class="rc-name">General Public</div>
+        <div class="rc-desc">Explore a local talent feed, follow favourite artists, send gig suggestions, and find events.</div>
       </div>
     </div>
   </div>
-  <span class="slide-num">07 / 25</span>
+  <span class="snum">05 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 08 — ORGANIZER EXPERIENCE
+     06 — KEY FEATURES
      ================================================== -->
-<section class="slide" id="slide-8">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">O</div>
-    <p class="eyebrow reveal d1">User Role: Organizer</p>
-    <h2 class="slide-title reveal d2">What Can an <span class="accent">Organizer</span> Do?</h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,800px)">
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d3"><div class="card-title">Discover Artists</div><div class="card-body">Browse and search artists by genre, instrument, or city</div></div>
-        <div class="card reveal-up d4"><div class="card-title">Send Booking Requests</div><div class="card-body">Formally invite artists to events with price, date, and a message</div></div>
-        <div class="card reveal-up d5"><div class="card-title">Create Event Pages</div><div class="card-body">Build event listings with poster, lineup, date, and location — submitted for admin approval</div></div>
+<section class="slide" id="s6">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">F</div>
+    <p class="eyebrow rv d1">Overview</p>
+    <h2 class="h2 rv d2">Six Core <span class="a">Capabilities</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="g3 gfill ru d3" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-play"/></svg>
+        <div class="ct">Video Feed</div>
+        <div class="cb">TikTok-style scrolling feed to discover artists by genre, location, or search</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d4"><div class="card-title">Manage Ticket Sales</div><div class="card-body">Track tickets sold, revenue, and booking history per event</div></div>
-        <div class="card reveal-up d5"><div class="card-title">View Event Analytics</div><div class="card-body">See reach, profile views, and booking conversion rates for your events</div></div>
-        <div class="card reveal-up d6"><div class="card-title">Message &amp; Gig-Offer Artists</div><div class="card-body">Chat directly and send in-chat gig proposals with structured details</div></div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-ticket"/></svg>
+        <div class="ct">Gig Booking</div>
+        <div class="cb">Send and accept gig offers with full event details — directly inside chat</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chat"/></svg>
+        <div class="ct">Live Messaging</div>
+        <div class="cb">Real-time chat with typing indicators, read receipts, and online presence</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chart"/></svg>
+        <div class="ct">Analytics</div>
+        <div class="cb">Reach trends, activity heatmaps, audience demographics, and conversion funnels</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-spark"/></svg>
+        <div class="ct">AI Insights</div>
+        <div class="cb">Google Gemini reads your metrics and writes plain-language tips on your dashboard</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-shield"/></svg>
+        <div class="ct">Moderation</div>
+        <div class="cb">Report content, admin review, account suspension, contests, and visibility boosts</div>
       </div>
     </div>
   </div>
-  <span class="slide-num">08 / 25</span>
+  <span class="snum">06 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 09 — TECH STACK
+     07 — ARTIST EXPERIENCE
      ================================================== -->
-<section class="slide" id="slide-9">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">⚙</div>
-    <p class="eyebrow reveal d1">Technology</p>
-    <h2 class="slide-title reveal d2">How It's <span class="accent">Built</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="grid-3" style="margin-top:clamp(.6rem,1.6vw,1.3rem);max-width:min(90vw,860px)">
-      <div class="card teal reveal-up d3" style="border-radius:0 12px 12px 0">
-        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">📱 Frontend</div>
-        <div class="card-body"><strong>React Native + Expo</strong><br>One codebase runs on iOS, Android, and Web. TypeScript throughout.</div>
-        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+<section class="slide" id="s7">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">A</div>
+    <p class="eyebrow rv d1">User Role: Artist</p>
+    <h2 class="h2 rv d2">What Can an <span class="a">Artist</span> Do?</h2>
+    <div class="divider rv d3"></div>
+    <div class="g3 gfill ru d3" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-play"/></svg>
+        <div class="ct">Upload Performance Videos</div>
+        <div class="cb">Post videos with auto-generated thumbnails — tagged with genre and instruments</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-cal"/></svg>
+        <div class="ct">Manage Availability</div>
+        <div class="cb">Set a schedule so organizers know which dates you are free to perform</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-ticket"/></svg>
+        <div class="ct">Receive Booking Requests</div>
+        <div class="cb">Accept or decline formal booking invitations from event organizers</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chart"/></svg>
+        <div class="ct">Track Analytics</div>
+        <div class="cb">Monitor views, followers, engagement rate, and audience age breakdown</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-trophy"/></svg>
+        <div class="ct">Enter Contests</div>
+        <div class="cb">Submit videos to platform-run competitions for visibility and recognition</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-star"/></svg>
+        <div class="ct">Buy Visibility Boosts</div>
+        <div class="cb">Purchase a profile boost to appear higher in organizer search results</div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">07 / 25</span>
+</section>
+
+<!-- ==================================================
+     08 — ORGANIZER EXPERIENCE
+     ================================================== -->
+<section class="slide" id="s8">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">O</div>
+    <p class="eyebrow rv d1">User Role: Organizer</p>
+    <h2 class="h2 rv d2">What Can an <span class="a">Organizer</span> Do?</h2>
+    <div class="divider rv d3"></div>
+    <div class="g3 gfill ru d3" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-search"/></svg>
+        <div class="ct">Discover Artists</div>
+        <div class="cb">Browse and search artists by genre, instrument, or city</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-send"/></svg>
+        <div class="ct">Send Booking Requests</div>
+        <div class="cb">Formally invite artists to events with price, date, and a personal message</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-cal"/></svg>
+        <div class="ct">Create Event Pages</div>
+        <div class="cb">Build event listings with poster, lineup, date, and location — submitted for admin approval</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-ticket"/></svg>
+        <div class="ct">Manage Ticket Sales</div>
+        <div class="cb">Track tickets sold, revenue, and booking history per event</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chart"/></svg>
+        <div class="ct">View Event Analytics</div>
+        <div class="cb">See reach, profile views, and booking conversion rates for your events</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chat"/></svg>
+        <div class="ct">Message &amp; Gig-Offer Artists</div>
+        <div class="cb">Chat directly and send structured in-chat gig proposals</div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">08 / 25</span>
+</section>
+
+<!-- ==================================================
+     09 — TECH STACK
+     ================================================== -->
+<section class="slide" id="s9">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">⚙</div>
+    <p class="eyebrow rv d1">Technology</p>
+    <h2 class="h2 rv d2">How It's <span class="a">Built</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="g3 gfill ru d4" style="margin-top:clamp(.7rem,1.8vw,1.5rem)">
+      <div class="card card-v teal" style="border-radius:0 14px 14px 0">
+        <svg class="ico ico-xl"><use href="#i-phone"/></svg>
+        <div class="ct" style="font-size:clamp(1rem,1.9vw,1.4rem)">Frontend</div>
+        <div class="cb" style="font-size:clamp(.8rem,1.45vw,1.05rem)"><strong>React Native + Expo</strong><br>One codebase runs on iOS, Android, and Web. TypeScript throughout.</div>
+        <div class="tags" style="margin-top:.7em">
           <span class="tag">React Native</span><span class="tag">TypeScript</span><span class="tag">Expo SDK 54</span>
         </div>
       </div>
-      <div class="card teal reveal-up d4" style="border-radius:0 12px 12px 0">
-        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">🗄️ Backend</div>
-        <div class="card-body"><strong>Supabase</strong> (hosted PostgreSQL)<br>Handles auth, file storage, real-time messaging, and serverless functions.</div>
-        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+      <div class="card card-v teal" style="border-radius:0 14px 14px 0">
+        <svg class="ico ico-xl"><use href="#i-db"/></svg>
+        <div class="ct" style="font-size:clamp(1rem,1.9vw,1.4rem)">Backend</div>
+        <div class="cb" style="font-size:clamp(.8rem,1.45vw,1.05rem)"><strong>Supabase</strong> (hosted PostgreSQL)<br>Auth, file storage, real-time messaging, and serverless functions.</div>
+        <div class="tags" style="margin-top:.7em">
           <span class="tag">PostgreSQL</span><span class="tag">Supabase Auth</span><span class="tag">Edge Functions</span>
         </div>
       </div>
-      <div class="card teal reveal-up d5" style="border-radius:0 12px 12px 0">
-        <div class="card-title" style="font-size:clamp(.78rem,1.4vw,.98rem);margin-bottom:.45em">🤖 AI &amp; Analytics</div>
-        <div class="card-body"><strong>Google Gemini</strong> generates smart insights. PostHog tracks user behaviour. Cloudflare headers provide geo-location.</div>
-        <div style="margin-top:.6em;display:flex;flex-wrap:wrap;gap:.3em">
+      <div class="card card-v teal" style="border-radius:0 14px 14px 0">
+        <svg class="ico ico-xl"><use href="#i-cpu"/></svg>
+        <div class="ct" style="font-size:clamp(1rem,1.9vw,1.4rem)">AI &amp; Analytics</div>
+        <div class="cb" style="font-size:clamp(.8rem,1.45vw,1.05rem)"><strong>Google Gemini</strong> generates smart insights. PostHog tracks behaviour. Cloudflare geo-enrichment.</div>
+        <div class="tags" style="margin-top:.7em">
           <span class="tag">Gemini API</span><span class="tag">PostHog</span><span class="tag">Cloudflare Geo</span>
         </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">09 / 25</span>
+  <span class="snum">09 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 10 — SYSTEM ARCHITECTURE
+     10 — SYSTEM ARCHITECTURE
      ================================================== -->
-<section class="slide" id="slide-10">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">Σ</div>
-    <p class="eyebrow reveal d1">Architecture</p>
-    <h2 class="slide-title reveal d2">How the Pieces <span class="accent">Connect</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.6vw,1.3rem)">
-      The app communicates with one cloud backend — Supabase. Every feature — auth, storage, messaging, AI — goes through it.
+<section class="slide" id="s10">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">Σ</div>
+    <p class="eyebrow rv d1">Architecture</p>
+    <h2 class="h2 rv d2">How the Pieces <span class="a">Connect</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      The app talks to one cloud backend — Supabase. Every feature — auth, storage, messaging, AI — flows through it.
     </p>
-    <div class="reveal-up d4" style="max-width:min(90vw,840px)">
-      <div class="flow" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
-        <div class="flow-step"><span class="step-label">User</span>Mobile / Web App</div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-step"><span class="step-label">Auth</span>Supabase Auth</div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-step"><span class="step-label">Data</span>PostgreSQL DB</div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-step"><span class="step-label">Security</span>RLS Policies</div>
+    <div class="ru d4">
+      <div class="flow" style="margin-bottom:clamp(.5rem,1.2vw,1rem)">
+        <div class="fs"><span class="lbl">User</span>Mobile / Web App</div>
+        <div class="fa">→</div>
+        <div class="fs"><span class="lbl">Auth</span>Supabase Auth</div>
+        <div class="fa">→</div>
+        <div class="fs"><span class="lbl">Data</span>PostgreSQL DB</div>
+        <div class="fa">→</div>
+        <div class="fs"><span class="lbl">Security</span>RLS Policies</div>
       </div>
       <div class="flow">
-        <div class="flow-step"><span class="step-label">Files</span>Storage Buckets</div>
-        <div class="flow-arrow">↔</div>
-        <div class="flow-step"><span class="step-label">Logic</span>Edge Functions</div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-step"><span class="step-label">AI</span>Google Gemini</div>
-        <div class="flow-arrow">↔</div>
-        <div class="flow-step"><span class="step-label">Live</span>Realtime Channels</div>
+        <div class="fs"><span class="lbl">Files</span>Storage Buckets</div>
+        <div class="fa">↔</div>
+        <div class="fs"><span class="lbl">Logic</span>Edge Functions</div>
+        <div class="fa">→</div>
+        <div class="fs"><span class="lbl">AI</span>Google Gemini</div>
+        <div class="fa">↔</div>
+        <div class="fs"><span class="lbl">Live</span>Realtime WebSocket</div>
       </div>
     </div>
-    <div class="reveal d5" style="margin-top:clamp(.6rem,1.5vw,1.2rem);display:flex;flex-wrap:wrap;gap:.4em">
+    <div class="tags rv d5" style="margin-top:clamp(.8rem,2vw,1.6rem)">
       <span class="tag">5 Storage Buckets</span>
       <span class="tag">2 Edge Functions</span>
       <span class="tag">25+ Analytics RPCs</span>
       <span class="tag">WebSocket Realtime</span>
-      <span class="tag">Row-Level Security on all tables</span>
+      <span class="tag">Row-Level Security everywhere</span>
     </div>
   </div>
-  <span class="slide-num">10 / 25</span>
+  <span class="snum">10 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 11 — ONBOARDING
+     11 — ONBOARDING
      ================================================== -->
-<section class="slide" id="slide-11">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">👤</div>
-    <p class="eyebrow reveal d1">Onboarding</p>
-    <h2 class="slide-title reveal d2">Signing Up &amp; <span class="accent">Getting Started</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="flow reveal-up d3" style="margin-bottom:clamp(.6rem,1.5vw,1.2rem);max-width:min(90vw,680px)">
-      <div class="flow-step"><span class="step-label">Step 1</span>Email &amp; Password</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Step 2</span>Pick a Role</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Step 3</span>Build Profile</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Step 4</span>Use the App</div>
+<section class="slide" id="s11">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">👤</div>
+    <p class="eyebrow rv d1">Onboarding</p>
+    <h2 class="h2 rv d2">Signing Up &amp; <span class="a">Getting Started</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="flow ru d3" style="margin-bottom:clamp(.8rem,2vw,1.6rem)">
+      <div class="fs"><span class="lbl">Step 1</span>Email &amp; Password</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Step 2</span>Pick a Role</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Step 3</span>Build Profile</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Step 4</span>Use the App</div>
     </div>
-    <div class="two-col" style="max-width:min(90vw,740px)">
-      <div class="card reveal-up d4">
-        <div class="card-title">Profile Fields Collected</div>
-        <div class="card-body">Username, display name, bio, city (auto-detected via GPS), genres, instruments, date of birth, gender, and profile photo</div>
+    <div class="g2 gfill ru d4">
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-key"/></svg>
+        <div class="card-text">
+          <div class="ct">Profile Fields Collected</div>
+          <div class="cb">Username, display name, bio, city (auto-detected via GPS), genres, instruments, date of birth, gender, and profile photo — all captured at sign-up</div>
+        </div>
       </div>
-      <div class="card reveal-up d5">
-        <div class="card-title">Role Shapes Everything</div>
-        <div class="card-body">The role you pick at sign-up determines your home dashboard, navigation, and every feature available to you. Artists, Organizers, and Fans see a completely different app.</div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-layers"/></svg>
+        <div class="card-text">
+          <div class="ct">Role Shapes Everything</div>
+          <div class="cb">The role you pick at sign-up determines your home dashboard, navigation, and every feature available to you. Artists, Organizers, and General Public each see a completely different app.</div>
+        </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">11 / 25</span>
+  <span class="snum">11 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 12 — VIDEO FEED
+     12 — VIDEO FEED
      ================================================== -->
-<section class="slide" id="slide-12">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">▶</div>
-    <p class="eyebrow reveal d1">Discovery</p>
-    <h2 class="slide-title reveal d2">The <span class="accent">Video Feed</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+<section class="slide" id="s12">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">▶</div>
+    <p class="eyebrow rv d1">Discovery</p>
+    <h2 class="h2 rv d2">The <span class="a">Video Feed</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
       <div>
-        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
-          Fans open the app to a full-screen, scrolling video feed — similar to TikTok. Videos play automatically as you scroll.
+        <p class="lead rv d3" style="margin-bottom:clamp(.6rem,1.4vw,1.1rem)">
+          The general public opens the app to a full-screen, auto-playing video feed — similar to TikTok. Videos play as you scroll.
         </p>
-        <ul class="bullet-list">
-          <li class="reveal-up d4">Filter by genre — Carnatic, Hip-Hop, Classical Dance, and more</li>
-          <li class="reveal-up d5">Search artists by name, username, or genre</li>
-          <li class="reveal-up d6">Videos auto-tagged with genre and instruments by the artist</li>
-          <li class="reveal-up d7">Contest-entry videos highlighted in the feed</li>
-          <li class="reveal-up d8">Suspended accounts automatically filtered before the feed loads</li>
+        <ul class="blist">
+          <li class="ru d4">Filter by genre — Carnatic, Hip-Hop, Classical Dance, and more</li>
+          <li class="ru d5">Search artists by name, username, or genre keyword</li>
+          <li class="ru d6">Videos auto-tagged with genre and instruments by the artist</li>
+          <li class="ru d7">Contest-entry videos highlighted throughout the feed</li>
+          <li class="ru d8">Suspended accounts automatically filtered before the feed renders</li>
         </ul>
       </div>
-      <div style="display:flex;flex-direction:column;gap:clamp(.35rem,.9vw,.7rem)">
-        <div class="card reveal-up d4">
-          <div class="card-title">How Artists Upload</div>
-          <div class="card-body">Artists pick a video from their gallery. A thumbnail is auto-generated at the 1-second mark. Custom thumbnails are also supported.</div>
+      <div class="gcol">
+        <div class="card card-h ru d4" style="flex:1">
+          <svg class="ico ico-md" style="flex-shrink:0;margin-top:.1em"><use href="#i-play"/></svg>
+          <div class="card-text">
+            <div class="ct">How Artists Upload</div>
+            <div class="cb">Artists pick a video from their gallery. A thumbnail is auto-generated at the 1-second mark. Custom thumbnails also supported.</div>
+          </div>
         </div>
-        <div class="card reveal-up d5">
-          <div class="card-title">expo-video Player</div>
-          <div class="card-body">Uses the Expo video player with auto-play on scroll-into-view for a smooth, native-feeling experience on both iOS and Android.</div>
+        <div class="card card-h ru d5" style="flex:1">
+          <svg class="ico ico-md" style="flex-shrink:0;margin-top:.1em"><use href="#i-shield"/></svg>
+          <div class="card-text">
+            <div class="ct">Safety Filter</div>
+            <div class="cb">Before the feed loads, the app fetches all suspended accounts and excludes their videos — users never encounter flagged content.</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">12 / 25</span>
+  <span class="snum">12 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 13 — MESSAGING
+     13 — MESSAGING
      ================================================== -->
-<section class="slide" id="slide-13">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">💬</div>
-    <p class="eyebrow reveal d1">Communication</p>
-    <h2 class="slide-title reveal d2">Real-Time <span class="accent">Messaging</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+<section class="slide" id="s13">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">💬</div>
+    <p class="eyebrow rv d1">Communication</p>
+    <h2 class="h2 rv d2">Real-Time <span class="a">Messaging</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
       <div>
-        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
-          Any two users can chat in real time. Messages appear instantly — powered by a live WebSocket connection, not polling.
+        <p class="lead rv d3" style="margin-bottom:clamp(.6rem,1.4vw,1.1rem)">
+          Any two users can chat in real time. Messages appear instantly via a live WebSocket connection — no polling, no refresh.
         </p>
-        <ul class="bullet-list">
-          <li class="reveal-up d4">Message requests — must be accepted before a chat opens (prevents spam)</li>
-          <li class="reveal-up d5">Typing indicator — shows when the other person is writing</li>
-          <li class="reveal-up d6">Read receipts — see exactly when your message was seen</li>
-          <li class="reveal-up d7">Online presence — shows if someone is currently active in the app</li>
-          <li class="reveal-up d8">Unread badge counts update live on the conversation list</li>
+        <ul class="blist">
+          <li class="ru d4">Message requests — must be accepted before a chat opens (prevents spam)</li>
+          <li class="ru d5">Typing indicator — shows when the other person is writing</li>
+          <li class="ru d6">Read receipts — see exactly when your message was seen</li>
+          <li class="ru d7">Online presence — shows if someone is currently active in the app</li>
+          <li class="ru d8">Unread badge counts update live on the conversation list</li>
         </ul>
       </div>
-      <div style="display:flex;flex-direction:column;gap:clamp(.35rem,.9vw,.7rem)">
-        <div class="card reveal-up d4">
-          <div class="card-title">Powered by Supabase Realtime</div>
-          <div class="card-body">The app subscribes to database changes on the messages table. When a new message is inserted, all relevant open chats update immediately.</div>
+      <div class="gcol">
+        <div class="card card-h ru d4" style="flex:1">
+          <svg class="ico ico-md" style="flex-shrink:0;margin-top:.1em"><use href="#i-bolt"/></svg>
+          <div class="card-text">
+            <div class="ct">Powered by Supabase Realtime</div>
+            <div class="cb">The app subscribes to database changes on the messages table. A new message anywhere instantly pushes to all relevant open conversations.</div>
+          </div>
         </div>
-        <div class="card reveal-up d5">
-          <div class="card-title">ChatHub Screen</div>
-          <div class="card-body">A central inbox lists all conversations sorted by latest message, with unread counts and last-message previews.</div>
+        <div class="card card-h ru d5" style="flex:1">
+          <svg class="ico ico-md" style="flex-shrink:0;margin-top:.1em"><use href="#i-chat"/></svg>
+          <div class="card-text">
+            <div class="ct">ChatHub Screen</div>
+            <div class="cb">A central inbox lists all conversations sorted by latest message, with unread counts and last-message previews.</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">13 / 25</span>
+  <span class="snum">13 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 14 — GIG BOOKING
+     14 — GIG BOOKING
      ================================================== -->
-<section class="slide" id="slide-14">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">🎫</div>
-    <p class="eyebrow reveal d1">Novel Feature</p>
-    <h2 class="slide-title reveal d2">In-Chat <span class="accent">Gig Booking</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
-      Anyone — fan, organizer, or fellow artist — can send a structured gig offer to an artist directly inside a conversation.
+<section class="slide" id="s14">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">✦</div>
+    <p class="eyebrow rv d1">Novel Feature</p>
+    <h2 class="h2 rv d2">In-Chat <span class="a">Gig Booking</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      Anyone — general public, organizer, or fellow artist — can send a structured gig offer directly inside a conversation.
     </p>
-    <div class="flow reveal-up d4" style="margin-bottom:clamp(.5rem,1.3vw,1.1rem);max-width:min(90vw,820px)">
-      <div class="flow-step"><span class="step-label">1</span>Tap 🎫 in chat</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">2</span>Fill event form</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">3</span>Card sent in chat</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">4</span>Artist taps Accept</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">5</span>Booking confirmed</div>
+    <div class="flow ru d4" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      <div class="fs"><span class="lbl">1</span>Tap ticket icon</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">2</span>Fill event form</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">3</span>Card sent in chat</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">4</span>Artist taps Accept</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">5</span>Booking confirmed</div>
     </div>
-    <div class="grid-2" style="max-width:min(90vw,700px)">
-      <div class="card reveal-up d5">
-        <div class="card-title">Form Fields</div>
-        <div class="card-body">Event name, date, location, budget, and notes — captured in a clean modal before being sent</div>
-      </div>
-      <div class="card reveal-up d6">
-        <div class="card-title">Rich Booking Card in Chat</div>
-        <div class="card-body">The offer renders as a formatted card inside the conversation. The artist taps Accept or Decline right on the chat bubble — no separate screen needed</div>
-      </div>
-    </div>
-  </div>
-  <span class="slide-num">14 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 15 — EVENTS & FORMAL BOOKING
-     ================================================== -->
-<section class="slide" id="slide-15">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">📅</div>
-    <p class="eyebrow reveal d1">Events Module</p>
-    <h2 class="slide-title reveal d2">Events &amp; <span class="accent">Formal Bookings</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
-      <div>
-        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d3">Organizer → Artist Booking</p>
-        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-          <div class="card reveal-up d3"><div class="card-title">1. Organizer sends booking request</div><div class="card-body">Specifies event date, venue, price, and a personal message</div></div>
-          <div class="card reveal-up d4"><div class="card-title">2. Artist accepts or declines</div><div class="card-body">Booking status updates to accepted / declined / cancelled</div></div>
-          <div class="card reveal-up d5"><div class="card-title">3. Booking tracked &amp; analysed</div><div class="card-body">Stored in the database and counted in both parties' analytics dashboards</div></div>
+    <div class="g2 gfill ru d5">
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-ticket"/></svg>
+        <div class="card-text">
+          <div class="ct">Form Fields Captured</div>
+          <div class="cb">Event name, date, location, budget, and notes — all in a clean modal before sending</div>
         </div>
       </div>
-      <div>
-        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d4">Events &amp; Tickets</p>
-        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-          <div class="card reveal-up d4"><div class="card-title">Event Creation</div><div class="card-body">Organizer creates an event with poster, lineup, and date — held for admin approval before going public</div></div>
-          <div class="card reveal-up d5"><div class="card-title">Lineup Invites</div><div class="card-body">Artists on the lineup receive an in-app invite to accept or decline</div></div>
-          <div class="card reveal-up d6"><div class="card-title">Ticket Tracking</div><div class="card-body">Quantity sold, total revenue, and booking timestamps all tracked per event</div></div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-check"/></svg>
+        <div class="card-text">
+          <div class="ct">Rich Booking Card in Chat</div>
+          <div class="cb">The offer appears as a formatted card inside the conversation. The artist taps Accept or Decline right on the chat bubble — no separate screen needed</div>
         </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">15 / 25</span>
+  <span class="snum">14 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 16 — ANALYTICS OVERVIEW
+     15 — EVENTS & FORMAL BOOKING
      ================================================== -->
-<section class="slide" id="slide-16">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">📊</div>
-    <p class="eyebrow reveal d1">Analytics</p>
-    <h2 class="slide-title reveal d2">Your Performance, <span class="accent">In Numbers</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,560px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
-      Artists and organizers each get a dedicated dashboard with role-specific metrics — all pulling from real user data.
-    </p>
-    <div class="grid-3" style="max-width:min(90vw,880px)">
-      <div class="card reveal-up d3"><div class="card-title">📈 Reach Trend</div><div class="card-body">Profile and video views over 7 / 30 / 90 days, with period-over-period comparison</div></div>
-      <div class="card reveal-up d4"><div class="card-title">🔥 Activity Heatmap</div><div class="card-body">Best times and days to post, based on when your audience is most active</div></div>
-      <div class="card reveal-up d5"><div class="card-title">🎯 Conversion Funnel</div><div class="card-body">Viewer → follower → booking request conversion rates in one chart</div></div>
-      <div class="card reveal-up d6"><div class="card-title">👥 Audience Ages</div><div class="card-body">Age breakdown of your followers — teens, 20s, 30s, and beyond</div></div>
-      <div class="card reveal-up d7"><div class="card-title">🏆 Benchmark</div><div class="card-body">How your engagement compares to other artists — P25, P50, P75, and P90 percentiles</div></div>
-      <div class="card reveal-up d8"><div class="card-title">📹 Video Performance</div><div class="card-body">Which videos drove the most views, likes, saves, and new followers</div></div>
-    </div>
-  </div>
-  <span class="slide-num">16 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 17 — ANALYTICS PIPELINE
-     ================================================== -->
-<section class="slide" id="slide-17">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">⚡</div>
-    <p class="eyebrow reveal d1">Under the Hood</p>
-    <h2 class="slide-title reveal d2">How Analytics <span class="accent">Actually Works</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
-      Every action a user takes — watching a video, following an artist, sending a booking — is recorded and processed into dashboard metrics.
-    </p>
-    <div class="flow reveal-up d4" style="flex-wrap:wrap;max-width:min(90vw,860px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
-      <div class="flow-step"><span class="step-label">Trigger</span>User action</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Ingest</span>Edge Function</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Enrich</span>Add geo + session</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Store</span>analytics_events</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Aggregate</span>Hourly view</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">Serve</span>25+ RPCs → Charts</div>
-    </div>
-    <div class="grid-2" style="max-width:min(90vw,700px)">
-      <div class="card reveal-up d5">
-        <div class="card-title">10 Tracked Event Types</div>
-        <div class="card-body">Video views, profile views, likes, follows, shares, saves, booking requests, event views, and booking confirmations</div>
-      </div>
-      <div class="card reveal-up d6">
-        <div class="card-title">Auto Geo-Enrichment</div>
-        <div class="card-body">Each event is tagged with the viewer's city and country using Cloudflare request headers — no extra API or cost</div>
-      </div>
-    </div>
-  </div>
-  <span class="slide-num">17 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 18 — AI INSIGHTS
-     ================================================== -->
-<section class="slide" id="slide-18">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">🤖</div>
-    <p class="eyebrow reveal d1">Artificial Intelligence</p>
-    <h2 class="slide-title reveal d2">AI-Powered <span class="accent">Insights</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
+<section class="slide" id="s15">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">📅</div>
+    <p class="eyebrow rv d1">Events Module</p>
+    <h2 class="h2 rv d2">Events &amp; <span class="a">Formal Bookings</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
       <div>
-        <p class="body-text reveal d3" style="margin-bottom:clamp(.4rem,1vw,.8rem)">
-          When an artist opens their dashboard, Google Gemini reads their metrics and generates plain-language advice — no technical jargon.
+        <p class="eyebrow" style="font-size:var(--small-size);margin-bottom:.55em" class="rv d3">Organizer → Artist Booking</p>
+        <div class="gcol">
+          <div class="card card-h ru d3">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-send"/></svg>
+            <div class="card-text"><div class="ct">Organizer sends booking request</div><div class="cb">Specifies event date, venue, price, and a personal message</div></div>
+          </div>
+          <div class="card card-h ru d4">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-check"/></svg>
+            <div class="card-text"><div class="ct">Artist accepts or declines</div><div class="cb">Status updates to accepted / declined / cancelled in database</div></div>
+          </div>
+          <div class="card card-h ru d5">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-chart"/></svg>
+            <div class="card-text"><div class="ct">Booking tracked &amp; analysed</div><div class="cb">Stored in the database and counted in both parties' analytics</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="eyebrow" style="font-size:var(--small-size);margin-bottom:.55em" class="rv d4">Events &amp; Tickets</p>
+        <div class="gcol">
+          <div class="card card-h ru d4">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-cal"/></svg>
+            <div class="card-text"><div class="ct">Event Creation</div><div class="cb">Organizer creates event with poster, lineup, and date — held for admin approval before going public</div></div>
+          </div>
+          <div class="card card-h ru d5">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-users"/></svg>
+            <div class="card-text"><div class="ct">Lineup Invites</div><div class="cb">Artists on the lineup receive an in-app invite to accept or decline</div></div>
+          </div>
+          <div class="card card-h ru d6">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-ticket"/></svg>
+            <div class="card-text"><div class="ct">Ticket Tracking</div><div class="cb">Quantity sold, total revenue, and timestamps all tracked per event</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">15 / 25</span>
+</section>
+
+<!-- ==================================================
+     16 — ANALYTICS OVERVIEW
+     ================================================== -->
+<section class="slide" id="s16">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">📊</div>
+    <p class="eyebrow rv d1">Analytics</p>
+    <h2 class="h2 rv d2">Your Performance, <span class="a">In Numbers</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+      Artists and organizers each get a dedicated dashboard with role-specific metrics — all from real user data.
+    </p>
+    <div class="g3 gfill ru d4">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-trend"/></svg>
+        <div class="ct">Reach Trend</div>
+        <div class="cb">Profile and video views over 7 / 30 / 90 days with period-over-period comparison</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-bolt"/></svg>
+        <div class="ct">Activity Heatmap</div>
+        <div class="cb">Best times and days to post based on when your audience is most active</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-funnel"/></svg>
+        <div class="ct">Conversion Funnel</div>
+        <div class="cb">Viewer → booking request conversion rates in one chart</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-users"/></svg>
+        <div class="ct">Audience Ages</div>
+        <div class="cb">Age breakdown of your viewers — teens, 20s, 30s, and beyond</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-trophy"/></svg>
+        <div class="ct">Platform Benchmark</div>
+        <div class="cb">How your engagement compares to other artists — P25, P50, P75, and P90 percentiles</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-play"/></svg>
+        <div class="ct">Video Performance</div>
+        <div class="cb">Which videos drove the most views, likes, saves, and new followers</div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">16 / 25</span>
+</section>
+
+<!-- ==================================================
+     17 — ANALYTICS PIPELINE
+     ================================================== -->
+<section class="slide" id="s17">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">⚡</div>
+    <p class="eyebrow rv d1">Under the Hood</p>
+    <h2 class="h2 rv d2">How Analytics <span class="a">Actually Works</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      Every user action — watching a video, liking a video, sending a booking — is recorded and processed into dashboard metrics.
+    </p>
+    <div class="flow ru d4" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
+      <div class="fs"><span class="lbl">Trigger</span>User action</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Ingest</span>Edge Function</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Enrich</span>Add geo + session</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Store</span>analytics_events</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Aggregate</span>Hourly view</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">Serve</span>25+ RPCs → Charts</div>
+    </div>
+    <div class="g2 gfill ru d5">
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-bolt"/></svg>
+        <div class="card-text">
+          <div class="ct">9 Tracked Event Types</div>
+          <div class="cb">Video views, profile views, likes, shares, saves, booking requests, event views, and booking confirmations</div>
+        </div>
+      </div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-map"/></svg>
+        <div class="card-text">
+          <div class="ct">Auto Geo-Enrichment</div>
+          <div class="cb">Each event is tagged with the viewer's city and country using Cloudflare request headers — no extra API or added cost</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">17 / 25</span>
+</section>
+
+<!-- ==================================================
+     18 — AI INSIGHTS
+     ================================================== -->
+<section class="slide" id="s18">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">✦</div>
+    <p class="eyebrow rv d1">Artificial Intelligence</p>
+    <h2 class="h2 rv d2">AI-Powered <span class="a">Insights</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
+      <div>
+        <p class="lead rv d3" style="margin-bottom:clamp(.6rem,1.4vw,1.1rem)">
+          When an artist opens their dashboard, Google Gemini reads their metrics and generates plain-language advice — no jargon.
         </p>
-        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-          <div class="card reveal-up d4"><div class="card-title">1. Metrics are gathered</div><div class="card-body">Reach, engagement rate, follower growth, and conversion bundled into one object</div></div>
-          <div class="card reveal-up d5"><div class="card-title">2. Sent to Gemini securely</div><div class="card-body">Via a Supabase Edge Function — the API key lives only on the server, never in the app</div></div>
-          <div class="card reveal-up d6"><div class="card-title">3. Insights displayed</div><div class="card-body">2–3 short tips, each labelled positive / warning / suggestion with distinct colours</div></div>
+        <div class="gcol">
+          <div class="card card-h ru d4">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-chart"/></svg>
+            <div class="card-text"><div class="ct">Metrics are gathered</div><div class="cb">Reach, engagement rate, follower growth, and booking conversion bundled into one object</div></div>
+          </div>
+          <div class="card card-h ru d5">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-cpu"/></svg>
+            <div class="card-text"><div class="ct">Sent to Gemini securely</div><div class="cb">Via a Supabase Edge Function — the API key lives only on the server, never in the app</div></div>
+          </div>
+          <div class="card card-h ru d6">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-spark"/></svg>
+            <div class="card-text"><div class="ct">Insights displayed</div><div class="cb">2–3 short tips returned as JSON, each labelled positive / warning / suggestion</div></div>
+          </div>
         </div>
       </div>
       <div>
-        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.6em" class="reveal d3">Example insight cards</p>
-        <div style="display:flex;flex-direction:column;gap:.45em">
-          <div class="card teal reveal-up d4">
-            <div class="card-title" style="color:var(--teal)">✅ Strong reach this week</div>
-            <div class="card-body">Your profile was seen 40% more than last week — your recent video is driving new visitors.</div>
+        <p class="eyebrow" style="font-size:var(--small-size);margin-bottom:.7em" class="rv d3">Example insight cards</p>
+        <div class="gcol">
+          <div class="card teal ru d4">
+            <div class="ct c-ok">Strong reach this week</div>
+            <div class="cb">Your profile was seen 40% more than last week — your recent video is driving new visitors.</div>
           </div>
-          <div class="card teal reveal-up d5">
-            <div class="card-title" style="color:#c0392b">⚠️ Low engagement rate</div>
-            <div class="card-body">Only 2% of viewers follow you. Try adding a call-to-action at the end of your videos.</div>
+          <div class="card teal ru d5">
+            <div class="ct c-warn">Low engagement rate</div>
+            <div class="cb">Only 2% of viewers follow you. Try adding a call-to-action at the end of your videos.</div>
           </div>
-          <div class="card teal reveal-up d6">
-            <div class="card-title" style="color:#7d3c98">💡 Best time to post</div>
-            <div class="card-body">Your audience is most active on Friday evenings. Schedule uploads between 7–9 PM.</div>
+          <div class="card teal ru d6">
+            <div class="ct c-tip">Best time to post</div>
+            <div class="cb">Your audience is most active on Friday evenings. Schedule uploads between 7–9 PM.</div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">18 / 25</span>
+  <span class="snum">18 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 19 — CONTENT MODERATION
+     19 — CONTENT MODERATION
      ================================================== -->
-<section class="slide" id="slide-19">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">🛡</div>
-    <p class="eyebrow reveal d1">Platform Safety</p>
-    <h2 class="slide-title reveal d2">Content <span class="accent">Moderation</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="flow reveal-up d4" style="max-width:min(90vw,760px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
-      <div class="flow-step"><span class="step-label">1</span>User reports content</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">2</span>Admin reviews</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">3</span>Account suspended</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><span class="step-label">4</span>Filtered from feed</div>
+<section class="slide" id="s19">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">✦</div>
+    <p class="eyebrow rv d1">Platform Safety</p>
+    <h2 class="h2 rv d2">Content <span class="a">Moderation</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="flow ru d4" style="margin-bottom:clamp(.8rem,2vw,1.6rem)">
+      <div class="fs"><span class="lbl">1</span>User reports content</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">2</span>Admin reviews</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">3</span>Account suspended</div>
+      <div class="fa">→</div>
+      <div class="fs"><span class="lbl">4</span>Filtered from feed</div>
     </div>
-    <div class="grid-3" style="max-width:min(90vw,860px)">
-      <div class="card reveal-up d4">
-        <div class="card-title">Report System</div>
-        <div class="card-body">Users flag videos or profiles. Reports queue in the admin panel with status: pending / resolved</div>
+    <div class="g3 gfill ru d5">
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-clip"/></svg>
+        <div class="ct">Report System</div>
+        <div class="cb">Users flag videos or profiles. Reports queue in the admin panel with status: pending / resolved</div>
       </div>
-      <div class="card reveal-up d5">
-        <div class="card-title">Admin Actions</div>
-        <div class="card-body">Admin can suspend an account or dismiss the report. Suspension takes effect immediately across the entire platform</div>
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-gear"/></svg>
+        <div class="ct">Admin Actions</div>
+        <div class="cb">Admin can suspend an account or dismiss the report. Suspension takes effect immediately across the entire platform</div>
       </div>
-      <div class="card reveal-up d6">
-        <div class="card-title">Automatic Feed Filter</div>
-        <div class="card-body">Before loading the video feed, the app fetches all suspended accounts and removes their videos — users never encounter flagged content</div>
-      </div>
-    </div>
-  </div>
-  <span class="slide-num">19 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 20 — CONTESTS & BOOSTS
-     ================================================== -->
-<section class="slide" id="slide-20">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">🏆</div>
-    <p class="eyebrow reveal d1">Engagement Features</p>
-    <h2 class="slide-title reveal d2">Contests &amp; <span class="accent">Visibility Boosts</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
-      <div>
-        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d3">Contests</p>
-        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-          <div class="card reveal-up d3"><div class="card-title">1. Admin creates contest</div><div class="card-body">Sets a theme, submission deadline, and prize details</div></div>
-          <div class="card reveal-up d4"><div class="card-title">2. Artists submit videos</div><div class="card-body">Entry is flagged and highlighted in the public feed for all users</div></div>
-          <div class="card reveal-up d5"><div class="card-title">3. Admin announces winner</div><div class="card-body">Winner receives an in-app notification and badge on their profile</div></div>
-        </div>
-      </div>
-      <div>
-        <p style="font-size:var(--small-size);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.55em" class="reveal d4">Profile Boosts</p>
-        <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-          <div class="card reveal-up d4"><div class="card-title">1. Artist requests boost</div><div class="card-body">Chooses boost duration — e.g. 7 or 30 days</div></div>
-          <div class="card reveal-up d5"><div class="card-title">2. Admin approves</div><div class="card-body">Profile is marked boosted and surfaces higher in organizer discovery results</div></div>
-          <div class="card reveal-up d6"><div class="card-title">3. Boost expires automatically</div><div class="card-body">Countdown timer shown on profile; ranking returns to normal after expiry</div></div>
-        </div>
+      <div class="card card-v">
+        <svg class="ico ico-lg"><use href="#i-eye"/></svg>
+        <div class="ct">Automatic Feed Filter</div>
+        <div class="cb">Before loading the feed, the app fetches all suspended accounts and removes their videos — users never encounter flagged content</div>
       </div>
     </div>
   </div>
-  <span class="slide-num">20 / 25</span>
+  <span class="snum">19 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 21 — ADMIN LAYER
+     20 — CONTESTS & BOOSTS
      ================================================== -->
-<section class="slide" id="slide-21">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">⚙</div>
-    <p class="eyebrow reveal d1">Platform Management</p>
-    <h2 class="slide-title reveal d2">The <span class="accent">Admin</span> Layer</h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.6rem,1.5vw,1.2rem)">
+<section class="slide" id="s20">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">✦</div>
+    <p class="eyebrow rv d1">Engagement Features</p>
+    <h2 class="h2 rv d2">Contests &amp; <span class="a">Visibility Boosts</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
+      <div>
+        <p class="eyebrow" style="font-size:var(--small-size);margin-bottom:.6em" class="rv d3">Contests</p>
+        <div class="gcol">
+          <div class="card card-h ru d3">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-gear"/></svg>
+            <div class="card-text"><div class="ct">Admin creates contest</div><div class="cb">Sets a theme, submission deadline, and prize details</div></div>
+          </div>
+          <div class="card card-h ru d4">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-play"/></svg>
+            <div class="card-text"><div class="ct">Artists submit videos</div><div class="cb">Entry is flagged and highlighted in the public feed for all users to see</div></div>
+          </div>
+          <div class="card card-h ru d5">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-trophy"/></svg>
+            <div class="card-text"><div class="ct">Admin announces winner</div><div class="cb">Winner receives an in-app notification and performance badge on their profile</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="eyebrow" style="font-size:var(--small-size);margin-bottom:.6em" class="rv d4">Profile Boosts</p>
+        <div class="gcol">
+          <div class="card card-h ru d4">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-send"/></svg>
+            <div class="card-text"><div class="ct">Artist requests boost</div><div class="cb">Chooses boost duration — e.g. 7 or 30 days</div></div>
+          </div>
+          <div class="card card-h ru d5">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-check"/></svg>
+            <div class="card-text"><div class="ct">Admin approves</div><div class="cb">Profile marked boosted and surfaces higher in organizer discovery results</div></div>
+          </div>
+          <div class="card card-h ru d6">
+            <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-star"/></svg>
+            <div class="card-text"><div class="ct">Boost expires automatically</div><div class="cb">Countdown timer shown on profile; ranking returns to normal after expiry</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">20 / 25</span>
+</section>
+
+<!-- ==================================================
+     21 — ADMIN LAYER
+     ================================================== -->
+<section class="slide" id="s21">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">⚙</div>
+    <p class="eyebrow rv d1">Platform Management</p>
+    <h2 class="h2 rv d2">The <span class="a">Admin</span> Layer</h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.7rem,1.8vw,1.5rem)">
       A fourth hidden role — Admin — oversees the entire platform with tools invisible to regular users.
     </p>
-    <div class="grid-2" style="max-width:min(90vw,720px)">
-      <div class="card reveal-up d4">
-        <div class="card-title">Content Moderation Queue</div>
-        <div class="card-body">Review all reported videos and profiles. Approve or dismiss with one tap. See full resolution history.</div>
+    <div class="g2 gfill ru d4">
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-shield"/></svg>
+        <div class="card-text">
+          <div class="ct">Content Moderation Queue</div>
+          <div class="cb">Review all reported videos and profiles. Approve or dismiss with one tap. See full resolution history with timestamps.</div>
+        </div>
       </div>
-      <div class="card reveal-up d5">
-        <div class="card-title">Event Approvals</div>
-        <div class="card-body">Events created by organizers stay pending until an admin approves them for public listing on the platform</div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-cal"/></svg>
+        <div class="card-text">
+          <div class="ct">Event Approvals</div>
+          <div class="cb">Events created by organizers stay pending until an admin approves them for public listing on the platform.</div>
+        </div>
       </div>
-      <div class="card reveal-up d6">
-        <div class="card-title">Contest Management</div>
-        <div class="card-body">Create and manage contests, review all submissions, select and notify winners in-app</div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-trophy"/></svg>
+        <div class="card-text">
+          <div class="ct">Contest Management</div>
+          <div class="cb">Create and manage contests, review all submissions, select and notify winners in-app.</div>
+        </div>
       </div>
-      <div class="card reveal-up d7">
-        <div class="card-title">Platform KPIs</div>
-        <div class="card-body">Total users by role, videos uploaded, active bookings, boost requests, and platform-wide engagement metrics</div>
+      <div class="card card-h">
+        <svg class="ico ico-lg" style="flex-shrink:0"><use href="#i-chart"/></svg>
+        <div class="card-text">
+          <div class="ct">Platform KPIs</div>
+          <div class="cb">Total users by role, videos uploaded, active bookings, boost requests, and platform-wide engagement metrics.</div>
+        </div>
       </div>
     </div>
   </div>
-  <span class="slide-num">21 / 25</span>
+  <span class="snum">21 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 22 — DATABASE OVERVIEW
+     22 — DATABASE OVERVIEW
      ================================================== -->
-<section class="slide" id="slide-22">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">🗄</div>
-    <p class="eyebrow reveal d1">Database Design</p>
-    <h2 class="slide-title reveal d2">Key <span class="accent">Data Tables</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <p class="body-text reveal d3" style="max-width:min(90vw,580px);margin-bottom:clamp(.5rem,1.3vw,1.1rem)">
+<section class="slide" id="s22">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">DB</div>
+    <p class="eyebrow rv d1">Database Design</p>
+    <h2 class="h2 rv d2">Key <span class="a">Data Tables</span></h2>
+    <div class="divider rv d3"></div>
+    <p class="lead rv d3" style="margin-bottom:clamp(.5rem,1.2vw,1rem)">
       All data lives in PostgreSQL on Supabase. Row-Level Security ensures users can only read and write data they are authorised to access.
     </p>
-    <div class="grid-4" style="max-width:min(90vw,900px)">
-      <div class="card reveal-up d3"><div class="card-title">users</div><div class="card-body">Role, email, account status (active / suspended)</div></div>
-      <div class="card reveal-up d4"><div class="card-title">profiles</div><div class="card-body">Username, bio, genres[ ], city, DOB, avatar URL</div></div>
-      <div class="card reveal-up d4"><div class="card-title">videos</div><div class="card-body">Title, URL, view / like counts, contest entry flag</div></div>
-      <div class="card reveal-up d5"><div class="card-title">messages</div><div class="card-body">Chat messages with sender, read status, timestamp</div></div>
-      <div class="card reveal-up d5"><div class="card-title">gig_bookings</div><div class="card-body">In-chat gig offers with event details and accept / decline status</div></div>
-      <div class="card reveal-up d6"><div class="card-title">bookings</div><div class="card-body">Formal booking requests from organizer to artist</div></div>
-      <div class="card reveal-up d6"><div class="card-title">events</div><div class="card-body">Event pages with lineup JSON and admin approval status</div></div>
-      <div class="card reveal-up d7"><div class="card-title">analytics_events</div><div class="card-body">Every user action with geo, session, and demographic data</div></div>
-    </div>
-  </div>
-  <span class="slide-num">22 / 25</span>
-</section>
-
-<!-- ==================================================
-     SLIDE 23 — RESULTS
-     ================================================== -->
-<section class="slide" id="slide-23">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">✓</div>
-    <p class="eyebrow reveal d1">Results</p>
-    <h2 class="slide-title reveal d2">What We <span class="accent">Built</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="two-col" style="margin-top:clamp(.45rem,1.2vw,.95rem);max-width:min(90vw,820px)">
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d3">
-          <div style="display:flex;align-items:center;gap:.55em">
-            <div class="stat-val">3</div>
-            <div><div class="card-title">Distinct User Roles</div><div class="card-body">Artist, Organizer, Fan — each with a unique dashboard and feature set</div></div>
-          </div>
-        </div>
-        <div class="card reveal-up d4">
-          <div style="display:flex;align-items:center;gap:.55em">
-            <div class="stat-val">25+</div>
-            <div><div class="card-title">Analytics Metrics</div><div class="card-body">Reach, heatmaps, funnels, benchmarks — all computed from real user data</div></div>
-          </div>
-        </div>
-        <div class="card reveal-up d5">
-          <div style="display:flex;align-items:center;gap:.55em">
-            <div class="stat-val">2</div>
-            <div><div class="card-title">Booking Pathways</div><div class="card-body">Formal booking requests + in-chat gig offers — both end-to-end functional</div></div>
-          </div>
-        </div>
+    <div class="g4 gfill ru d4">
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-users"/></svg>
+        <div class="ct">users</div>
+        <div class="cb">Role, email, account status (active / suspended)</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:clamp(.3rem,.85vw,.6rem)">
-        <div class="card reveal-up d4"><div class="card-title">✅ Cross-Platform App</div><div class="card-body">Tested and running on iOS and Android via Expo Go</div></div>
-        <div class="card reveal-up d5"><div class="card-title">✅ Live Messaging</div><div class="card-body">Real-time chat with typing indicators, online presence, and read receipts</div></div>
-        <div class="card reveal-up d6"><div class="card-title">✅ AI Insights Live</div><div class="card-body">Gemini-generated tips based on actual artist analytics data</div></div>
-        <div class="card reveal-up d7"><div class="card-title">✅ Moderation Pipeline</div><div class="card-body">Report → admin review → suspend → auto-filter from feed — fully functional</div></div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-key"/></svg>
+        <div class="ct">profiles</div>
+        <div class="cb">Username, bio, genres[ ], city, DOB, avatar URL</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-play"/></svg>
+        <div class="ct">videos</div>
+        <div class="cb">Title, URL, view/like counts, contest entry flag</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-chat"/></svg>
+        <div class="ct">messages</div>
+        <div class="cb">Chat messages with sender, read status, timestamp</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-ticket"/></svg>
+        <div class="ct">gig_bookings</div>
+        <div class="cb">In-chat gig offers with event details and status</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-send"/></svg>
+        <div class="ct">bookings</div>
+        <div class="cb">Formal booking requests from organizer to artist</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-cal"/></svg>
+        <div class="ct">events</div>
+        <div class="cb">Event pages with lineup JSON and admin approval status</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-sm"><use href="#i-bolt"/></svg>
+        <div class="ct">analytics_events</div>
+        <div class="cb">Every user action with geo, session, and demographic data</div>
       </div>
     </div>
   </div>
-  <span class="slide-num">23 / 25</span>
+  <span class="snum">22 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 24 — FUTURE SCOPE
+     23 — RESULTS
      ================================================== -->
-<section class="slide" id="slide-24">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">→</div>
-    <p class="eyebrow reveal d1">What's Next</p>
-    <h2 class="slide-title reveal d2">Future <span class="accent">Scope</span></h2>
-    <div class="slide-divider reveal d3"></div>
-    <div class="grid-3" style="margin-top:clamp(.6rem,1.5vw,1.2rem);max-width:min(90vw,860px)">
-      <div class="card reveal-up d3"><div class="card-title">📡 Live Streaming</div><div class="card-body">Artists broadcast live performances within the app using WebRTC</div></div>
-      <div class="card reveal-up d4"><div class="card-title">💳 Payment Integration</div><div class="card-body">Stripe for booking deposits and in-app ticket purchases</div></div>
-      <div class="card reveal-up d5"><div class="card-title">🔔 Push Notifications</div><div class="card-body">Alerts for new bookings, messages, and contest results when the app is closed</div></div>
-      <div class="card reveal-up d6"><div class="card-title">🗺️ Map Discovery</div><div class="card-body">"Artists near me" using the city coordinates captured during sign-up</div></div>
-      <div class="card reveal-up d7"><div class="card-title">🎯 Smart Recommendations</div><div class="card-body">Personalised feed based on watch history and favourite genres</div></div>
-      <div class="card reveal-up d8"><div class="card-title">⭐ Fan Subscriptions</div><div class="card-body">Paid tiers for exclusive content — a direct monetisation path for artists</div></div>
+<section class="slide" id="s23">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">✓</div>
+    <p class="eyebrow rv d1">Results</p>
+    <h2 class="h2 rv d2">What We <span class="a">Built</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="two" style="margin-top:clamp(.5rem,1.3vw,1.1rem)">
+      <div class="gcol">
+        <div class="card card-h ru d3">
+          <div class="stat">3</div>
+          <div class="card-text">
+            <div class="ct">Distinct User Roles</div>
+            <div class="cb">Artist, Organizer, General Public — each with a unique dashboard and feature set</div>
+          </div>
+        </div>
+        <div class="card card-h ru d4">
+          <div class="stat">25+</div>
+          <div class="card-text">
+            <div class="ct">Analytics Metrics</div>
+            <div class="cb">Reach, heatmaps, funnels, benchmarks — all computed from real user data</div>
+          </div>
+        </div>
+        <div class="card card-h ru d5">
+          <div class="stat">2</div>
+          <div class="card-text">
+            <div class="ct">Booking Pathways</div>
+            <div class="cb">Formal booking requests + in-chat gig offers — both end-to-end functional</div>
+          </div>
+        </div>
+      </div>
+      <div class="gcol">
+        <div class="card card-h ru d4">
+          <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-phone"/></svg>
+          <div class="card-text"><div class="ct">Cross-Platform App</div><div class="cb">Tested and running on iOS and Android via Expo Go</div></div>
+        </div>
+        <div class="card card-h ru d5">
+          <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-chat"/></svg>
+          <div class="card-text"><div class="ct">Live Messaging</div><div class="cb">Real-time chat with typing indicators, online presence, and read receipts</div></div>
+        </div>
+        <div class="card card-h ru d6">
+          <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-spark"/></svg>
+          <div class="card-text"><div class="ct">AI Insights Live</div><div class="cb">Gemini-generated tips based on actual artist analytics data</div></div>
+        </div>
+        <div class="card card-h ru d7">
+          <svg class="ico ico-md" style="flex-shrink:0"><use href="#i-shield"/></svg>
+          <div class="card-text"><div class="ct">Moderation Pipeline</div><div class="cb">Report → admin review → suspend → auto-filter from feed — fully functional</div></div>
+        </div>
+      </div>
     </div>
   </div>
-  <span class="slide-num">24 / 25</span>
+  <span class="snum">23 / 25</span>
 </section>
 
 <!-- ==================================================
-     SLIDE 25 — THANK YOU
+     24 — FUTURE SCOPE
      ================================================== -->
-<section class="slide thankyou-slide" id="slide-25">
-  <div class="slide-strip"></div>
-  <div class="slide-inner">
-    <div class="bg-deco">S</div>
-    <p class="eyebrow reveal d1" style="text-align:center">Department of Computer Science &amp; Engineering &nbsp;·&nbsp; 2026</p>
-    <div class="slide-divider reveal d2" style="margin:clamp(.35rem,1vw,.85rem) auto"></div>
-    <h1 class="main-title reveal d3">Spot<span class="accent">Light</span></h1>
-    <p class="title-tagline reveal d4">Discover · Connect · Perform</p>
-    <div class="reveal d5" style="margin-top:clamp(1rem,2.5vw,2rem);display:flex;flex-wrap:wrap;gap:.45em">
+<section class="slide" id="s24">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">→</div>
+    <p class="eyebrow rv d1">What's Next</p>
+    <h2 class="h2 rv d2">Future <span class="a">Scope</span></h2>
+    <div class="divider rv d3"></div>
+    <div class="g4 gfill ru d3" style="margin-top:clamp(.6rem,1.5vw,1.2rem)">
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-card"/></svg>
+        <div class="ct">Payment Integration</div>
+        <div class="cb">Secure payment gateways for ticket booking, artist payments, and premium subscriptions</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-spark"/></svg>
+        <div class="ct">AI Recommendations</div>
+        <div class="cb">Machine learning for personalised content, smart feed ranking, and improved music discovery</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-signal"/></svg>
+        <div class="ct">Live Streaming</div>
+        <div class="cb">Live performances, virtual concerts, and real-time artist collaboration within the app</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-chat"/></svg>
+        <div class="ct">Enhanced Communication</div>
+        <div class="cb">Voice/video calls, file sharing, and scheduling tools for better user coordination</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-map"/></svg>
+        <div class="ct">Smart Discovery</div>
+        <div class="cb">Location-based suggestions, nearby events, and popularity trends to strengthen discovery</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-shield"/></svg>
+        <div class="ct">Trust &amp; Verification</div>
+        <div class="cb">Verification systems, ratings, and reviews to improve credibility and user security</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-cal"/></svg>
+        <div class="ct">Event Management</div>
+        <div class="cb">Integrated tools for organizers to handle scheduling, ticketing, and attendee tracking</div>
+      </div>
+      <div class="card card-v">
+        <svg class="ico ico-md"><use href="#i-mic"/></svg>
+        <div class="ct">Artist Portfolio</div>
+        <div class="cb">Customisable profiles and portfolio tools to help artists showcase their work and build their brand</div>
+      </div>
+    </div>
+  </div>
+  <span class="snum">24 / 25</span>
+</section>
+
+<!-- ==================================================
+     25 — THANK YOU
+     ================================================== -->
+<section class="slide ty" id="s25">
+  <div class="strip"></div>
+  <div class="inn">
+    <div class="bg-d">S</div>
+    <p class="eyebrow rv d1" style="text-align:center">Department of Computer Science &amp; Engineering &nbsp;·&nbsp; 2026</p>
+    <div class="divider rv d2" style="margin:clamp(.4rem,1vw,.9rem) auto"></div>
+    <h1 class="big-title rv d3">Spot<span class="a">Light</span></h1>
+    <p class="tagline rv d4">Discover · Connect · Perform</p>
+    <div class="tags rv d5" style="margin-top:clamp(1.2rem,3vw,2.5rem);justify-content:center">
       <span class="tag">Anantha Krishnan</span>
       <span class="tag">Evin John</span>
       <span class="tag">Govardhan</span>
       <span class="tag">Karthika</span>
     </div>
-    <p class="body-text reveal d6" style="margin-top:clamp(.7rem,1.8vw,1.5rem);font-style:italic">
-      Thank you for your time and attention.
+    <p class="rv d6" style="margin-top:clamp(1.2rem,3vw,2.5rem);font-family:var(--font-display);font-size:clamp(2rem,6vw,5rem);font-weight:800;letter-spacing:-.03em;color:var(--text)">
+      Thank <span style="color:var(--teal)">You</span>
     </p>
   </div>
-  <span class="slide-num">25 / 25</span>
+  <span class="snum">25 / 25</span>
 </section>
 
 <script>
-/* =====================================================
-   SLIDE PRESENTATION CONTROLLER
-   Keyboard nav, wheel nav, touch swipe,
-   IntersectionObserver for reveal animations,
-   progress bar, navigation dots.
-   ===================================================== */
-class SlidePresentation {
+class Deck {
   constructor() {
     this.slides = Array.from(document.querySelectorAll('.slide'));
-    this.total   = this.slides.length;
-    this.current = 0;
-    this.pb      = document.getElementById('progressBar');
-    this.dots    = document.getElementById('navDots');
-
+    this.n      = this.slides.length;
+    this.cur    = 0;
+    this.bar    = document.getElementById('pb');
+    this.dots   = document.getElementById('navd');
     this.buildDots();
-    this.setupObserver();
-    this.setupKeyboard();
-    this.setupWheel();
-    this.setupTouch();
-
-    setTimeout(() => {
-      this.slides[0].classList.add('visible');
-      this.sync();
-    }, 80);
+    this.observe();
+    this.keyboard();
+    this.wheel();
+    this.touch();
+    setTimeout(() => { this.slides[0].classList.add('visible'); this.sync(); }, 80);
   }
 
-  goTo(i) {
-    if (i < 0 || i >= this.total) return;
-    this.current = i;
+  go(i) {
+    if (i < 0 || i >= this.n) return;
+    this.cur = i;
     this.slides[i].scrollIntoView({ behavior: 'smooth' });
     this.sync();
   }
 
-  next() { this.goTo(this.current + 1); }
-  prev() { this.goTo(this.current - 1); }
+  next() { this.go(this.cur + 1); }
+  prev() { this.go(this.cur - 1); }
 
   sync() {
-    // Progress bar
-    if (this.pb) {
-      this.pb.style.width = (this.total > 1
-        ? (this.current / (this.total - 1)) * 100
-        : 100) + '%';
-    }
-    // Nav dots
-    this.dots?.querySelectorAll('.nav-dot')
-      .forEach((d, i) => d.classList.toggle('active', i === this.current));
+    if (this.bar) this.bar.style.width = (this.n > 1 ? this.cur / (this.n - 1) * 100 : 100) + '%';
+    this.dots?.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i === this.cur));
   }
 
   buildDots() {
     if (!this.dots) return;
     this.slides.forEach((_, i) => {
       const b = document.createElement('button');
-      b.className = 'nav-dot' + (i === 0 ? ' active' : '');
+      b.className = 'dot' + (i === 0 ? ' on' : '');
       b.setAttribute('aria-label', `Slide ${i + 1}`);
-      b.addEventListener('click', () => this.goTo(i));
+      b.addEventListener('click', () => this.go(i));
       this.dots.appendChild(b);
     });
   }
 
-  setupObserver() {
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (en.isIntersecting) {
-          en.target.classList.add('visible');
-          this.current = this.slides.indexOf(en.target);
+  observe() {
+    const o = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          this.cur = this.slides.indexOf(e.target);
           this.sync();
         }
       });
     }, { threshold: 0.5 });
-    this.slides.forEach(s => obs.observe(s));
+    this.slides.forEach(s => o.observe(s));
   }
 
-  setupKeyboard() {
+  keyboard() {
     document.addEventListener('keydown', e => {
       if (['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.next(); }
       if (['ArrowUp','ArrowLeft','PageUp'].includes(e.key))          { e.preventDefault(); this.prev(); }
-      if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
-      if (e.key === 'End')  { e.preventDefault(); this.goTo(this.total - 1); }
+      if (e.key === 'Home') { e.preventDefault(); this.go(0); }
+      if (e.key === 'End')  { e.preventDefault(); this.go(this.n - 1); }
     });
   }
 
-  setupWheel() {
+  wheel() {
     let lock = false;
     document.addEventListener('wheel', e => {
       e.preventDefault();
       if (lock) return;
       lock = true;
-      if      (e.deltaY >  25) this.next();
-      else if (e.deltaY < -25) this.prev();
+      if (e.deltaY > 20) this.next(); else if (e.deltaY < -20) this.prev();
       setTimeout(() => { lock = false; }, 750);
     }, { passive: false });
   }
 
-  setupTouch() {
+  touch() {
     let sy = 0;
     document.addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive: true });
     document.addEventListener('touchend',   e => {
@@ -1226,7 +1780,7 @@ class SlidePresentation {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => new SlidePresentation());
+document.addEventListener('DOMContentLoaded', () => new Deck());
 </script>
 </body>
 </html>
