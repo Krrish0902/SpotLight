@@ -22,12 +22,13 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Send, MoreVertical, Ticket, X, CalendarDays, MapPin, DollarSign, FileText, Sparkles, ShieldAlert, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Send, MoreVertical, Ticket, X, CalendarDays, Clock, MapPin, DollarSign, FileText, Sparkles, ShieldAlert, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 import { formatMessageTime } from '../lib/timeUtils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../components/ui/Text';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ─── Design Tokens ──────────────────────────────────────────────────────────
 const C = {
@@ -95,7 +96,7 @@ function TypingPulse() {
 // ─── Gig Booking Modal ───────────────────────────────────────────────────────
 interface GigForm {
   eventName: string;
-  eventDate: string;
+  eventDateIso: string; // ISO datetime
   location: string;
   budget: string;
   notes: string;
@@ -118,12 +119,18 @@ function GigBookingModal({
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<GigForm>({
-    eventName: '', eventDate: '', location: '', budget: '', notes: '',
+    eventName: '', eventDateIso: '', location: '', budget: '', notes: '',
   });
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      setForm({ eventName: '', eventDate: '', location: '', budget: '', notes: '' });
+      setForm({ eventName: '', eventDateIso: '', location: '', budget: '', notes: '' });
+      setEventDate(null);
+      setShowDatePicker(false);
+      setShowTimePicker(false);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 200 }),
         Animated.timing(fadeAnim,  { toValue: 1, duration: 220, useNativeDriver: true }),
@@ -136,7 +143,16 @@ function GigBookingModal({
 
   const patch = (key: keyof GigForm, val: string) => setForm(p => ({ ...p, [key]: val }));
 
-  const canSubmit = form.eventName.trim() && form.eventDate.trim() && form.location.trim() && form.budget.trim();
+  useEffect(() => {
+    if (!eventDate) {
+      if (form.eventDateIso) patch('eventDateIso', '');
+      return;
+    }
+    patch('eventDateIso', eventDate.toISOString());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventDate]);
+
+  const canSubmit = form.eventName.trim() && form.eventDateIso.trim() && form.location.trim() && form.budget.trim();
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return;
@@ -206,14 +222,60 @@ function GigBookingModal({
             />
           </GigField>
 
-          <GigField icon={<CalendarDays size={14} color={C.primary} />} label="Event Date" required>
-            <TextInput
-              style={gm.input}
-              value={form.eventDate}
-              onChangeText={v => patch('eventDate', v)}
-              placeholder="e.g. Dec 15, 2026 · 8 PM"
-              placeholderTextColor={C.onSurfaceMuted}
-            />
+          <GigField icon={<CalendarDays size={14} color={C.primary} />} label="Event Date & Time" required>
+            <View style={gm.dtRow}>
+              <Pressable
+                onPress={() => setShowDatePicker(v => !v)}
+                style={({ pressed }) => [gm.dtBtn, pressed && { opacity: 0.85 }]}
+              >
+                <CalendarDays size={16} color={C.primary} />
+                <Text style={gm.dtBtnText}>
+                  {eventDate ? eventDate.toLocaleDateString() : 'Pick date'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setShowTimePicker(v => !v)}
+                style={({ pressed }) => [gm.dtBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Clock size={16} color={C.primary} />
+                <Text style={gm.dtBtnText}>
+                  {eventDate ? eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pick time'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={eventDate || new Date()}
+                mode="date"
+                onChange={(_, d) => {
+                  if (Platform.OS === 'android') setShowDatePicker(false);
+                  if (!d) return;
+                  setEventDate(prev => {
+                    const base = prev ? new Date(prev) : new Date();
+                    base.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                    return base;
+                  });
+                }}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={eventDate || new Date()}
+                mode="time"
+                onChange={(_, d) => {
+                  if (Platform.OS === 'android') setShowTimePicker(false);
+                  if (!d) return;
+                  setEventDate(prev => {
+                    const base = prev ? new Date(prev) : new Date();
+                    base.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                    return base;
+                  });
+                }}
+              />
+            )}
           </GigField>
 
           <GigField icon={<MapPin size={14} color={C.primary} />} label="Venue / Location" required>
@@ -421,14 +483,30 @@ function GigRequestBubble({
   onAccept,
   onDecline,
 }: {
-  data: { id: string; eventName: string; eventDate: string; location: string; budget: string; notes?: string | null };
+  data: {
+    id: string;
+    eventName: string;
+    eventDateIso?: string;
+    // Back-compat for older messages
+    eventDate?: string;
+    location: string;
+    budget: string;
+    notes?: string | null;
+  };
   isMe: boolean;
   status: 'pending' | 'accepted' | 'declined';
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const whenRaw = data.eventDateIso || data.eventDate || '';
+  const when = new Date(whenRaw);
+  const whenOk = !!whenRaw && !Number.isNaN(when.getTime());
+  const whenLabel = whenOk
+    ? `${when.toLocaleDateString()} · ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    : (data.eventDate || data.eventDateIso || '');
+
   return (
-    <View style={gb.card}>
+    <View style={[gb.card, isMe ? gb.cardMe : gb.cardThem]}>
       {/* Header */}
       <LinearGradient colors={['#0e7490', '#22d3ee']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={gb.header}>
         <Ticket size={14} color="#fff" strokeWidth={2.5} />
@@ -442,7 +520,7 @@ function GigRequestBubble({
 
       {/* Details */}
       <View style={gb.body}>
-        <GigRow icon="📅" label={data.eventDate} />
+        <GigRow icon="📅" label={whenLabel} />
         <GigRow icon="📍" label={data.location} />
         <GigRow icon="💰" label={data.budget} />
         {data.notes ? <GigRow icon="📝" label={data.notes} /> : null}
@@ -481,7 +559,14 @@ const gb = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(34,211,238,0.25)',
     overflow: 'hidden',
-    maxWidth: 260,
+    width: 280,
+    maxWidth: '100%' as any,
+  },
+  cardMe: {
+    alignSelf: 'flex-end',
+  },
+  cardThem: {
+    alignSelf: 'flex-start',
   },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -568,6 +653,17 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
           supabase.from('messages').update({ is_read: true }).eq('message_id', msg.message_id).then();
         }
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      })
+      // ── Gig booking status updates (so requester/artist sees accept/decline without refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gig_bookings' }, (p) => {
+        const row: any = (p.new || p.old) as any;
+        if (!row) return;
+        const involved = row.artist_id === appUser.id || row.requester_id === appUser.id;
+        if (!involved) return;
+        if (!row.id) return;
+        const nextStatus = row.status as 'pending' | 'accepted' | 'declined';
+        if (!nextStatus) return;
+        setGigStatuses((prev) => ({ ...prev, [row.id]: nextStatus }));
       })
       // ── Typing indicator via broadcast (reliable, no REPLICA IDENTITY needed)
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
@@ -692,13 +788,18 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
   };
 
   const handleGigSubmit = async (form: GigForm) => {
+    // Prefer ISO datetime coming from the picker; fallback to whatever is provided.
+    const iso = form.eventDateIso?.trim();
+    const dt = iso ? new Date(iso) : new Date();
+    const eventDateIso = Number.isNaN(dt.getTime()) ? new Date().toISOString() : dt.toISOString();
+
     const { data: booking, error } = await supabase
       .from('gig_bookings')
       .insert({
         requester_id: appUser?.id,
         artist_id: artist?.id,
         event_name: form.eventName.trim(),
-        event_date: form.eventDate.trim(),
+        event_date: eventDateIso,
         location: form.location.trim(),
         budget: form.budget.trim(),
         notes: form.notes.trim() || null,
@@ -719,7 +820,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
     const contextMsg = `__GIG__${JSON.stringify({
       id: booking.id,
       eventName: form.eventName.trim(),
-      eventDate: form.eventDate.trim(),
+      eventDateIso,
       location: form.location.trim(),
       budget: form.budget.trim(),
       notes: form.notes.trim() || null,
@@ -743,6 +844,60 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
     }
 
     setGigStatuses(p => ({ ...p, [bookingId]: response }));
+
+    // If accepted by the artist, add to artist_schedule.
+    if (response === 'accepted' && appUser?.id) {
+      try {
+        const src = messages
+          .filter((m: any) => typeof m.content === 'string' && m.content.startsWith('__GIG__'))
+          .map((m: any) => {
+            try { return JSON.parse(String(m.content).slice(7)); } catch { return null; }
+          })
+          .find((g: any) => g && g.id === bookingId);
+
+        const when = new Date(src?.eventDateIso || src?.eventDate || '');
+        const whenOk = !Number.isNaN(when.getTime());
+        const scheduleDate = whenOk
+          ? `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`
+          : new Date().toISOString().slice(0, 10);
+        const startTime = whenOk
+          ? `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}:00`
+          : null;
+
+        const title = (src?.eventName || 'Gig').trim();
+        const venue = (src?.location || '').trim() || null;
+        const notesParts = [
+          'Added from gig request',
+          src?.budget ? `Budget: ${String(src.budget)}` : null,
+          src?.notes ? String(src.notes) : null,
+        ].filter(Boolean);
+        const notes = notesParts.join('\n');
+
+        const { data: existingSchedule } = await supabase
+          .from('artist_schedule')
+          .select('schedule_id')
+          .eq('artist_id', appUser.id)
+          .eq('schedule_date', scheduleDate)
+          .eq('title', title)
+          .limit(1);
+
+        if (!existingSchedule || existingSchedule.length === 0) {
+          const { error: scheduleError } = await supabase.from('artist_schedule').insert({
+            artist_id: appUser.id,
+            schedule_date: scheduleDate,
+            title,
+            notes,
+            start_time: startTime,
+            duration_minutes: null,
+            venue,
+            location_address: null,
+          });
+          if (scheduleError) throw scheduleError;
+        }
+      } catch (e) {
+        console.warn('Failed to add gig to artist schedule:', e);
+      }
+    }
 
     const replyMsg = response === 'accepted'
       ? `✅ Gig request accepted! Looking forward to performing at your event.`
@@ -843,7 +998,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
                         <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
                       </Pressable>
                     )}
-                    <View style={st.bubbleCol}>
+                    <View style={[st.bubbleCol, isMe ? st.bubbleColMe : st.bubbleColThem]}>
                       <GigRequestBubble
                         data={gigData}
                         isMe={isMe}
@@ -867,7 +1022,7 @@ export default function Messaging({ navigate, artist, chatId }: { navigate: any,
                     <Image source={{ uri: avatarUri }} style={st.itemAvatar} />
                   </Pressable>
                 )}
-                <View style={st.bubbleCol}>
+                <View style={[st.bubbleCol, isMe ? st.bubbleColMe : st.bubbleColThem]}>
                   {isMe ? (
                     <LinearGradient
                       colors={[C.primary, C.secondary]}
@@ -992,7 +1147,9 @@ const st = StyleSheet.create({
   msgRowThem: { flexDirection: 'row', alignItems: 'flex-end', marginRight: 70 },
   avatarCol: { width: 32, marginRight: 8, flexShrink: 0 },
   itemAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.glassBorder },
-  bubbleCol: { flexShrink: 1 },
+  bubbleCol: { flexShrink: 1, maxWidth: '78%' },
+  bubbleColMe: { alignItems: 'flex-end' },
+  bubbleColThem: { alignItems: 'flex-start' },
 
   bubbleMe: {
     paddingHorizontal: 18, paddingVertical: 12,
@@ -1109,6 +1266,21 @@ const gm = StyleSheet.create({
 
   formScroll: { flex: 1 },
   formContent: { padding: 20, paddingBottom: 36 },
+
+  dtRow: { flexDirection: 'row', gap: 10 },
+  dtBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  dtBtnText: { color: C.onSurface, fontSize: 14, fontWeight: '600' },
 
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },

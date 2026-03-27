@@ -29,10 +29,34 @@ export interface TrackEventOptions {
   like_at_second?: number
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function asUuidOrNull(value?: string): string | null {
+  if (!value) return null
+  return UUID_RE.test(value) ? value : null
+}
+
 async function trackEvent(opts: TrackEventOptions): Promise<void> {
-  supabase.functions.invoke('track-event', {
-    body: { ...opts, session_id: getSessionId() }
-  }).catch(() => {})  // fire-and-forget, never crash app
+  const payload = {
+    ...opts,
+    session_id: getSessionId(),
+    viewer_id: asUuidOrNull(opts.viewer_id),
+    target_user_id: asUuidOrNull(opts.target_user_id),
+    target_video_id: asUuidOrNull(opts.target_video_id),
+    target_event_id: asUuidOrNull(opts.target_event_id),
+    source_video_id: asUuidOrNull(opts.source_video_id),
+  }
+
+  try {
+    const { error } = await supabase.functions.invoke('track-event', { body: payload })
+    if (!error) return
+  } catch {
+    // fall through to DB insert fallback
+  }
+
+  // Fallback path: write directly so analytics doesn't silently disappear if edge fn fails.
+  await supabase.from('analytics_events').insert(payload).then(() => {}).catch(() => {})
 }
 
 // Typed convenience wrappers

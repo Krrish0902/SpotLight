@@ -21,6 +21,8 @@ export default function AdminDashboard({ navigate }: Props) {
     pendingEvents: 0,
     recentVideos7d: 0,
     pendingVideoReports: 0,
+    pendingProfileReports: 0,
+    pendingBoostRequests: 0,
   });
   const [recentActivity, setRecentActivity] = useState<Array<{ text: string; time: string; color: string }>>([]);
 
@@ -28,43 +30,85 @@ export default function AdminDashboard({ navigate }: Props) {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-        const [
-          usersCountRes,
-          videosCountRes,
-          bookingsCountRes,
-          pendingEventsCountRes,
-          recentVideosCountRes,
-          pendingVideoReportsRes,
-          ticketsRes,
-          latestUsersRes,
-          latestEventsRes,
-        ] = await Promise.all([
-          supabase.from('users').select('*', { count: 'exact', head: true }),
-          supabase.from('videos').select('*', { count: 'exact', head: true }),
-          supabase.from('bookings').select('*', { count: 'exact', head: true }),
-          supabase.from('events').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending').eq('is_deleted', false),
-          supabase.from('videos').select('*', { count: 'exact', head: true }).gte('upload_date', sevenDaysAgo),
-          supabase
-            .from('reports')
-            .select('*', { count: 'exact', head: true })
-            .eq('report_type', 'video')
-            .eq('status', 'pending'),
-          supabase.from('tickets').select('total_amount'),
+        const [latestUsersRes, latestEventsRes] = await Promise.all([
           supabase.from('users').select('created_at').order('created_at', { ascending: false }).limit(3),
-          supabase.from('events').select('title, created_at, approval_status').eq('is_deleted', false).order('created_at', { ascending: false }).limit(3),
+          supabase
+            .from('events')
+            .select('title, created_at, approval_status')
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false })
+            .limit(3),
         ]);
 
-        const revenue = (ticketsRes.data || []).reduce((sum: number, t: any) => sum + Number(t.total_amount || 0), 0);
+        // Use an elevated RPC so these totals aren't clamped by client-side RLS.
+        // Fallback to client-side counts so the dashboard still renders if the RPC isn't deployed yet.
+        let c: any = null;
+        try {
+          const { data: counts, error: countsErr } = await supabase.rpc('get_admin_dashboard_counts');
+          if (countsErr) throw countsErr;
+          c = Array.isArray(counts) ? counts[0] : counts;
+        } catch (rpcErr) {
+          console.warn('get_admin_dashboard_counts RPC failed; using fallback totals.', rpcErr);
+
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const [
+            usersCountRes,
+            videosCountRes,
+            bookingsCountRes,
+            pendingEventsCountRes,
+            recentVideosCountRes,
+            pendingVideoReportsRes,
+            pendingProfileReportsRes,
+            pendingBoostRequestsRes,
+            ticketsRes,
+          ] = await Promise.all([
+            supabase.from('users').select('*', { count: 'exact', head: true }),
+            supabase.from('videos').select('*', { count: 'exact', head: true }),
+            supabase.from('bookings').select('*', { count: 'exact', head: true }),
+            supabase
+              .from('events')
+              .select('*', { count: 'exact', head: true })
+              .eq('approval_status', 'pending')
+              .eq('is_deleted', false),
+            supabase.from('videos').select('*', { count: 'exact', head: true }).gte('upload_date', sevenDaysAgo),
+            supabase
+              .from('reports')
+              .select('*', { count: 'exact', head: true })
+              .eq('report_type', 'video')
+              .eq('status', 'pending'),
+            supabase
+              .from('reports')
+              .select('*', { count: 'exact', head: true })
+              .eq('report_type', 'profile')
+              .eq('status', 'pending'),
+            supabase.from('boost_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+            supabase.from('tickets').select('total_amount'),
+          ]);
+
+          const revenue = (ticketsRes.data || []).reduce((sum: number, t: any) => sum + Number(t.total_amount || 0), 0);
+          c = {
+            total_users: usersCountRes.count || 0,
+            total_videos: videosCountRes.count || 0,
+            total_bookings: bookingsCountRes.count || 0,
+            revenue,
+            pending_events: pendingEventsCountRes.count || 0,
+            recent_videos_7d: recentVideosCountRes.count || 0,
+            pending_video_reports: pendingVideoReportsRes.count || 0,
+            pending_profile_reports: pendingProfileReportsRes.count || 0,
+            pending_boost_requests: pendingBoostRequestsRes.count || 0,
+          };
+        }
+
         setStats({
-          totalUsers: usersCountRes.count || 0,
-          totalVideos: videosCountRes.count || 0,
-          totalBookings: bookingsCountRes.count || 0,
-          revenue,
-          pendingEvents: pendingEventsCountRes.count || 0,
-          recentVideos7d: recentVideosCountRes.count || 0,
-          pendingVideoReports: pendingVideoReportsRes.count || 0,
+          totalUsers: Number(c?.total_users ?? 0),
+          totalVideos: Number(c?.total_videos ?? 0),
+          totalBookings: Number(c?.total_bookings ?? 0),
+          revenue: Number(c?.revenue ?? 0),
+          pendingEvents: Number(c?.pending_events ?? 0),
+          recentVideos7d: Number(c?.recent_videos_7d ?? 0),
+          pendingVideoReports: Number(c?.pending_video_reports ?? 0),
+          pendingProfileReports: Number(c?.pending_profile_reports ?? 0),
+          pendingBoostRequests: Number(c?.pending_boost_requests ?? 0),
         });
 
         const activities: Array<{ text: string; time: string; color: string }> = [];
@@ -169,19 +213,22 @@ export default function AdminDashboard({ navigate }: Props) {
             </View>
           ) : null}
         </Card>
-        <Card style={styles.actionCard} onPress={() => navigate('manage-live-events')}>
-          <View style={styles.actionIcon}><Video size={20} color="#22D3EE" /></View>
-          <View style={styles.actionInfo}><Text style={styles.actionTitle}>Review Events</Text><Text style={styles.actionDesc}>Pending event approvals</Text></View>
-          {!loading && stats.pendingEvents > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{stats.pendingEvents > 99 ? '99+' : stats.pendingEvents}</Text></View> : null}
-        </Card>
+        
         <Card style={styles.actionCard} onPress={() => navigate('approve-boost')}>
           <View style={styles.actionIcon}><Trophy size={20} color="#22D3EE" /></View>
           <View style={styles.actionInfo}><Text style={styles.actionTitle}>Approve Boosts</Text><Text style={styles.actionDesc}>Manage artist boost status</Text></View>
+          {!loading && stats.pendingBoostRequests > 0 ? (
+            <View style={styles.badge}><Text style={styles.badgeText}>{stats.pendingBoostRequests > 99 ? '99+' : stats.pendingBoostRequests}</Text></View>
+          ) : null}
         </Card>
         <Card style={styles.actionCard} onPress={() => navigate('manage-profiles')}>
           <View style={styles.actionIcon}><Users size={20} color="#22D3EE" /></View>
           <View style={styles.actionInfo}><Text style={styles.actionTitle}>Manage Profiles</Text><Text style={styles.actionDesc}>User management and moderation</Text></View>
-          {!loading && stats.recentVideos7d > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{stats.recentVideos7d > 99 ? '99+' : stats.recentVideos7d}</Text></View> : null}
+          {!loading && stats.pendingProfileReports > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{stats.pendingProfileReports > 99 ? '99+' : stats.pendingProfileReports}</Text>
+            </View>
+          ) : null}
         </Card>
 
         <View style={styles.managementRow}>

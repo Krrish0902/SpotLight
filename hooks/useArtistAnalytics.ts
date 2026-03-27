@@ -37,7 +37,9 @@ export function useArtistAnalytics(artistId: string) {
     if (!artistId) return
     setIsLoading(true); setError(null)
     try {
-      const safe = (p: Promise<any>) => p.catch(() => ({ data: null }))
+      // supabase.rpc() returns a thenable builder (not always a real Promise),
+      // so wrap with Promise.resolve() before using .catch().
+      const safe = (p: any) => Promise.resolve(p).catch(() => ({ data: null }))
       const [
         reachTrend, dailyTrend, heatmap, geo, funnel,
         content, followerSplit, followAttr, repeatRate,

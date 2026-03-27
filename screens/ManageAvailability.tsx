@@ -88,6 +88,29 @@ export default function ManageAvailability({ navigate }: Props) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: bookings/schedule updates should appear without refresh
+  useEffect(() => {
+    if (!artistId) return;
+    const channel = supabase
+      .channel(`availability:${artistId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (p) => {
+        const row: any = (p.new || p.old) as any;
+        if (!row) return;
+        if (row.artist_id !== artistId) return;
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'artist_schedule' }, (p) => {
+        const row: any = (p.new || p.old) as any;
+        if (!row) return;
+        if (row.artist_id !== artistId) return;
+        fetchData();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [artistId, fetchData]);
+
   const getWorkDates = (): Record<string, { marked: boolean; dotColor: string }> => {
     const marked: Record<string, { marked: boolean; dotColor: string }> = {};
     bookings.forEach((b) => {

@@ -124,7 +124,7 @@ export default function ArtistProfile({ navigate, artist, userRole = 'public', r
         // Step 3: Silent Tracking - Profile View
         (async () => {
           try {
-        track.profileView(targetArtistId, appUser?.id || 'anonymous');
+            track.profileView(targetArtistId, appUser?.id || undefined);
       } catch (err) {
             console.log('Silent tracking failed', err);
           }

@@ -33,6 +33,20 @@ export default function EventsGridScreen({ navigate }: Props) {
         fetchEvents();
     }, []);
 
+    // Realtime: update list when events get approved/updated/deleted
+    useEffect(() => {
+        const channel = supabase
+            .channel('events-grid')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+                fetchEvents();
+            })
+            .subscribe();
+        return () => {
+            supabase.removeChannel(channel);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const fetchEvents = async () => {
         try {
             const { data, error } = await supabase

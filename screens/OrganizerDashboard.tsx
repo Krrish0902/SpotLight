@@ -60,6 +60,34 @@ export default function OrganizerDashboard({ navigate }: Props) {
     fetchEvents();
   }, [appUser?.id]);
 
+  // Realtime: reflect admin approval/rejection without refresh
+  useEffect(() => {
+    if (!appUser?.id) return;
+    const channel = supabase
+      .channel(`org-events:${appUser.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, (p) => {
+        const row: any = (p.new || p.old) as any;
+        if (!row) return;
+        if (row.organizer_id !== appUser.id) return;
+        // Re-fetch to keep ordering/filters correct
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('events')
+              .select('event_id, title, event_date, location_name, city, poster_url, approval_status')
+              .eq('organizer_id', appUser.id)
+              .eq('is_deleted', false)
+              .order('event_date', { ascending: false });
+            setEvents((data as any) ?? []);
+          } catch {}
+        })();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [appUser?.id]);
+
   // Transform ticket trend for area chart
   const ticketTrendSeries = React.useMemo(() => {
     if (!ticketTypeTrend || ticketTypeTrend.length === 0) return [];
