@@ -1769,7 +1769,7 @@ class Deck {
       setTimeout(() => { lock = false; }, 750);
     }, { passive: false });
   }
-
+ 
   touch() {
     let sy = 0;
     document.addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive: true });
